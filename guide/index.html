@@ -139,20 +139,42 @@ a:hover{text-decoration:underline}
 <div id="app"><div class="loading"><p class="loading-logo">yui</p></div></div>
 <script>
 var GAS_API = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';
+var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 
 (function() {
   var params = new URLSearchParams(location.search);
   var customerId = params.get('id') || '';
-  var url = GAS_API + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
+  var cacheKey = 'guide_' + (customerId || '_default');
 
+  // キャッシュがあれば即時表示し、バックグラウンドで更新
+  try {
+    var cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      var obj = JSON.parse(cached);
+      if (Date.now() - obj.ts < CACHE_TTL) {
+        render(obj.data);
+        // バックグラウンドで新鮮なデータを取得してキャッシュ更新（表示は変えない）
+        fetchFromGas(customerId, cacheKey, false);
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // キャッシュなし→ローディング表示のままGASから取得
+  fetchFromGas(customerId, cacheKey, true);
+})();
+
+function fetchFromGas(customerId, cacheKey, showResult) {
+  var url = GAS_API + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.error) { showError(data.error); return; }
-      render(data);
+      if (data.error) { if (showResult) showError(data.error); return; }
+      try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+      if (showResult) render(data);
     })
-    .catch(function(e) { showError(e.message); });
-})();
+    .catch(function(e) { if (showResult) showError(e.message); });
+}
 
 function showError(msg) {
   document.getElementById('app').innerHTML =
