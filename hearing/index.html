@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>yuiカタログヒアリングフォーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf9f7;--surface:#fff;--text:#1a1a1a;--text-light:#555;--text-muted:#999;--accent:#8c7851;--accent-light:#c4b394;--accent-bg:rgba(140,120,81,.06);--border:#ddd8d0;--border-light:#eceae5;--serif:"Noto Serif JP","Hiragino Mincho ProN",serif;--sans:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);font-weight:300;background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.9;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+.wrap{max-width:540px;margin:0 auto;padding:20px 1.5rem 60px}
+.logo{text-align:center;padding:2.5rem 0 1rem}
+.logo img{height:52px;width:auto}
+h1{font-family:var(--serif);font-size:1.1rem;font-weight:300;text-align:center;margin-bottom:.3rem;letter-spacing:.15em;color:var(--text)}
+.sub{text-align:center;font-size:.72rem;color:var(--text-muted);margin-bottom:2rem;letter-spacing:.05em}
+.card{background:var(--surface);border-radius:10px;border:1px solid var(--border-light);padding:20px;margin-bottom:14px}
+.card-title{font-family:var(--serif);font-size:.8rem;font-weight:400;color:var(--accent);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border-light);letter-spacing:.1em}
+label{display:block;font-size:.72rem;font-weight:400;color:var(--text-light);margin-bottom:4px;letter-spacing:.03em}
+input[type=text],input[type=email],input[type=date],select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;transition:border .25s;background:var(--surface);color:var(--text)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent-light);box-shadow:0 0 0 3px rgba(140,120,81,.08)}
+textarea{resize:vertical;min-height:60px}
+.row{display:flex;gap:12px;margin-bottom:12px}
+.row>*{flex:1}
+.field{margin-bottom:12px}
+.radio-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.radio-opt{position:relative}
+.radio-opt input{position:absolute;opacity:0;pointer-events:none}
+.radio-opt span{display:block;padding:7px 14px;border:1px solid var(--border);border-radius:20px;font-size:.75rem;cursor:pointer;transition:all .25s;text-align:center;color:var(--text-light);letter-spacing:.02em;-webkit-user-select:none;user-select:none}
+.radio-opt input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}
+.radio-opt input.deselectable+span{cursor:pointer}
+.group-card{background:var(--accent-bg);border:1px solid var(--border-light);border-radius:10px;padding:16px;margin-bottom:12px}
+.group-card h3{font-family:var(--serif);font-size:.8rem;font-weight:400;color:var(--accent);margin-bottom:10px;letter-spacing:.08em}
+.check-group{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.check-opt{position:relative}
+.check-opt input{position:absolute;opacity:0;pointer-events:none}
+.check-opt span{display:block;padding:5px 12px;border:1px solid var(--border);border-radius:16px;font-size:.7rem;cursor:pointer;transition:all .25s;color:var(--text-light)}
+.check-opt input:checked+span{background:var(--accent-light);color:#fff;border-color:var(--accent-light)}
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.qty-row label{margin:0;white-space:nowrap;min-width:50px}
+.qty-input{width:80px;padding:6px 8px;text-align:right}
+.btn-submit{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:.85rem;font-weight:400;cursor:pointer;font-family:var(--serif);transition:all .25s;letter-spacing:.15em}
+.btn-submit:hover{background:#7a6845}
+.btn-submit:disabled{background:#ccc;cursor:not-allowed}
+.success{text-align:center;padding:60px 20px}
+.success h2{font-family:var(--serif);color:var(--accent);font-size:1.1rem;font-weight:300;margin-bottom:1rem;letter-spacing:.1em}
+.hidden{display:none}
+.loading{text-align:center;padding:80px 20px}
+.loading p{font-family:var(--serif);color:var(--text-muted);font-size:.9rem;letter-spacing:.1em}
+.spinner{width:32px;height:32px;border:3px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error{text-align:center;padding:60px 20px}
+.error h2{font-family:var(--serif);color:#DC2626;font-size:1.1rem;font-weight:300;margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><img src="https://res.cloudinary.com/yui-gift/image/upload/h_56,f_auto/v1775458897/logo_B_r9hqn5.png" alt="yui"></div>
+
+  <div id="loading-area" class="loading">
+    <div class="spinner"></div>
+    <p>読み込み中...</p>
+  </div>
+
+  <div id="error-area" class="error hidden">
+    <h2>フォームが見つかりません</h2>
+    <p>URLをご確認ください。</p>
+  </div>
+
+  <div id="form-area" class="hidden">
+    <h1>カタログヒアリングフォーム</h1>
+    <div class="sub">所要時間 約3〜5分</div>
+
+    <!-- 基本情報 -->
+    <div class="card">
+      <div class="card-title">基本情報</div>
+      <div class="field" id="f-kikkake-area">
+        <label>「yui」を最初に知ったきっかけ</label>
+        <div class="radio-group" id="f-kikkake"></div>
+      </div>
+    </div>
+
+    <!-- 式場・納品 -->
+    <div class="card" id="f-delivery-card">
+      <div class="card-title">式場・納品情報</div>
+      <div class="row">
+        <div class="field"><label>式場名・会場名</label><input type="text" id="f-venue"></div>
+        <div class="field"><label>ご担当者様のお名前</label><input type="text" id="f-staff"></div>
+      </div>
+      <div id="f-delivery-fields">
+        <div class="row">
+          <div class="field"><label>ご希望の納品日</label><input type="date" id="f-delivDate"></div>
+          <div class="field">
+            <label>ご希望の納品時間</label>
+            <select id="f-delivTime">
+              <option value="">選択してください</option>
+              <option>午前中（8時〜12時）</option>
+              <option>12時〜14時</option>
+              <option>14時〜16時</option>
+              <option>16時〜18時</option>
+              <option>18時〜20時</option>
+              <option>18時〜21時</option>
+              <option>19時〜21時</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>ご希望の納品場所</label><input type="text" id="f-delivPlace" placeholder="例）自宅、式場名"></div>
+      </div>
+    </div>
+
+    <!-- 贈り分け -->
+    <div class="card">
+      <div class="card-title">贈り分け</div>
+      <div class="field">
+        <label>贈り分けの種類数</label>
+        <select id="f-groupCount" onchange="renderGroups()">
+          <option value="1">1種類</option>
+          <option value="2">2種類</option>
+          <option value="3">3種類</option>
+          <option value="4">4種類</option>
+          <option value="5">5種類</option>
+        </select>
+      </div>
+      <div id="f-groups"></div>
+    </div>
+
+    <!-- カードデザイン・柄 -->
+    <div class="card" id="f-card-design-area">
+      <div class="card-title">カードデザイン・柄</div>
+      <div id="f-design-section"></div>
+      <div id="f-pattern-section" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- その他 -->
+    <div class="card">
+      <div class="card-title">その他ご要望</div>
+      <div class="field"><textarea id="f-notes" rows="3" placeholder="ご質問やご要望がございましたらご記入ください"></textarea></div>
+    </div>
+
+    <button class="btn-submit" id="btn-submit" onclick="submitForm()">回答を送信</button>
+  </div>
+
+  <div id="success-area" class="success hidden">
+    <h2>ご回答ありがとうございます</h2>
+    <p>内容を確認し、LINEにてご連絡いたします。</p>
+  </div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/a/macros/yui.gift/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';
+var FD = null;
+
+// URLパラメータから顧客IDを取得してデータをfetch
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var customerId = params.get('customer') || '';
+  if (!customerId) {
+    document.getElementById('loading-area').classList.add('hidden');
+    document.getElementById('error-area').classList.remove('hidden');
+    return;
+  }
+  fetch(GAS_URL + '?action=formData&customer=' + encodeURIComponent(customerId))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.error) {
+        document.getElementById('loading-area').classList.add('hidden');
+        document.getElementById('error-area').classList.remove('hidden');
+        return;
+      }
+      FD = data;
+      document.getElementById('loading-area').classList.add('hidden');
+      document.getElementById('form-area').classList.remove('hidden');
+      init();
+    })
+    .catch(function() {
+      document.getElementById('loading-area').classList.add('hidden');
+      document.getElementById('error-area').classList.remove('hidden');
+    });
+})();
+
+var cardDesigns = {
+  '和風': ['鶴','亀','桜','富士','扇'],
+  '洋風': ['クローバー','ダイヤモンド','バード','ハート','ラビット']
+};
+var allCatalogTypes = ['人気商品盛りだくさんA','人気商品盛りだくさんB','グルメ中心','男性向け','女性向け','オーダーメイド'];
+var targets = ['ご親族','ご友人','会社の上司・同僚','その他'];
+
+function init() {
+  if (!FD) return;
+  // きっかけ
+  var kikkake = document.getElementById('f-kikkake');
+  if (FD.isPartner) {
+    document.getElementById('f-kikkake-area').classList.add('hidden');
+  } else {
+    ['式場・プランナー紹介','友人・知人の紹介','Instagram','TikTok','Facebook','YouTube','その他'].forEach(function(k) {
+      kikkake.innerHTML += '<label class="radio-opt"><input type="radio" name="kikkake" value="' + k + '"><span>' + k + '</span></label>';
+    });
+  }
+  // 提携先ありなら式場名を非表示
+  if (FD.isPartner) {
+    document.getElementById('f-venue').closest('.field').classList.add('hidden');
+  }
+  // 納品
+  if (FD.deliveryType === '式場指定（住所あり）') {
+    document.getElementById('f-delivery-fields').classList.add('hidden');
+  } else if (FD.deliveryType === '式場指定（住所未定）') {
+    document.getElementById('f-delivPlace').closest('.field').classList.add('hidden');
+  }
+  renderGroups();
+}
+
+var patternImages = {
+  '和風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468339/wafu_tne3xd.jpg',
+  '洋風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468338/yofu_lokobr.jpg'
+};
+
+function renderGroups() {
+  var count = parseInt(document.getElementById('f-groupCount').value) || 1;
+  var labels = ['A','B','C','D','E'];
+  var hdProducts = FD.products.filter(function(p) { return p['\u30AB\u30C6\u30B4\u30EA'] === '\u5F15\u304D\u51FA\u7269'; });
+  var html = '';
+  for (var g = 0; g < count; g++) {
+    html += '<div class="group-card"><h3>贈り分け ' + labels[g] + '</h3>';
+    html += '<label>対象ゲスト</label><div class="check-group">';
+    targets.forEach(function(t) {
+      html += '<label class="check-opt"><input type="checkbox" name="target_' + g + '" value="' + t + '"><span>' + t + '</span></label>';
+    });
+    html += '</div>';
+    html += '<label>引き出物のランク</label><div class="radio-group" id="rank-group-' + g + '">';
+    hdProducts.forEach(function(p) {
+      var price = parseInt(p['\u7A0E\u8FBC\u4FA1\u683C']) || 0;
+      var types = (p._catTypes || []).join(',');
+      html += '<label class="radio-opt" data-cattypes="' + types + '"><input type="radio" name="rank_' + g + '" value="' + p['\u5546\u54C1ID'] + '" onchange="onRankChange(' + g + ')">';
+      html += '<span>' + p['\u5546\u54C1\u540D'] + '（税込' + price.toLocaleString() + '\u5186）</span></label>';
+    });
+    html += '</div>';
+    html += '<div id="cattype-area-' + g + '"><label>カタログタイプ</label><div class="radio-group" id="cattype-group-' + g + '">';
+    allCatalogTypes.forEach(function(t) {
+      html += '<label class="radio-opt"><input type="radio" name="cattype_' + g + '" value="' + t + '" onchange="onCatTypeChange(' + g + ')"><span>' + t + '</span></label>';
+    });
+    html += '</div></div>';
+    html += '<div class="qty-row"><label>冊数</label><input type="number" class="qty-input" min="0" value="" placeholder="0" id="qty_' + g + '"></div>';
+    html += '<div style="margin-top:12px;"><label>引き菓子・縁起物</label><div class="radio-group">';
+    if (FD.sweetType === 'セットのみ') {
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子＋縁起物"><span>引き菓子＋縁起物</span></label>';
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="不要"><span>不要</span></label>';
+    } else {
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子＋縁起物"><span>引き菓子＋縁起物</span></label>';
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子のみ"><span>引き菓子のみ</span></label>';
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="縁起物のみ"><span>縁起物のみ</span></label>';
+      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="不要"><span>不要</span></label>';
+    }
+    html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="検討中"><span>検討中</span></label>';
+    html += '</div></div>';
+    html += '</div>';
+  }
+  document.getElementById('f-groups').innerHTML = html;
+  renderCardDesignSection(count);
+}
+
+function renderCardDesignSection(count) {
+  var labels = ['A','B','C','D','E'];
+  var designHtml = '';
+  var patternHtml = '';
+
+  if (FD.originalCard) {
+    var origDesign = FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風';
+    designHtml = '<p style="font-size:.8rem;color:var(--text-light);">オリジナルカードのため、カードデザインの選択は不要です。</p>';
+    var imgUrl = patternImages[origDesign] || '';
+    patternHtml = '<label>カード柄（' + origDesign + '）</label>';
+    if (imgUrl) patternHtml += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="' + imgUrl + '" alt="柄イメージ" style="width:100%;display:block;"></div>';
+    patternHtml += '<p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">贈り分けごとに異なる柄をお選びください</p>';
+    var patterns = cardDesigns[origDesign] || [];
+    for (var g = 0; g < count; g++) {
+      patternHtml += '<div style="margin-bottom:8px;"><label style="font-weight:500;">贈り分け ' + labels[g] + '</label><div class="radio-group">';
+      patterns.forEach(function(p) {
+        patternHtml += '<label class="radio-opt"><input type="radio" name="pattern_' + g + '" value="' + p + '" onchange="updatePatternAvail()"><span>' + p + '</span></label>';
+      });
+      patternHtml += '</div></div>';
+    }
+  } else {
+    designHtml = '<label>カードデザイン</label>';
+    designHtml += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468336/card_d3yaov.png" alt="カードデザイン" style="width:100%;display:block;"></div>';
+    designHtml += '<div class="radio-group">';
+    designHtml += '<label class="radio-opt"><input type="radio" name="design" value="洋風" onchange="showPatternSection()"><span>洋風（左）</span></label>';
+    designHtml += '<label class="radio-opt"><input type="radio" name="design" value="和風" onchange="showPatternSection()"><span>和風（右）</span></label>';
+    designHtml += '</div>';
+  }
+
+  document.getElementById('f-design-section').innerHTML = designHtml;
+  document.getElementById('f-pattern-section').innerHTML = patternHtml;
+}
+
+function showPatternSection() {
+  var design = (document.querySelector('input[name=design]:checked') || {}).value || '';
+  renderPatternChoices(design);
+}
+
+function renderPatternChoices(design) {
+  var patterns = cardDesigns[design] || [];
+  var count = parseInt(document.getElementById('f-groupCount').value) || 1;
+  var labels = ['A','B','C','D','E'];
+  var imgUrl = patternImages[design] || '';
+  var h = '';
+  if (imgUrl) h += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="' + imgUrl + '" alt="' + design + '柄イメージ" style="width:100%;display:block;"></div>';
+  h += '<p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">贈り分けごとに異なる柄をお選びください</p>';
+  for (var g = 0; g < count; g++) {
+    h += '<div style="margin-bottom:8px;"><label style="font-weight:500;">贈り分け ' + labels[g] + '</label><div class="radio-group">';
+    patterns.forEach(function(p) {
+      h += '<label class="radio-opt"><input type="radio" name="pattern_' + g + '" value="' + p + '" onchange="updatePatternAvail()"><span>' + p + '</span></label>';
+    });
+    h += '</div></div>';
+  }
+  document.getElementById('f-pattern-section').innerHTML = h;
+}
+
+function updatePatternAvail() {
+  var count = parseInt(document.getElementById('f-groupCount').value) || 1;
+  var used = {};
+  for (var g = 0; g < count; g++) {
+    var sel = document.querySelector('input[name=pattern_' + g + ']:checked');
+    if (sel) used[sel.value] = g;
+  }
+  for (var g = 0; g < count; g++) {
+    document.querySelectorAll('input[name=pattern_' + g + ']').forEach(function(input) {
+      var opt = input.closest('.radio-opt');
+      if (used[input.value] !== undefined && used[input.value] !== g) {
+        opt.style.opacity = '0.3';
+        opt.style.pointerEvents = 'none';
+      } else {
+        opt.style.opacity = '';
+        opt.style.pointerEvents = '';
+      }
+    });
+  }
+}
+
+var formSubmitted = false;
+// ラジオボタン解除機能
+document.addEventListener('click', function(e) {
+  var label = e.target.closest('.radio-opt');
+  if (!label) return;
+  var input = label.querySelector('input[type=radio]');
+  if (!input) return;
+  if (input._wasChecked) {
+    input.checked = false;
+    input._wasChecked = false;
+    input.dispatchEvent(new Event('change'));
+    var name = input.name;
+    if (name.startsWith('rank_')) { var g = parseInt(name.split('_')[1]); onRankClear(g); }
+    if (name.startsWith('cattype_')) { var g = parseInt(name.split('_')[1]); onCatTypeClear(g); }
+    e.preventDefault();
+  }
+});
+document.addEventListener('mousedown', function(e) {
+  var label = e.target.closest('.radio-opt');
+  if (!label) return;
+  var input = label.querySelector('input[type=radio]');
+  if (input) input._wasChecked = input.checked;
+});
+
+function onRankClear(g) {
+  var area = document.getElementById('cattype-area-' + g);
+  area.style.display = '';
+  document.querySelectorAll('#cattype-group-' + g + ' .radio-opt').forEach(function(opt) { opt.style.display = ''; });
+}
+
+function onCatTypeClear(g) {
+  document.querySelectorAll('#rank-group-' + g + ' .radio-opt').forEach(function(opt) { opt.style.display = ''; });
+}
+
+function onRankChange(g) {
+  var selected = document.querySelector('input[name=rank_' + g + ']:checked');
+  if (!selected) return;
+  var label = selected.closest('.radio-opt');
+  var types = (label.getAttribute('data-cattypes') || '').split(',').filter(Boolean);
+  var area = document.getElementById('cattype-area-' + g);
+  area.style.display = '';
+  document.querySelectorAll('#cattype-group-' + g + ' .radio-opt').forEach(function(opt) {
+    var val = opt.querySelector('input').value;
+    var match = types.indexOf(val) >= 0 || val === 'オーダーメイド';
+    opt.style.display = match ? '' : 'none';
+    if (!match) opt.querySelector('input').checked = false;
+  });
+}
+
+function onCatTypeChange(g) {
+  var selected = document.querySelector('input[name=cattype_' + g + ']:checked');
+  if (!selected) return;
+  var selectedType = selected.value;
+  if (selectedType === 'オーダーメイド') {
+    document.querySelectorAll('#rank-group-' + g + ' .radio-opt').forEach(function(opt) { opt.style.display = ''; });
+    return;
+  }
+  document.querySelectorAll('#rank-group-' + g + ' .radio-opt').forEach(function(opt) {
+    var types = (opt.getAttribute('data-cattypes') || '').split(',').filter(Boolean);
+    var match = types.indexOf(selectedType) >= 0;
+    opt.style.display = match ? '' : 'none';
+    if (!match) opt.querySelector('input').checked = false;
+  });
+}
+
+function submitForm() {
+  if (formSubmitted) return;
+  formSubmitted = true;
+  var btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+
+  var count = parseInt(document.getElementById('f-groupCount').value) || 1;
+  var groups = [];
+  var totalQty = 0;
+  for (var g = 0; g < count; g++) {
+    var tgts = [];
+    document.querySelectorAll('input[name=target_' + g + ']:checked').forEach(function(c) { tgts.push(c.value); });
+    var rank = (document.querySelector('input[name=rank_' + g + ']:checked') || {}).value || '';
+    var cattype = (document.querySelector('input[name=cattype_' + g + ']:checked') || {}).value || '';
+    if (!cattype && rank) {
+      var rankLabel = document.querySelector('input[name=rank_' + g + ']:checked');
+      if (rankLabel) {
+        var types = (rankLabel.closest('.radio-opt').getAttribute('data-cattypes') || '').split(',').filter(Boolean);
+        if (types.length === 1) cattype = types[0];
+      }
+    }
+    var design = FD.originalCard ? (FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風') : (document.querySelector('input[name=design]:checked') || {}).value || '';
+    var pattern = (document.querySelector('input[name=pattern_' + g + ']:checked') || {}).value || '';
+    var sweets = (document.querySelector('input[name=sweets_' + g + ']:checked') || {}).value || '';
+    var qty = parseInt(document.getElementById('qty_' + g).value) || 0;
+    totalQty += qty;
+    groups.push({ targets: tgts, rank: rank, catalogType: cattype, design: design, pattern: pattern, sweets: sweets, qty: qty });
+  }
+
+  var items = [];
+  groups.forEach(function(gr) {
+    if (!gr.rank || !gr.qty) return;
+    var prod = FD.products.find(function(p) { return p['\u5546\u54C1ID'] === gr.rank; });
+    if (prod) items.push({ name: prod['\u5546\u54C1\u540D'], cat: '\u5F15\u304D\u51FA\u7269', excl: parseInt(prod['\u7A0E\u629C\u4FA1\u683C'])||0, incl: parseInt(prod['\u7A0E\u8FBC\u4FA1\u683C'])||0, qty: gr.qty });
+  });
+
+  var payload = {
+    customerId: FD.customerId,
+    venue: document.getElementById('f-venue').value,
+    groups: groups,
+    items: items,
+    totalQty: totalQty,
+    delivery: {
+      date: document.getElementById('f-delivDate').value,
+      time: document.getElementById('f-delivTime').value,
+      place: document.getElementById('f-delivPlace').value
+    },
+    notes: document.getElementById('f-notes').value
+  };
+
+  // GAS Web AppにPOST送信
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'submitHearing', payload: payload })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(result) {
+    if (result.error) {
+      formSubmitted = false;
+      btn.disabled = false;
+      btn.textContent = '回答を送信';
+      alert(result.error);
+      return;
+    }
+    document.getElementById('form-area').classList.add('hidden');
+    document.getElementById('success-area').classList.remove('hidden');
+  })
+  .catch(function() {
+    formSubmitted = false;
+    btn.disabled = false;
+    btn.textContent = '回答を送信';
+    alert('送信に失敗しました。もう一度お試しください。');
+  });
+}
+</script>
+</body>
+</html>
