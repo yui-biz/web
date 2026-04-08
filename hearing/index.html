@@ -151,9 +151,10 @@ textarea{resize:vertical;min-height:60px}
 
 <script>
 var GAS_URL = 'https://script.google.com/a/macros/yui.gift/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';
+var CACHE_TTL = 60 * 60 * 1000; // 1時間
 var FD = null;
 
-// URLパラメータから顧客IDを取得してデータをfetch
+// URLパラメータから顧客IDを取得してデータをfetch（キャッシュ付き）
 (function() {
   var params = new URLSearchParams(window.location.search);
   var customerId = params.get('customer') || '';
@@ -162,24 +163,47 @@ var FD = null;
     document.getElementById('error-area').classList.remove('hidden');
     return;
   }
+  var cacheKey = 'form_' + customerId;
+
+  // キャッシュがあれば即時表示し、バックグラウンドで更新
+  try {
+    var cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      var obj = JSON.parse(cached);
+      if (Date.now() - obj.ts < CACHE_TTL) {
+        showForm(obj.data);
+        fetchFromGas(customerId, cacheKey, false);
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // キャッシュなし→ローディング表示のままGASから取得
+  fetchFromGas(customerId, cacheKey, true);
+})();
+
+function fetchFromGas(customerId, cacheKey, showResult) {
   fetch(GAS_URL + '?action=formData&customer=' + encodeURIComponent(customerId))
     .then(function(res) { return res.json(); })
     .then(function(data) {
-      if (data.error) {
-        document.getElementById('loading-area').classList.add('hidden');
-        document.getElementById('error-area').classList.remove('hidden');
-        return;
-      }
-      FD = data;
-      document.getElementById('loading-area').classList.add('hidden');
-      document.getElementById('form-area').classList.remove('hidden');
-      init();
+      if (data.error) { if (showResult) showError(); return; }
+      try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+      if (showResult) showForm(data);
     })
-    .catch(function() {
-      document.getElementById('loading-area').classList.add('hidden');
-      document.getElementById('error-area').classList.remove('hidden');
-    });
-})();
+    .catch(function() { if (showResult) showError(); });
+}
+
+function showForm(data) {
+  FD = data;
+  document.getElementById('loading-area').classList.add('hidden');
+  document.getElementById('form-area').classList.remove('hidden');
+  init();
+}
+
+function showError() {
+  document.getElementById('loading-area').classList.add('hidden');
+  document.getElementById('error-area').classList.remove('hidden');
+}
 
 var cardDesigns = {
   '和風': ['鶴','亀','桜','富士','扇'],
