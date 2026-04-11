@@ -48,10 +48,10 @@ textarea{resize:vertical;min-height:60px}
 .success{text-align:center;padding:60px 20px}
 .success h2{font-family:var(--serif);color:var(--accent);font-size:1.1rem;font-weight:300;margin-bottom:1rem;letter-spacing:.1em}
 .hidden{display:none}
-.loading{text-align:center;padding:80px 20px}
-.loading p{font-family:var(--serif);color:var(--text-muted);font-size:.9rem;letter-spacing:.1em}
-.spinner{width:32px;height:32px;border:3px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+.loading{text-align:center;padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:0}
+.loading-spinner{width:32px;height:32px;border:1.5px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.loading p{font-family:var(--serif);color:var(--text-muted);font-size:.7rem;letter-spacing:.18em;margin-top:20px}
 .error{text-align:center;padding:60px 20px}
 .error h2{font-family:var(--serif);color:#DC2626;font-size:1.1rem;font-weight:300;margin-bottom:1rem}
 </style>
@@ -61,8 +61,8 @@ textarea{resize:vertical;min-height:60px}
   <div class="logo"><img src="https://yui-biz.github.io/web/assets/yui_logo.svg?v=2" alt="yui"></div>
 
   <div id="loading-area" class="loading">
-    <div class="spinner"></div>
-    <p>読み込み中...</p>
+    <div class="loading-spinner"></div>
+    <p>読み込み中</p>
   </div>
 
   <div id="error-area" class="error hidden">
