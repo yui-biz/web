@@ -195,9 +195,9 @@ function fetchFromGas(customerId, cacheKey, showResult) {
 
 function showForm(data) {
   FD = data;
+  init();
   document.getElementById('loading-area').classList.add('hidden');
   document.getElementById('form-area').classList.remove('hidden');
-  init();
 }
 
 function showError() {
