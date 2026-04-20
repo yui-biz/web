@@ -464,9 +464,11 @@ function submitForm() {
     if (prod) items.push({ name: prod['\u5546\u54C1\u540D'], cat: '\u5F15\u304D\u51FA\u7269', excl: parseInt(prod['\u7A0E\u629C\u4FA1\u683C'])||0, incl: parseInt(prod['\u7A0E\u8FBC\u4FA1\u683C'])||0, qty: gr.qty });
   });
 
+  var kikkakeEl = document.querySelector('input[name=kikkake]:checked');
   var payload = {
     customerId: FD.customerId,
     venue: document.getElementById('f-venue').value,
+    kikkake: kikkakeEl ? kikkakeEl.value : '',
     groups: groups,
     items: items,
     totalQty: totalQty,
