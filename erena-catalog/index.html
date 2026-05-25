@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>エレナ カタログギフト お申し込みフォーム</title>
+<style>
+  /* 基本スタイル */
+  body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+  .container { max-width: 800px; margin: 20px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .header { background-color: #007BFF; color: white; padding: 20px; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+  h2, h3 { margin: 0; }
+  .content { padding: 30px; }
+  .progress-bar { display: flex; justify-content: space-around; margin-bottom: 20px; }
+  .progress-item { color: #ccc; }
+  .progress-item.active { font-weight: bold; color: #333; }
+  .form-section { border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+  .form-section h3 { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #007BFF; }
+  .form-row { margin-bottom: 20px; }
+  hr.section-divider { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
+  label { display: block; margin-bottom: 5px; font-weight: bold; }
+  input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], select { width: 60%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+  select:disabled { background-color: #e9ecef; }
+  .btn, button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
+  .btn-container { text-align: center; margin-top: 30px; }
+  .btn-primary { background-color: #5cb85c; color: white; }
+  .btn-secondary { background-color: #f0f0f0; color: #333; }
+  .btn-address-search { background-color: #6c757d; color: white; padding: 10px; margin-left: 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 14px; }
+  .multi-input { display: flex; align-items: center; flex-wrap: nowrap; }
+  .multi-input input { text-align: center; }
+  .multi-input .input-separator { margin: 0 5px; flex-shrink: 0; }
+  .multi-input button { flex-shrink: 0; }
+  .multi-input.zipcode input:first-of-type { width: 80px; flex-shrink: 0; }
+  .multi-input.zipcode input:last-of-type { width: 120px; flex-shrink: 0; }
+  .multi-input.tel input { width: 100px; flex-grow: 0; }
+  .required-tag, .optional-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold; color: white; margin-left: 8px; vertical-align: middle; }
+  .required-tag { background-color: #D9534F; }
+  .optional-tag { background-color: #6c757d; }
+  .checkbox-row { display: flex; align-items: center; margin: 20px 0; }
+  .checkbox-row input { width: auto; margin-right: 10px; }
+  .checkbox-row label { margin-bottom: 0; }
+  .radio-group label { display: inline-block; margin-right: 20px; font-weight: normal; }
+  .radio-group input { margin-right: 5px; }
+  .product-image-container { margin-top: 15px; margin-bottom: 20px; min-height: 1px; }
+  #product-image { max-width: 250px; max-height: 250px; object-fit: contain; }
+  .confirm-data p { margin: 10px 0; }
+  .confirm-data span:first-child { font-weight: bold; margin-right: 10px; display: inline-block; min-width: 120px; }
+  #confirm-image { max-width: 150px; margin-top: 10px; border: 1px solid #eee; }
+
+  @media print {
+    body, .container { margin: 0; padding: 0; box-shadow: none; }
+  }
+
+  @media (max-width: 600px) {
+    .container { width: 100%; margin: 0; border-radius: 0; }
+    .content { padding: 15px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], select { width: 100%; }
+    .multi-input.zipcode input:first-of-type, .multi-input.zipcode input:last-of-type { width: auto; flex: 1 1 0; }
+    .multi-input.tel { justify-content: space-between; }
+    .multi-input.tel input { width: 30%; flex-grow: 0; }
+  }
+</style>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="header"><h2>エレナ カタログギフト お申し込みフォーム</h2></div>
+      <div class="content">
+        <div class="progress-bar">
+          <span class="progress-item active" id="step-input">入力</span>
+          <span class="progress-item" id="step-confirm">確認</span>
+          <span class="progress-item" id="step-complete">完了</span>
+        </div>
+        <div id="form-input">
+          <form id="entryForm" onsubmit="return false;">
+            <div class="form-section" id="orderer-section">
+              <h3>ご注文者様・ご注文品情報</h3>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="shipToDifferentAddress" onchange="toggleRecipientForm()">
+              <label for="shipToDifferentAddress">商品のお届け先を別住所に変更する場合、チェックを入れてください。</label>
+            </div>
+            <div class="form-section" id="recipient-section" style="display:none;">
+              <h3>お届け先様情報</h3>
+            </div>
+            <div class="btn-container">
+              <button type="button" class="btn btn-primary" onclick="showConfirmation()">内容確認画面に進む</button>
+            </div>
+          </form>
+        </div>
+        <div id="form-confirm" style="display:none;">
+          <div class="printable-area"><h2 style="text-align:center; margin-bottom:20px;">ご注文内容の確認</h2><div id="confirm-display"></div></div>
+          <div class="btn-container">
+            <button type="button" class="btn btn-secondary" onclick="showInput()">修正する</button>
+            <button type="button" class="btn btn-primary" onclick="submitForm()">この内容で送信する</button>
+          </div>
+        </div>
+        <div id="form-complete" style="display:none;">
+          <h2>お申し込みが完了しました。</h2>
+          <p>ご登録いただいたメールアドレス宛に、ご注文内容の確認メールをお送りしました。</p>
+          <p>「お客様控えを印刷する」ボタンから、このお申し込み内容を印刷・保存できます。</p>
+          <div class="btn-container">
+            <button type="button" class="btn btn-primary" onclick="printReceipt()">お客様控えを印刷する</button>
+            <button type="button" class="btn btn-secondary" onclick="location.reload()">TOPに戻る</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKlZQFhOpxk71eL9WLfMeSW5bDGp6UrpV7EfkYUIY-kKteMKe9oby9OiCUH7joltYj/exec';
+
+  function gasPost(payload) {
+    return fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    }).then(res => res.json());
+  }
+
+  let formDataGlobal = {};
+  let originalBodyHtml;
+  let imageCache = {};
+
+  document.addEventListener('DOMContentLoaded', function() {
+    buildFormStructure();
+    gasPost({ action: 'getProducts' })
+      .then(result => {
+        if (result.error) return onFailure({ message: result.error });
+        populateProductDropdown(result.products);
+      })
+      .catch(err => onFailure(err));
+  });
+
+  function onFailure(error) {
+    const select = document.getElementById('productName');
+    if (select) {
+      select.querySelector('option').textContent = 'リスト取得に失敗';
+    }
+    console.error('Script call failed:', error.message);
+  }
+
+  function populateProductDropdown(products) {
+    const select = document.getElementById('productName');
+    if (!products) {
+      onFailure({ message: "サーバーから空の応答がありました。" });
+      return;
+    }
+
+    select.querySelector('option').textContent = '選択してください';
+    products.forEach(product => {
+      const option = document.createElement('option');
+      option.value = product.name;
+      option.textContent = product.name;
+      option.dataset.fileId = product.fileId;
+      select.appendChild(option);
+    });
+    select.disabled = false;
+  }
+
+  function displayProductImage(selectElement) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const fileId = selectedOption.dataset.fileId;
+    const imageContainer = document.getElementById('product-image-container');
+    const imageEl = document.getElementById('product-image');
+
+    if (fileId) {
+      imageEl.style.display = 'none';
+      imageContainer.style.display = 'block';
+
+      if (imageCache[fileId]) {
+        imageEl.src = imageCache[fileId];
+        imageEl.style.display = 'block';
+        return;
+      }
+
+      imageContainer.innerHTML = '<span>画像を読み込み中...</span>';
+
+      gasPost({ action: 'getProductImage', fileId: fileId })
+        .then(result => {
+          const base64data = result.image;
+          if (base64data) {
+            imageCache[fileId] = base64data;
+            imageContainer.innerHTML = '';
+            imageEl.src = base64data;
+            imageEl.style.display = 'block';
+            imageContainer.appendChild(imageEl);
+          } else {
+            imageContainer.innerHTML = '<span>画像の表示に失敗しました</span>';
+          }
+        })
+        .catch(err => {
+          imageContainer.innerHTML = '<span>画像の表示に失敗しました</span>';
+          console.error(err);
+        });
+    } else {
+      imageContainer.style.display = 'none';
+      imageEl.src = '';
+    }
+  }
+
+  function createProductRow() {
+    const div = document.createElement('div');
+    const select = createSelect('productName', '商品名', ["読み込み中..."], true);
+    const selectElement = select.querySelector('select');
+    selectElement.disabled = true;
+    selectElement.setAttribute('onchange', 'displayProductImage(this)');
+
+    const imageContainer = document.createElement('div');
+    imageContainer.id = 'product-image-container';
+    imageContainer.className = 'product-image-container';
+    imageContainer.style.display = 'none';
+
+    const imageEl = document.createElement('img');
+    imageEl.id = 'product-image';
+    imageContainer.appendChild(imageEl);
+
+    const quantity = createFormRow('quantity', '数量', 'number', true, '1');
+
+    div.append(select, imageContainer, quantity);
+    return div;
+  }
+
+  function checkRequiredFields() {
+    const e = ["staffId","productName","quantity","orderer_name","orderer_furigana","orderer_zip1","orderer_zip2","orderer_pref","orderer_city","orderer_address","orderer_tel1","orderer_tel2","orderer_tel3","orderer_email"];
+    if (document.getElementById("shipToDifferentAddress").checked) e.push("recipient_name","recipient_furigana","recipient_zip1","recipient_zip2","recipient_pref","recipient_city","recipient_address","recipient_tel1","recipient_tel2","recipient_tel3");
+    if ("specify" === document.querySelector('input[name="deliveryPref"]:checked').value) e.push("deliveryDate");
+    for (const t of e) {
+      const el = document.getElementById(t);
+      if (!el || !el.value || "" === el.value.trim()) {
+        const labelEl = el ? (el.closest(".form-row, .form-row > div").querySelector("label")) : null;
+        const labelText = labelEl ? labelEl.textContent.replace(/必須|任意/g, "").trim() : t;
+        alert(el ? `必須項目「${labelText}」が入力されていません。` : ("フォームの必須項目が見つかりません。 ID: " + t));
+        if (el) el.focus();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function showConfirmation() {
+    if (!checkRequiredFields()) return;
+    const e = { name: getValue("orderer_name"), furigana: getValue("orderer_furigana"), zipcode: `${getValue("orderer_zip1")}-${getValue("orderer_zip2")}`, pref: getValue("orderer_pref"), city: getValue("orderer_city"), address: getValue("orderer_address"), tel: `${getValue("orderer_tel1")}-${getValue("orderer_tel2")}-${getValue("orderer_tel3")}`, email: getValue("orderer_email") };
+    const t = document.getElementById("shipToDifferentAddress").checked;
+    const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
+    const n = document.getElementById("product-image").src;
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: n.startsWith("data:image") ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "" };
+    formDataGlobal = { orderer: e, recipient: o, order: r };
+    let c = `
+      <div class="form-section">
+        <h3>ご注文者様・ご注文品情報</h3>
+        <p><span>受付者社員番号:</span> <span>${r.staffId}</span></p>
+        <p><span>商品名:</span> <span>${r.productName}</span></p>
+        ${r.productImage ? `<div><img id="confirm-image" src="${r.productImage}"></div>` : ""}
+        <p><span>数量:</span> <span>${r.quantity}</span></p>
+        <p><span>希望配達日:</span> <span>${r.deliveryDate || "指定なし"}</span></p>
+        <hr class="section-divider">
+        ${generateConfirmPersonHtml(e)}
+      </div>
+      <div class="form-section">
+        <h3>お届け先様情報</h3>
+        ${generateConfirmPersonHtml(o)}
+        ${t ? `
+          <hr class="section-divider">
+          <p><span>のしの種類:</span> <span>${r.noshiType || "なし"}</span></p>
+          ${r.noshiName ? `<p><span>のし名入れ:</span> <span>${r.noshiName}</span></p>` : ""}
+        ` : ""}
+      </div>
+    `;
+    document.getElementById("confirm-display").innerHTML = c;
+    switchView("confirm");
+  }
+
+  function printReceipt() {
+    originalBodyHtml = document.body.innerHTML;
+    const e = formDataGlobal.printableNode;
+    if (e) {
+      document.body.innerHTML = "";
+      document.body.appendChild(e);
+      window.print();
+    } else {
+      alert("印刷するデータが見つかりません。");
+    }
+  }
+
+  window.addEventListener("afterprint", () => {
+    if (originalBodyHtml) {
+      document.body.innerHTML = originalBodyHtml;
+      originalBodyHtml = null;
+    }
+  });
+
+  function showComplete() {
+    switchView("complete");
+    formDataGlobal.printableNode = document.querySelector("#form-confirm .printable-area").cloneNode(!0);
+    window.scrollTo(0, 0);
+  }
+
+  function buildFormStructure() {
+    const e = document.getElementById("orderer-section");
+    e.appendChild(createFormRow("staffId", "受付者社員番号", "number", !0, "12345"));
+    e.appendChild(document.createElement("hr")).className = "section-divider";
+    e.appendChild(createProductRow());
+    e.appendChild(createDeliveryDateRow());
+    e.appendChild(document.createElement("hr")).className = "section-divider";
+    e.appendChild(createFormRow("orderer_name", "お名前", "text", !0, "山田 太郎"));
+    e.appendChild(createFormRow("orderer_furigana", "フリガナ", "text", !0, "ヤマダ タロウ"));
+    e.appendChild(createZipRow("orderer", "郵便番号"));
+    e.appendChild(createPrefRow("orderer_pref", "都道府県"));
+    e.appendChild(createFormRow("orderer_city", "市区町村", "text", !0));
+    e.appendChild(createFormRow("orderer_address", "番地・建物名", "text", !0));
+    e.appendChild(createTelRow("orderer", "電話番号"));
+    e.appendChild(createFormRow("orderer_email", "メールアドレス", "email", !0, "test@example.com"));
+
+    const t = document.getElementById("recipient-section");
+    t.appendChild(createFormRow("recipient_name", "お名前", "text", !0, "鈴木 一郎"));
+    t.appendChild(createFormRow("recipient_furigana", "フリガナ", "text", !0, "スズキ イチロウ"));
+    t.appendChild(createZipRow("recipient", "郵便番号"));
+    t.appendChild(createPrefRow("recipient_pref", "都道府県"));
+    t.appendChild(createFormRow("recipient_city", "市区町村", "text", !0));
+    t.appendChild(createFormRow("recipient_address", "番地・建物名", "text", !0));
+    t.appendChild(createTelRow("recipient", "電話番号"));
+    t.appendChild(document.createElement("hr")).className = "section-divider";
+    t.appendChild(createNoshiRow());
+  }
+
+  function toggleRecipientForm() {
+    const e = document.getElementById("recipient-section");
+    const t = document.getElementById("shipToDifferentAddress").checked;
+    e.style.display = t ? "block" : "none";
+  }
+
+  function toggleDeliveryDate(e) {
+    document.getElementById("deliveryDate").style.display = "specify" === e.value ? "block" : "none";
+  }
+
+  function generateConfirmPersonHtml(e) {
+    return `
+      <p><span>お名前:</span> <span>${e.name} (${e.furigana})</span></p>
+      <p><span>ご住所:</span> <span>〒${e.zipcode} ${e.pref}${e.city}${e.address}</span></p>
+      <p><span>電話番号:</span> <span>${e.tel}</span></p>
+      ${e.email ? `<p><span>メールアドレス:</span> <span>${e.email}</span></p>` : ""}
+    `;
+  }
+
+  function getValue(e) {
+    return document.getElementById(e) ? document.getElementById(e).value : "";
+  }
+
+  function submitForm() {
+    const btn = document.querySelector("#form-confirm .btn-primary");
+    btn.disabled = !0;
+    btn.textContent = "送信中...";
+    gasPost({ action: 'submitForm', payload: formDataGlobal })
+      .then(result => {
+        if (result && "success" === result.status) {
+          showComplete();
+        } else {
+          alert("送信に失敗しました。時間をおいて再度お試しください。\nエラー: " + (result ? (result.message || result.error || 'Unknown error') : "Unknown error"));
+          btn.disabled = !1;
+          btn.textContent = "この内容で送信する";
+        }
+      })
+      .catch(err => {
+        alert("サーバーとの通信に失敗しました。\n" + err.message);
+        btn.disabled = !1;
+        btn.textContent = "この内容で送信する";
+      });
+  }
+
+  function showInput() { switchView("input"); }
+
+  function switchView(e) {
+    ["input", "confirm", "complete"].forEach(t => {
+      document.getElementById(`form-${t}`).style.display = t === e ? "block" : "none";
+      document.getElementById(`step-${t}`).classList.toggle("active", t === e);
+    });
+    if (["confirm", "complete"].includes(e)) document.getElementById("step-input").classList.add("active");
+    if ("complete" === e) document.getElementById("step-confirm").classList.add("active");
+  }
+
+  function searchAddress(e, t, o, n) {
+    const r = document.getElementById(e).value;
+    const c = document.getElementById(t).value;
+    if (!r || !c) return alert("郵便番号を入力してください。");
+    fetch("https://zipcloud.ibsnet.co.jp/api/search?zipcode=" + r + c)
+      .then(e => e.json())
+      .then(e => {
+        if (e.results) {
+          document.getElementById(o).value = e.results[0].address1;
+          document.getElementById(n).value = e.results[0].address2 + (e.results[0].address3 || "");
+        } else {
+          alert("該当する住所が見つかりませんでした。");
+        }
+      })
+      .catch(() => alert("住所の検索に失敗しました。"));
+  }
+
+  function createFormRow(e, t, o, n, r = "") {
+    const c = document.createElement("div");
+    c.className = "form-row";
+    const l = document.createElement("label");
+    l.htmlFor = e;
+    l.textContent = t;
+    l.innerHTML += n ? ' <span class="required-tag">必須</span>' : ' <span class="optional-tag">任意</span>';
+    const d = document.createElement("input");
+    d.type = o;
+    d.id = e;
+    d.name = e;
+    d.placeholder = r;
+    if (n) d.required = !0;
+    c.appendChild(l);
+    c.appendChild(d);
+    return c;
+  }
+
+  function createZipRow(e, t) {
+    const o = document.createElement("div");
+    o.className = "form-row";
+    const n = document.createElement("label");
+    n.textContent = t;
+    n.innerHTML += ' <span class="required-tag">必須</span>';
+    const r = document.createElement("div");
+    r.className = "multi-input zipcode";
+    const c = e + "_zip1", l = e + "_zip2", d = e + "_pref", a = e + "_city";
+    const i = document.createElement("input");
+    i.type = "tel"; i.id = c; i.maxLength = 3; i.required = !0;
+    const s = document.createElement("span");
+    s.className = "input-separator"; s.textContent = "-";
+    const p = document.createElement("input");
+    p.type = "tel"; p.id = l; p.maxLength = 4; p.required = !0;
+    const m = document.createElement("button");
+    m.type = "button"; m.className = "btn-address-search"; m.textContent = "住所検索";
+    m.onclick = () => searchAddress(c, l, d, a);
+    r.append(i, s, p, m);
+    o.append(n, r);
+    return o;
+  }
+
+  function createPrefRow(e, t) {
+    const o = document.createElement("div");
+    o.className = "form-row";
+    const n = document.createElement("label");
+    n.htmlFor = e; n.textContent = t;
+    n.innerHTML += ' <span class="required-tag">必須</span>';
+    const r = document.createElement("select");
+    r.id = e; r.name = e; r.required = !0;
+    const c = ["", "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+    c.forEach(e => {
+      const t = document.createElement("option");
+      t.value = e; t.textContent = e || "選択してください";
+      r.appendChild(t);
+    });
+    o.append(n, r);
+    return o;
+  }
+
+  function createTelRow(e, t) {
+    const o = document.createElement("div");
+    o.className = "form-row";
+    const n = document.createElement("label");
+    n.textContent = t;
+    n.innerHTML += ' <span class="required-tag">必須</span>';
+    const r = document.createElement("div");
+    r.className = "multi-input tel";
+    const c = document.createElement("input"); c.type = "tel"; c.id = e + "_tel1"; c.required = !0;
+    const l = document.createElement("span"); l.className = "input-separator"; l.textContent = "-";
+    const d = document.createElement("input"); d.type = "tel"; d.id = e + "_tel2"; d.required = !0;
+    const a = document.createElement("span"); a.className = "input-separator"; a.textContent = "-";
+    const i = document.createElement("input"); i.type = "tel"; i.id = e + "_tel3"; i.required = !0;
+    r.append(c, l, d, a, i);
+    o.append(n, r);
+    return o;
+  }
+
+  function createDeliveryDateRow() {
+    const e = document.createElement("div");
+    e.className = "form-row";
+    const t = document.createElement("label");
+    t.textContent = "希望配達日";
+    const o = document.createElement("div");
+    o.className = "radio-group";
+    o.innerHTML = '<label><input type="radio" name="deliveryPref" value="none" checked onchange="toggleDeliveryDate(this)"> 指定しない</label><label><input type="radio" name="deliveryPref" value="specify" onchange="toggleDeliveryDate(this)"> 指定する</label>';
+    const n = document.createElement("input");
+    n.type = "date"; n.id = "deliveryDate"; n.style.display = "none";
+    const r = new Date;
+    r.setDate(r.getDate() + 14);
+    n.min = r.toISOString().split("T")[0];
+    e.append(t, o, n);
+    return e;
+  }
+
+  function createNoshiRow() {
+    const e = document.createElement("div");
+    const t = ["なし","御祝","内祝","御礼","御中元","御歳暮","その他"];
+    const o = createSelect("noshiType", "のしの種類", t, !1);
+    const n = createFormRow("noshiName", "のし名入れ", "text", !1, "山田 太郎");
+    e.append(o, n);
+    return e;
+  }
+
+  function createSelect(e, t, o, n) {
+    const r = document.createElement("div");
+    r.className = "form-row";
+    const c = document.createElement("label");
+    c.htmlFor = e; c.textContent = t;
+    c.innerHTML += n ? ' <span class="required-tag">必須</span>' : ' <span class="optional-tag">任意</span>';
+    const l = document.createElement("select");
+    l.id = e; l.name = e;
+    if (n) l.required = !0;
+    const d = ["選択してください", "なし", "読み込み中..."];
+    o.forEach(e => {
+      const t = document.createElement("option");
+      t.value = d.includes(e) ? "" : e;
+      t.textContent = e;
+      l.appendChild(t);
+    });
+    r.append(c, l);
+    return r;
+  }
+</script>
+  </body>
+</html>
