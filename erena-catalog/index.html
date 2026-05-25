@@ -66,6 +66,14 @@
     <div class="container">
       <div class="header"><h2>エレナ カタログギフト お申し込みフォーム</h2></div>
       <div class="content">
+        <div id="store-display" style="background:#fff4e8;border:1px solid #f0c896;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;display:none;">
+          ご利用店舗: <span id="store-name"></span>
+        </div>
+        <div id="store-error" style="background:#fdecea;border:1px solid #f5c2c0;border-radius:4px;padding:20px;margin-bottom:20px;text-align:center;color:#c0392b;display:none;">
+          <h3 style="margin-bottom:8px;">店舗専用URLでアクセスしてください</h3>
+          <p style="margin:0;font-size:14px;">各店舗に配布されている専用URLからアクセスしてください。</p>
+        </div>
+        <div id="main-content">
         <div class="progress-bar">
           <span class="progress-item active" id="step-input">入力</span>
           <span class="progress-item" id="step-confirm">確認</span>
@@ -104,11 +112,51 @@
             <button type="button" class="btn btn-secondary" onclick="location.reload()">TOPに戻る</button>
           </div>
         </div>
+        </div><!-- /#main-content -->
       </div>
     </div>
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKlZQFhOpxk71eL9WLfMeSW5bDGp6UrpV7EfkYUIY-kKteMKe9oby9OiCUH7joltYj/exec';
+
+  const STORE_MAP = {
+    // 長崎県北エリア
+    'tabira': 'エレナ田平店','sasa': 'エレナ佐々店','ainoura': 'エレナ相浦店','yoshioka': 'エレナ吉岡店',
+    'ono': 'エレナ大野店','aioi': 'エレナ相生店','nakiri': 'エレナ名切店','kyotsubo': 'エレナ京坪店',
+    'ekimachi': 'エレナえきマチ1丁目店','sasebo-gobangai': 'エレナさせぼ五番街店','yamazumi': 'エレナ山祇店',
+    'tenjin': 'エレナ天神店','daito': 'エレナ大塔店','hasami': 'エレナ波佐見店','kawatana': 'エレナ川棚店',
+    'hirota': 'エレナ広田店','saikai': 'エレナ西海店',
+    // 佐賀エリア
+    'imari': 'エレナ伊万里店','ouchi': 'エレナ相知店','tara': 'エレナ太良店',
+    // 長崎県央エリア
+    'takematsu': 'エレナ竹松店','omura-chuo': 'エレナ大村中央店','kubara': 'エレナ久原店','takaki': 'エレナ高来店',
+    // 島原エリア
+    'kunimi': 'エレナ国見店','shimabara': 'エレナ島原店','shimabara-sakaemachi': 'エレナ島原栄町店',
+    // 長崎県南エリア
+    'nagayo': 'エレナ長与店','togitsu': 'エレナ時津店','pratto-nagasaki': 'エレナプラっとモール長崎店',
+    'inasa': 'エレナ稲佐店','koebaru': 'エレナ小江原店','kamikoshima': 'エレナ上小島店','fukuda': 'エレナ福田店',
+    'himi': 'エレナ日見店','yagami': 'エレナ矢上店','fukabori': 'エレナ深堀店','sanwa': 'エレナ三和店',
+    // 五島エリア
+    'fc-kamigoto': 'エレナFC上五島店','fc-arikawa': 'エレナFC有川店','fc-fukue': 'エレナFC福江店',
+    // 壱岐エリア
+    'fc-iki-gonoura': 'エレナFC壱岐郷ノ浦店'
+  };
+
+  let currentStoreName = '';
+
+  function initStore() {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get('s');
+    if (!sid || !STORE_MAP[sid]) {
+      document.getElementById('store-error').style.display = 'block';
+      document.getElementById('main-content').style.display = 'none';
+      return false;
+    }
+    currentStoreName = STORE_MAP[sid];
+    document.getElementById('store-name').textContent = currentStoreName;
+    document.getElementById('store-display').style.display = 'block';
+    return true;
+  }
 
   function gasPost(payload) {
     return fetch(GAS_URL, {
@@ -123,6 +171,7 @@
   let imageCache = {};
 
   document.addEventListener('DOMContentLoaded', function() {
+    if (!initStore()) return;
     buildFormStructure();
     gasPost({ action: 'getProducts' })
       .then(result => {
@@ -244,11 +293,12 @@
     const t = document.getElementById("shipToDifferentAddress").checked;
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
-    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: n.startsWith("data:image") ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "" };
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: n.startsWith("data:image") ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "", store: currentStoreName };
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
         <h3>ご注文者様・ご注文品情報</h3>
+        <p><span>店舗:</span> <span>${r.store}</span></p>
         <p><span>受付者社員番号:</span> <span>${r.staffId}</span></p>
         <p><span>商品名:</span> <span>${r.productName}</span></p>
         ${r.productImage ? `<div><img id="confirm-image" src="${r.productImage}"></div>` : ""}
