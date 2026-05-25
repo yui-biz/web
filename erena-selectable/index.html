@@ -173,10 +173,22 @@
             <input type="date" id="purchaseDate" name="purchaseDate" class="short-input" required autocomplete="off">
           </div>
           <div class="form-row">
-            <label>購入店舗 <span class="required-tag">必須</span></label>
-            <select id="store" name="store" class="short-input" required autocomplete="off">
+            <label>購入エリア <span class="required-tag">必須</span></label>
+            <select id="area" name="area" class="short-input" required autocomplete="off" onchange="updateStoreOptions()">
               <option value="">選択してください</option>
-              <option value="エレナ 山店">エレナ 山店</option>
+              <option value="長崎県北エリア">長崎県北エリア</option>
+              <option value="佐賀エリア">佐賀エリア</option>
+              <option value="長崎県央エリア">長崎県央エリア</option>
+              <option value="島原エリア">島原エリア</option>
+              <option value="長崎県南エリア">長崎県南エリア</option>
+              <option value="五島エリア">五島エリア</option>
+              <option value="壱岐エリア">壱岐エリア</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>購入店舗 <span class="required-tag">必須</span></label>
+            <select id="store" name="store" class="short-input" required autocomplete="off" disabled>
+              <option value="">先にエリアを選択してください</option>
             </select>
           </div>
           <!-- ●WEBお申込み締切日: エレナから締切日確定後に解除 -->
@@ -220,6 +232,39 @@
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbyPqmQ48-6zM_C6s4y0Sj9Z4fEux1xSbzc48rwyiY6vdhkGVSoebTRqdwHmYKGKGl8F/exec';
+
+  const STORES_BY_AREA = {
+    '長崎県北エリア': ['エレナ田平店','エレナ佐々店','エレナ相浦店','エレナ吉岡店','エレナ大野店','エレナ相生店','エレナ名切店','エレナ京坪店','エレナえきマチ1丁目店','エレナさせぼ五番街店','エレナ山祇店','エレナ天神店','エレナ大塔店','エレナ波佐見店','エレナ川棚店','エレナ広田店','エレナ西海店'],
+    '佐賀エリア': ['エレナ伊万里店','エレナ相知店','エレナ太良店'],
+    '長崎県央エリア': ['エレナ竹松店','エレナ大村中央店','エレナ久原店','エレナ高来店'],
+    '島原エリア': ['エレナ国見店','エレナ島原店','エレナ島原栄町店'],
+    '長崎県南エリア': ['エレナ長与店','エレナ時津店','エレナプラっとモール長崎店','エレナ稲佐店','エレナ小江原店','エレナ上小島店','エレナ福田店','エレナ日見店','エレナ矢上店','エレナ深堀店','エレナ三和店'],
+    '五島エリア': ['エレナFC上五島店','エレナFC有川店','エレナFC福江店'],
+    '壱岐エリア': ['エレナFC壱岐郷ノ浦店']
+  };
+
+  function updateStoreOptions() {
+    const area = document.getElementById('area').value;
+    const storeSel = document.getElementById('store');
+    storeSel.innerHTML = '';
+    if (!area) {
+      storeSel.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '先にエリアを選択してください';
+      storeSel.appendChild(opt);
+      return;
+    }
+    storeSel.disabled = false;
+    const placeholder = document.createElement('option');
+    placeholder.value = ''; placeholder.textContent = '選択してください';
+    storeSel.appendChild(placeholder);
+    (STORES_BY_AREA[area] || []).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      storeSel.appendChild(opt);
+    });
+  }
+
   let formDataGlobal = {};
 
   function searchAddress() {
@@ -266,6 +311,7 @@
       tel: document.getElementById('tel1').value + '-' + document.getElementById('tel2').value + '-' + document.getElementById('tel3').value,
       catalog: document.getElementById('catalog').value,
       purchaseDate: document.getElementById('purchaseDate').value,
+      area: document.getElementById('area').value,
       store: document.getElementById('store').value
     };
 
@@ -274,7 +320,7 @@
       document.getElementById('zipcode1').value, document.getElementById('zipcode2').value,
       formDataGlobal.pref, formDataGlobal.city, formDataGlobal.address,
       document.getElementById('tel1').value, document.getElementById('tel2').value, document.getElementById('tel3').value,
-      formDataGlobal.catalog, formDataGlobal.purchaseDate, formDataGlobal.store
+      formDataGlobal.catalog, formDataGlobal.purchaseDate, formDataGlobal.area, formDataGlobal.store
     ];
     if (!requiredInputs.every(v => v.trim() !== '')) {
       alert('必須項目が入力されていません。');
@@ -290,7 +336,7 @@
     document.getElementById('confirm-tel').textContent = formDataGlobal.tel;
     document.getElementById('confirm-catalog').textContent = formDataGlobal.catalog;
     document.getElementById('confirm-purchaseDate').textContent = formDataGlobal.purchaseDate;
-    document.getElementById('confirm-store').textContent = formDataGlobal.store;
+    document.getElementById('confirm-store').textContent = formDataGlobal.area + ' / ' + formDataGlobal.store;
 
     document.getElementById('form-input').style.display = 'none';
     document.getElementById('form-confirm').style.display = 'block';
