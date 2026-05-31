@@ -103,7 +103,16 @@
       .modal-content dl { margin: 0; }
       .modal-content dt { font-weight: bold; color: #555; margin-top: 12px; font-size: 13px; }
       .modal-content dd { margin: 4px 0 0 0; padding-left: 8px; }
-      .modal-close { background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-top: 20px; float: right; }
+      .modal-close { background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+      .modal-btn { background: #007BFF; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+      .modal-btn:hover { background: #0056b3; }
+      .modal-btn:disabled { background: #aaa; cursor: not-allowed; }
+      .modal-btn.save { background: #28a745; }
+      .modal-btn.save:hover { background: #218838; }
+      .modal-content .edit-form { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; }
+      .modal-content .edit-form label { font-weight: bold; color: #555; font-size: 13px; align-self: center; }
+      .modal-content .edit-form input, .modal-content .edit-form select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box; }
+      .modal-content .edit-form .section-divider-row { grid-column: 1 / -1; border-top: 1px solid #ddd; margin-top: 8px; padding-top: 8px; font-weight: bold; color: #007BFF; }
       @media (max-width: 600px) {
         .home-buttons { grid-template-columns: 1fr; }
         .summary-cards { grid-template-columns: repeat(2, 1fr); }
@@ -193,9 +202,10 @@
         <!-- 注文詳細モーダル -->
         <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
           <div class="modal-content">
-            <h3>注文詳細</h3>
+            <h3 id="order-detail-title">注文詳細</h3>
             <div id="order-detail-body"></div>
-            <button class="modal-close" onclick="closeOrderDetail()">閉じる</button>
+            <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
+            <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
             <div style="clear:both;"></div>
           </div>
         </div>
@@ -441,6 +451,14 @@
   function showOrderDetail(idx) {
     const o = (window._orderCache || {})[idx];
     if (!o) return;
+    window._currentDetailOrder = JSON.parse(JSON.stringify(o));  // 編集前バックアップ
+    renderDetailView(o);
+    document.getElementById('order-detail-modal').classList.add('active');
+    setDetailMessage('', null);
+  }
+
+  function renderDetailView(o) {
+    document.getElementById('order-detail-title').textContent = '注文詳細';
     const dt = new Date(o.timestamp);
     const html =
       '<dl>' +
@@ -459,11 +477,138 @@
         '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
       '</dl>';
     document.getElementById('order-detail-body').innerHTML = html;
-    document.getElementById('order-detail-modal').classList.add('active');
+    document.getElementById('order-detail-buttons').innerHTML =
+      '<button class="modal-btn" onclick="enterEditMode()">編集</button>' +
+      '<button class="modal-close" onclick="closeOrderDetail()" style="margin-left:8px;">閉じる</button>';
+  }
+
+  function enterEditMode() {
+    const o = window._currentDetailOrder;
+    document.getElementById('order-detail-title').textContent = '注文編集';
+    const dt = new Date(o.timestamp);
+
+    // 商品名選択肢: getProducts のキャッシュ window._cachedProducts から
+    const productOpts = (window._cachedProducts || []).map(function(p) {
+      return '<option value="' + escapeHtml(p.name) + '"' + (p.name === o.productName ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>';
+    }).join('');
+
+    const PREFS = ["","北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+    const prefOpts = function(sel) { return PREFS.map(function(p) { return '<option value="' + p + '"' + (p === sel ? ' selected' : '') + '>' + (p || '選択してください') + '</option>'; }).join(''); };
+
+    const NOSHI = ["", "御祝", "内祝", "御礼", "御中元", "御歳暮", "その他"];
+    const noshiOpts = NOSHI.map(function(n) { return '<option value="' + n + '"' + (n === (o.noshiType || '') ? ' selected' : '') + '>' + (n || 'なし') + '</option>'; }).join('');
+
+    const html =
+      '<div class="edit-form">' +
+        '<label>申込日時</label><span>' + dt.toLocaleString('ja-JP') + ' <small style="color:#999;">(編集不可)</small></span>' +
+        '<label>店舗</label><input type="text" id="edit-store" value="' + escapeHtml(o.store || '') + '">' +
+        '<label>受付者社員番号</label><input type="number" id="edit-staffId" value="' + escapeHtml(o.staffId || '') + '">' +
+
+        '<div class="section-divider-row">商品</div>' +
+        '<label>商品名</label><select id="edit-productName">' + productOpts + '</select>' +
+        '<label>数量</label><input type="number" id="edit-quantity" min="1" value="' + (o.quantity || 1) + '">' +
+        '<label>希望配達日</label><input type="date" id="edit-deliveryDate" value="' + (o.deliveryDate || '') + '">' +
+        '<label>のしの種類</label><select id="edit-noshiType">' + noshiOpts + '</select>' +
+        '<label>のし名入れ</label><input type="text" id="edit-noshiName" value="' + escapeHtml(o.noshiName || '') + '">' +
+
+        '<div class="section-divider-row">ご注文者</div>' +
+        '<label>お名前</label><input type="text" id="edit-ordererName" value="' + escapeHtml(o.ordererName || '') + '">' +
+        '<label>フリガナ</label><input type="text" id="edit-ordererFurigana" value="' + escapeHtml(o.ordererFurigana || '') + '">' +
+        '<label>郵便番号</label><input type="text" id="edit-ordererZip" value="' + escapeHtml(o.ordererZip || '') + '">' +
+        '<label>都道府県</label><select id="edit-ordererPref">' + prefOpts(o.ordererPref || '') + '</select>' +
+        '<label>市区町村</label><input type="text" id="edit-ordererCity" value="' + escapeHtml(o.ordererCity || '') + '">' +
+        '<label>番地・建物名</label><input type="text" id="edit-ordererAddress" value="' + escapeHtml(o.ordererAddress || '') + '">' +
+        '<label>電話番号</label><input type="text" id="edit-ordererTel" value="' + escapeHtml(o.ordererTel || '') + '">' +
+        '<label>メールアドレス</label><input type="email" id="edit-ordererEmail" value="' + escapeHtml(o.ordererEmail || '') + '">' +
+
+        '<div class="section-divider-row">お届け先</div>' +
+        '<label>お名前</label><input type="text" id="edit-recipientName" value="' + escapeHtml(o.recipientName || '') + '">' +
+        '<label>フリガナ</label><input type="text" id="edit-recipientFurigana" value="' + escapeHtml(o.recipientFurigana || '') + '">' +
+        '<label>郵便番号</label><input type="text" id="edit-recipientZip" value="' + escapeHtml(o.recipientZip || '') + '">' +
+        '<label>都道府県</label><select id="edit-recipientPref">' + prefOpts(o.recipientPref || '') + '</select>' +
+        '<label>市区町村</label><input type="text" id="edit-recipientCity" value="' + escapeHtml(o.recipientCity || '') + '">' +
+        '<label>番地・建物名</label><input type="text" id="edit-recipientAddress" value="' + escapeHtml(o.recipientAddress || '') + '">' +
+        '<label>電話番号</label><input type="text" id="edit-recipientTel" value="' + escapeHtml(o.recipientTel || '') + '">' +
+      '</div>';
+
+    document.getElementById('order-detail-body').innerHTML = html;
+    document.getElementById('order-detail-buttons').innerHTML =
+      '<button class="modal-close" onclick="cancelEdit()">キャンセル</button>' +
+      '<button class="modal-btn save" id="save-edit-btn" onclick="saveOrderEdit()">保存</button>';
+    setDetailMessage('変更内容を「保存」すると、メーカーへ変更通知メールが自動送信されます', null);
+  }
+
+  function cancelEdit() {
+    renderDetailView(window._currentDetailOrder);
+    setDetailMessage('', null);
+  }
+
+  function getEditVal(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  function saveOrderEdit() {
+    const o = window._currentDetailOrder;
+    const fields = {
+      store: getEditVal('edit-store'),
+      staffId: getEditVal('edit-staffId'),
+      productName: getEditVal('edit-productName'),
+      quantity: getEditVal('edit-quantity'),
+      deliveryDate: getEditVal('edit-deliveryDate'),
+      noshiType: getEditVal('edit-noshiType'),
+      noshiName: getEditVal('edit-noshiName'),
+      ordererName: getEditVal('edit-ordererName'),
+      ordererFurigana: getEditVal('edit-ordererFurigana'),
+      ordererZip: getEditVal('edit-ordererZip'),
+      ordererPref: getEditVal('edit-ordererPref'),
+      ordererCity: getEditVal('edit-ordererCity'),
+      ordererAddress: getEditVal('edit-ordererAddress'),
+      ordererTel: getEditVal('edit-ordererTel'),
+      ordererEmail: getEditVal('edit-ordererEmail'),
+      recipientName: getEditVal('edit-recipientName'),
+      recipientFurigana: getEditVal('edit-recipientFurigana'),
+      recipientZip: getEditVal('edit-recipientZip'),
+      recipientPref: getEditVal('edit-recipientPref'),
+      recipientCity: getEditVal('edit-recipientCity'),
+      recipientAddress: getEditVal('edit-recipientAddress'),
+      recipientTel: getEditVal('edit-recipientTel')
+    };
+    const btn = document.getElementById('save-edit-btn');
+    btn.disabled = true; btn.textContent = '保存中...';
+    setDetailMessage('保存中...', null);
+
+    gasPost({
+      action: 'updateOrder',
+      params: { rowIdx: o.rowIdx, fields: fields, storeId: currentStoreId, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.disabled = false; btn.textContent = '保存';
+      if (result && result.success) {
+        setDetailMessage(result.message + (result.changes && result.changes.length > 0 ? '。メーカー変更通知メール送信済み' : ''), 'success');
+        // 1.5秒後にリスト再読み込み + モーダル閉じる
+        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1500);
+      } else {
+        setDetailMessage('エラー: ' + (result.error || '不明なエラー'), 'error');
+      }
+    }).catch(function(err) {
+      btn.disabled = false; btn.textContent = '保存';
+      setDetailMessage('通信エラー: ' + err.message, 'error');
+    });
+  }
+
+  function setDetailMessage(msg, type) {
+    const el = document.getElementById('order-detail-msg');
+    if (!msg) { el.style.display = 'none'; return; }
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.background = type === 'error' ? '#fdecea' : (type === 'success' ? '#e8f5e9' : '#f0f9ff');
+    el.style.color = type === 'error' ? '#c0392b' : (type === 'success' ? '#2e7d32' : '#0066cc');
+    el.style.border = '1px solid ' + (type === 'error' ? '#f5c2c0' : (type === 'success' ? '#a5d6a7' : '#b3d9ff'));
   }
 
   function closeOrderDetail() {
     document.getElementById('order-detail-modal').classList.remove('active');
+    setDetailMessage('', null);
   }
 
   function showVerifying() {
@@ -591,6 +736,7 @@
   }
 
   function populateProductDropdown(products) {
+    window._cachedProducts = products || [];  // 編集モーダルの商品選択肢用にキャッシュ
     const select = document.getElementById('productName');
     if (!products) {
       onFailure({ message: "サーバーから空の応答がありました。" });
