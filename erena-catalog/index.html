@@ -82,7 +82,7 @@
       .home-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 600px; margin: 40px auto; }
       .home-btn { padding: 40px 20px; border: 2px solid #007BFF; border-radius: 8px; background: white; cursor: pointer; text-align: center; font-size: 18px; font-weight: bold; color: #007BFF; transition: all 0.2s; }
       .home-btn:hover { background: #007BFF; color: white; transform: translateY(-2px); }
-      .home-btn .icon { font-size: 36px; display: block; margin-bottom: 10px; }
+      .home-btn { padding-top: 50px; padding-bottom: 50px; }
       .back-btn { background: transparent; border: 1px solid #888; color: #555; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 20px; }
       .back-btn:hover { background: #f0f0f0; }
       .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
@@ -148,14 +148,8 @@
           <h3 style="text-align:center;margin-bottom:8px;">メニュー</h3>
           <p style="text-align:center;color:#666;font-size:14px;">操作を選択してください</p>
           <div class="home-buttons">
-            <div class="home-btn" onclick="showFormView()">
-              <span class="icon">📝</span>
-              申し込みフォーム
-            </div>
-            <div class="home-btn" onclick="showOrdersView()">
-              <span class="icon">📋</span>
-              申し込み確認
-            </div>
+            <div class="home-btn" onclick="showFormView()">申し込みフォーム</div>
+            <div class="home-btn" onclick="showOrdersView()">申し込み確認</div>
           </div>
         </div>
 
