@@ -67,15 +67,20 @@
       .ts-wrapper { width: 60%; }
       .ts-control { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
       .ts-dropdown .optgroup-header { background: #f5f5f5; color: #007BFF; font-weight: bold; padding: 6px 10px; }
-      .login-screen { max-width: 500px; margin: 0 auto; padding: 40px 20px; }
-      .login-screen h3 { text-align: center; margin-bottom: 24px; color: #333; }
-      .login-screen input[type="email"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 12px; }
-      .login-screen button { width: 100%; padding: 12px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-      .login-screen button:disabled { background: #aaa; cursor: not-allowed; }
-      .login-msg { margin-top: 16px; padding: 12px; border-radius: 4px; font-size: 14px; }
+      .login-screen { padding: 30px 20px; }
+      .login-screen > h3 { text-align: center; margin-bottom: 24px; color: #333; }
+      .login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin: 0 auto; }
+      .login-card { border: 1px solid #ddd; border-radius: 8px; padding: 24px; background: #fafafa; }
+      .login-card h4 { margin: 0 0 8px 0; color: #007BFF; font-size: 18px; border-bottom: 2px solid #007BFF; padding-bottom: 8px; }
+      .login-card p.role-desc { color: #666; font-size: 13px; margin: 0 0 16px 0; }
+      .login-card input[type="email"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 12px; }
+      .login-card button { width: 100%; padding: 12px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+      .login-card button:disabled { background: #aaa; cursor: not-allowed; }
+      .login-msg { margin-top: 12px; padding: 10px; border-radius: 4px; font-size: 13px; }
       .login-msg.success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
       .login-msg.error { background: #fdecea; border: 1px solid #f5c2c0; color: #c0392b; }
-      .login-help { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; font-size: 13px; color: #666; line-height: 1.6; }
+      .login-help { margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 4px; font-size: 13px; color: #666; line-height: 1.6; max-width: 900px; margin-left: auto; margin-right: auto; }
+      @media (max-width: 600px) { .login-grid { grid-template-columns: 1fr; } }
       .logout-btn { background: transparent; border: 1px solid #888; color: #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
       .logout-btn:hover { background: #f0f0f0; }
       .admin-badge { display: inline-block; background: #d32f2f; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px; vertical-align: middle; }
@@ -135,10 +140,22 @@
 
         <div id="login-screen" class="login-screen" style="display:none;">
           <h3>ログイン</h3>
-          <p style="text-align:center;color:#666;margin-bottom:20px;">店舗のメールアドレスを入力してください。<br>ログイン用のリンクをメールでお送りします。</p>
-          <input type="email" id="loginEmail" placeholder="例: 〇〇@ellena.co.jp" autocomplete="email">
-          <button type="button" id="loginBtn" onclick="requestLogin()">ログインリンクを送信</button>
-          <div id="login-msg" class="login-msg" style="display:none;"></div>
+          <div class="login-grid">
+            <div class="login-card">
+              <h4>店舗担当者の方</h4>
+              <p class="role-desc">エレナ各店舗の担当者向け<br>お申し込み入力・確認ができます</p>
+              <input type="email" id="loginEmail" placeholder="例: 〇〇@ellena.co.jp" autocomplete="email">
+              <button type="button" id="loginBtn" onclick="requestLogin()">ログインリンクを送信</button>
+              <div id="login-msg" class="login-msg" style="display:none;"></div>
+            </div>
+            <div class="login-card">
+              <h4>メーカー担当者の方</h4>
+              <p class="role-desc">商品を発送するメーカー担当者向け<br>自社商品の発注情報を確認できます</p>
+              <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
+              <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインリンクを送信</button>
+              <div id="login-msg-maker" class="login-msg" style="display:none;"></div>
+            </div>
+          </div>
           <div class="login-help">
             <strong>ログインリンクが届かない場合：</strong><br>
             ・迷惑メールフォルダをご確認ください<br>
@@ -254,6 +271,47 @@
         </div>
         </div><!-- /#form-view -->
         </div><!-- /#main-content -->
+
+        <!-- メーカー専用ビュー -->
+        <div id="maker-content" style="display:none;">
+          <div id="maker-display" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;">
+            メーカー: <span id="maker-name"></span><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span>
+            <button class="logout-btn" onclick="logout()">ログアウト</button>
+          </div>
+          <h3 style="margin-bottom:8px;">発注情報</h3>
+          <p style="color:#666;font-size:13px;margin-bottom:16px;" id="maker-product-note">自社で取り扱う商品の発注情報を表示しています。</p>
+          <div class="summary-cards">
+            <div class="summary-card"><div class="label">今日</div><div class="value" id="maker-cnt-today">-</div></div>
+            <div class="summary-card"><div class="label">今週</div><div class="value" id="maker-cnt-week">-</div></div>
+            <div class="summary-card"><div class="label">今月</div><div class="value" id="maker-cnt-month">-</div></div>
+            <div class="summary-card"><div class="label">累計</div><div class="value" id="maker-cnt-total">-</div></div>
+          </div>
+          <div class="orders-filter" id="maker-orders-filter" style="display:none;">
+            <label>商品で絞り込み:
+              <select id="maker-product-filter" onchange="loadMakerOrders()">
+                <option value="">すべての商品</option>
+              </select>
+            </label>
+          </div>
+          <div id="maker-orders-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
+          <div id="maker-orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">該当する発注はまだありません</div>
+          <div style="overflow-x:auto;">
+            <table class="orders-table" id="maker-orders-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>申込日時</th>
+                  <th>商品</th>
+                  <th>数量</th>
+                  <th>お届け先</th>
+                  <th>配達日</th>
+                  <th>店舗</th>
+                  <th>詳細</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -286,6 +344,9 @@
   let currentStoreName = '';
   let currentStoreId = '';
   let currentIsAdmin = false;
+  let currentRole = 'store';  // 'store' or 'maker'
+  let currentMakerEmail = '';
+  let currentMakerName = '';
 
   // === 認証関連 ===
   const AUTH_KEY = 'erena_auth';
@@ -306,7 +367,16 @@
 
   function saveAuth(storeId, storeName, isAdmin) {
     localStorage.setItem(AUTH_KEY, JSON.stringify({
+      role: 'store',
       storeId, storeName, isAdmin: !!isAdmin,
+      expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
+    }));
+  }
+
+  function saveAuthMaker(email, makerName, isAdmin) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify({
+      role: 'maker',
+      email, makerName, isAdmin: !!isAdmin,
       expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
     }));
   }
@@ -321,6 +391,7 @@
     document.getElementById('auth-verifying').style.display = 'none';
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('store-display').style.display = 'none';
+    document.getElementById('maker-content').style.display = 'none';
   }
 
   function showMainContent(storeId, storeName, isAdmin) {
@@ -687,6 +758,37 @@
     el.style.display = msg ? 'block' : 'none';
   }
 
+  function setLoginMessageMaker(msg, type) {
+    const el = document.getElementById('login-msg-maker');
+    el.textContent = msg;
+    el.className = 'login-msg ' + (type || '');
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function requestLoginMaker() {
+    const email = document.getElementById('loginEmailMaker').value.trim();
+    if (!email || !email.includes('@')) {
+      setLoginMessageMaker('有効なメールアドレスを入力してください', 'error');
+      return;
+    }
+    const btn = document.getElementById('loginBtnMaker');
+    btn.disabled = true; btn.textContent = '送信中...';
+    setLoginMessageMaker('', null);
+
+    gasPost({ action: 'requestMagicLinkMaker', email: email })
+      .then(result => {
+        if (result.success) {
+          setLoginMessageMaker(result.message, 'success');
+        } else {
+          setLoginMessageMaker(result.message || 'ログインリンク送信に失敗しました', 'error');
+        }
+      })
+      .catch(err => setLoginMessageMaker('通信エラー: ' + err.message, 'error'))
+      .finally(() => {
+        btn.disabled = false; btn.textContent = 'ログインリンクを送信';
+      });
+  }
+
   function requestLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     if (!email || !email.includes('@')) {
@@ -717,49 +819,75 @@
    */
   function authenticate() {
     const params = new URLSearchParams(window.location.search);
-    const sid = params.get('s');
+    const role = params.get('role');
     const token = params.get('t');
 
-    // ?s=&t= ありで来た = マジックリンククリック直後
-    // STORE_MAPに無いIDでも店舗マスタに存在すれば認証可（テスト/追加店舗対応）
+    // メーカー認証フロー: ?role=maker&m=&t=
+    if (role === 'maker' && token) {
+      const mEmail = params.get('m');
+      if (mEmail) {
+        showVerifying();
+        return gasPost({ action: 'verifyTokenMaker', email: mEmail, token: token })
+          .then(result => {
+            if (result.valid) {
+              saveAuthMaker(result.email, result.makerName, result.isAdmin);
+              history.replaceState(null, '', location.pathname);
+              return { role: 'maker', email: result.email, makerName: result.makerName, isAdmin: result.isAdmin };
+            } else {
+              showLoginScreen();
+              setLoginMessageMaker(_reasonText(result.reason), 'error');
+              return null;
+            }
+          })
+          .catch(err => { showLoginScreen(); setLoginMessageMaker('通信エラー: ' + err.message, 'error'); return null; });
+      }
+    }
+
+    // 店舗認証フロー: ?s=&t=
+    const sid = params.get('s');
     if (sid && token) {
       showVerifying();
       return gasPost({ action: 'verifyToken', storeId: sid, token: token })
         .then(result => {
           if (result.valid) {
             saveAuth(result.storeId, result.storeName, result.isAdmin);
-            // URLからトークン除去（履歴汚染&リロードでの再検証エラー防止）
             history.replaceState(null, '', location.pathname + '?s=' + encodeURIComponent(result.storeId));
-            return { storeId: result.storeId, storeName: result.storeName, isAdmin: result.isAdmin };
+            return { role: 'store', storeId: result.storeId, storeName: result.storeName, isAdmin: result.isAdmin };
           } else {
-            const reasons = {
-              expired: 'リンクの有効期限が切れています',
-              already_used: 'このリンクは既に使用されています',
-              not_found: 'リンクが無効です',
-              invalid_request: 'リクエストが不正です',
-              error: 'サーバーエラーが発生しました'
-            };
-            setLoginMessage(reasons[result.reason] || 'ログインに失敗しました。再度メールをご請求ください', 'error');
+            setLoginMessage(_reasonText(result.reason), 'error');
             showLoginScreen();
             return null;
           }
         })
-        .catch(err => {
-          setLoginMessage('通信エラー: ' + err.message, 'error');
-          showLoginScreen();
-          return null;
-        });
+        .catch(err => { setLoginMessage('通信エラー: ' + err.message, 'error'); showLoginScreen(); return null; });
     }
 
-    // ?s= のみ or なし → localStorage確認
+    // ?s= のみ or なし → localStorage 確認
     const stored = getStoredAuth();
-    if (stored && (!sid || stored.storeId === sid)) {
-      return Promise.resolve({ storeId: stored.storeId, storeName: stored.storeName, isAdmin: stored.isAdmin });
+    if (stored) {
+      if (stored.role === 'maker') {
+        return Promise.resolve({ role: 'maker', email: stored.email, makerName: stored.makerName, isAdmin: stored.isAdmin });
+      }
+      if (stored.role === 'store' || stored.storeId) {
+        if (!sid || stored.storeId === sid) {
+          return Promise.resolve({ role: 'store', storeId: stored.storeId, storeName: stored.storeName, isAdmin: stored.isAdmin });
+        }
+      }
     }
 
-    // 未認証 → ログイン画面
     showLoginScreen();
     return Promise.resolve(null);
+  }
+
+  function _reasonText(reason) {
+    const reasons = {
+      expired: 'リンクの有効期限が切れています',
+      already_used: 'このリンクは既に使用されています',
+      not_found: 'リンクが無効です',
+      invalid_request: 'リクエストが不正です',
+      error: 'サーバーエラーが発生しました'
+    };
+    return reasons[reason] || 'ログインに失敗しました。再度メールをご請求ください';
   }
 
   // 旧 initStore はもう使わない（authenticate に統合）
@@ -779,6 +907,11 @@
   document.addEventListener('DOMContentLoaded', function() {
     authenticate().then(auth => {
       if (!auth) return;  // ログイン画面表示中
+      if (auth.role === 'maker') {
+        showMakerContent(auth.email, auth.makerName, auth.isAdmin);
+        return;
+      }
+      // 店舗ログイン
       showMainContent(auth.storeId, auth.storeName, auth.isAdmin);
       buildFormStructure();
       gasPost({ action: 'getProducts' })
@@ -789,6 +922,117 @@
         .catch(err => onFailure(err));
     });
   });
+
+  // === メーカービュー ===
+  function showMakerContent(email, makerName, isAdmin) {
+    currentRole = 'maker';
+    currentMakerEmail = email;
+    currentMakerName = makerName;
+    currentIsAdmin = !!isAdmin;
+    document.getElementById('maker-name').textContent = makerName || '(担当者)';
+    document.getElementById('maker-admin-badge').style.display = currentIsAdmin ? 'inline-block' : 'none';
+    if (currentIsAdmin) {
+      document.getElementById('maker-product-note').textContent = '管理者権限で全メーカーの発注情報を表示しています。';
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('auth-verifying').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('store-display').style.display = 'none';
+    document.getElementById('maker-content').style.display = 'block';
+    loadMakerOrders();
+  }
+
+  function loadMakerOrders() {
+    const filterProduct = (document.getElementById('maker-product-filter') || {}).value || '';
+    document.getElementById('maker-orders-loading').style.display = 'block';
+    document.getElementById('maker-orders-empty').style.display = 'none';
+    document.getElementById('maker-orders-table').style.display = 'none';
+
+    gasPost({
+      action: 'getOrdersForMaker',
+      params: { email: currentMakerEmail, isAdmin: currentIsAdmin, filterProduct: filterProduct }
+    }).then(function(result) {
+      document.getElementById('maker-orders-loading').style.display = 'none';
+      if (result.error) { alert('読み込みエラー: ' + result.error); return; }
+
+      document.getElementById('maker-cnt-today').textContent = result.summary.today;
+      document.getElementById('maker-cnt-week').textContent = result.summary.thisWeek;
+      document.getElementById('maker-cnt-month').textContent = result.summary.thisMonth;
+      document.getElementById('maker-cnt-total').textContent = result.summary.total;
+
+      if (result.productList && result.productList.length > 0) {
+        document.getElementById('maker-orders-filter').style.display = 'block';
+        const sel = document.getElementById('maker-product-filter');
+        const currentValue = sel.value;
+        sel.innerHTML = '<option value="">すべての商品</option>';
+        result.productList.forEach(function(p) {
+          const opt = document.createElement('option');
+          opt.value = p; opt.textContent = p;
+          if (p === currentValue) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+
+      const orders = result.orders || [];
+      if (orders.length === 0) {
+        document.getElementById('maker-orders-empty').style.display = 'block';
+        return;
+      }
+      const tbody = document.querySelector('#maker-orders-table tbody');
+      tbody.innerHTML = '';
+      window._makerOrderCache = {};
+      orders.forEach(function(o, i) {
+        window._makerOrderCache[i] = o;
+        const dt = new Date(o.timestamp);
+        const pad = n => String(n).padStart(2, '0');
+        const timeStr = dt.getFullYear() + '/' + pad(dt.getMonth()+1) + '/' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + timeStr + '</td>' +
+          '<td>' + escapeHtml(o.productName || '') + '</td>' +
+          '<td>' + (o.quantity || '') + '</td>' +
+          '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+          '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
+          '<td>' + escapeHtml(o.store || '') + '</td>' +
+          '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>';
+        tbody.appendChild(tr);
+      });
+      document.getElementById('maker-orders-table').style.display = 'table';
+    }).catch(function(err) {
+      document.getElementById('maker-orders-loading').style.display = 'none';
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  function showMakerOrderDetail(idx) {
+    const o = (window._makerOrderCache || {})[idx];
+    if (!o) return;
+    window._currentDetailOrder = JSON.parse(JSON.stringify(o));
+    // 既存の renderDetailView を流用して表示するが、編集ボタンは非表示にする
+    renderDetailViewReadOnly(o);
+    document.getElementById('order-detail-modal').classList.add('active');
+    setDetailMessage('', null);
+  }
+
+  function renderDetailViewReadOnly(o) {
+    document.getElementById('order-detail-title').textContent = '発注詳細';
+    const dt = new Date(o.timestamp);
+    const html =
+      '<dl>' +
+      '<dt>申込日時</dt><dd>' + dt.toLocaleString('ja-JP') + '</dd>' +
+      '<dt>店舗</dt><dd>' + escapeHtml(o.store || '') + '</dd>' +
+      '<dt>商品</dt><dd>' + escapeHtml(o.productName) + ' × ' + o.quantity + '</dd>' +
+      '<dt>希望配達日</dt><dd>' + (o.deliveryDate || '指定なし') + '</dd>' +
+      '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>' +
+      '<dt>お届け先</dt><dd>' + escapeHtml(o.recipientName) + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') +
+        '<br>〒' + escapeHtml(o.recipientZip) + ' ' + escapeHtml(o.recipientPref) + escapeHtml(o.recipientCity) + escapeHtml(o.recipientAddress) +
+        '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
+      '<dt>ご注文者（発注元店舗の受付担当）</dt><dd>' + escapeHtml(o.ordererName || '') + ' / TEL: ' + escapeHtml(o.ordererTel || '') + '</dd>' +
+      '</dl>';
+    document.getElementById('order-detail-body').innerHTML = html;
+    document.getElementById('order-detail-buttons').innerHTML =
+      '<button class="modal-close" onclick="closeOrderDetail()">閉じる</button>';
+  }
 
   function onFailure(error) {
     const select = document.getElementById('productName');
