@@ -95,7 +95,7 @@
         <div id="login-screen" class="login-screen" style="display:none;">
           <h3>ログイン</h3>
           <p style="text-align:center;color:#666;margin-bottom:20px;">店舗のメールアドレスを入力してください。<br>ログイン用のリンクをメールでお送りします。</p>
-          <input type="email" id="loginEmail" placeholder="例: info@yui.gift" autocomplete="email">
+          <input type="email" id="loginEmail" placeholder="例: 〇〇@ellena.co.jp" autocomplete="email">
           <button type="button" id="loginBtn" onclick="requestLogin()">ログインリンクを送信</button>
           <div id="login-msg" class="login-msg" style="display:none;"></div>
           <div class="login-help">
@@ -424,7 +424,8 @@
     imageEl.id = 'product-image';
     imageContainer.appendChild(imageEl);
 
-    const quantity = createFormRow('quantity', '数量', 'number', true, '1');
+    const quantity = createFormRow('quantity', '数量', 'number', true, '');
+    quantity.querySelector('input').value = '1';  // デフォルト値1（placeholderだと入力済みと誤解されるため実値で）
 
     div.append(select, imageContainer, quantity);
     return div;
