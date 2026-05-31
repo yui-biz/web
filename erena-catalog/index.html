@@ -271,7 +271,8 @@
     const token = params.get('t');
 
     // ?s=&t= ありで来た = マジックリンククリック直後
-    if (sid && token && STORE_MAP[sid]) {
+    // STORE_MAPに無いIDでも店舗マスタに存在すれば認証可（テスト/追加店舗対応）
+    if (sid && token) {
       showVerifying();
       return gasPost({ action: 'verifyToken', storeId: sid, token: token })
         .then(result => {
