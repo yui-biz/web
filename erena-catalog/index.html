@@ -70,12 +70,16 @@
       .login-screen { padding: 30px 20px; }
       .login-screen > h3 { text-align: center; margin-bottom: 24px; color: #333; }
       .login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin: 0 auto; }
-      .login-card { border: 1px solid #ddd; border-radius: 8px; padding: 24px; background: #fafafa; }
+      .login-card { border: 1px solid #ddd; border-radius: 8px; padding: 24px; background: #fafafa; border-top: 4px solid #007BFF; }
       .login-card h4 { margin: 0 0 8px 0; color: #007BFF; font-size: 18px; border-bottom: 2px solid #007BFF; padding-bottom: 8px; }
       .login-card p.role-desc { color: #666; font-size: 13px; margin: 0 0 16px 0; }
       .login-card input[type="email"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 12px; }
       .login-card button { width: 100%; padding: 12px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
       .login-card button:disabled { background: #aaa; cursor: not-allowed; }
+      .login-card.maker { border-top-color: #28a745; }
+      .login-card.maker h4 { color: #28a745; border-bottom-color: #28a745; }
+      .login-card.maker button { background: #28a745; }
+      .login-card.maker button:hover:not(:disabled) { background: #218838; }
       .login-msg { margin-top: 12px; padding: 10px; border-radius: 4px; font-size: 13px; }
       .login-msg.success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
       .login-msg.error { background: #fdecea; border: 1px solid #f5c2c0; color: #c0392b; }
@@ -133,8 +137,8 @@
         <img src="https://res.cloudinary.com/yui-gift/image/upload/v1780210994/image_22_mqnxys.png" alt="エレナ 特選 夏ギフト 2026 カタログギフト お申し込みフォーム">
       </div>
       <div class="content">
-        <div id="store-display" style="background:#fff4e8;border:1px solid #f0c896;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;display:none;">
-          ご利用店舗: <span id="store-name"></span><span id="admin-badge" class="admin-badge" style="display:none;">管理者</span>
+        <div id="store-display" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;display:none;">
+          ログインアカウント: <span id="store-name"></span><span id="admin-badge" class="admin-badge" style="display:none;">管理者</span>
           <button class="logout-btn" onclick="logout()">ログアウト</button>
         </div>
 
@@ -148,7 +152,7 @@
               <button type="button" id="loginBtn" onclick="requestLogin()">ログインリンクを送信</button>
               <div id="login-msg" class="login-msg" style="display:none;"></div>
             </div>
-            <div class="login-card">
+            <div class="login-card maker">
               <h4>メーカー担当者の方</h4>
               <p class="role-desc">商品を発送するメーカー担当者向け<br>自社商品の発注情報を確認できます</p>
               <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
@@ -274,8 +278,8 @@
 
         <!-- メーカー専用ビュー -->
         <div id="maker-content" style="display:none;">
-          <div id="maker-display" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;">
-            メーカー: <span id="maker-name"></span><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span>
+          <div id="maker-display" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;">
+            ログインアカウント: <span id="maker-name"></span><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
           <h3 style="margin-bottom:8px;">発注情報</h3>
