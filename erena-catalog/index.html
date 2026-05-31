@@ -453,7 +453,7 @@
     const t = document.getElementById("shipToDifferentAddress").checked;
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
-    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "", store: currentStoreName };
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName };
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
@@ -466,15 +466,13 @@
         <p><span>希望配達日:</span> <span>${r.deliveryDate || "指定なし"}</span></p>
         <hr class="section-divider">
         ${generateConfirmPersonHtml(e)}
+        <hr class="section-divider">
+        <p><span>のしの種類:</span> <span>${r.noshiType || "なし"}</span></p>
+        ${r.noshiName ? `<p><span>のし名入れ:</span> <span>${r.noshiName}</span></p>` : ""}
       </div>
       <div class="form-section">
         <h3>お届け先様情報</h3>
         ${generateConfirmPersonHtml(o)}
-        ${t ? `
-          <hr class="section-divider">
-          <p><span>のしの種類:</span> <span>${r.noshiType || "なし"}</span></p>
-          ${r.noshiName ? `<p><span>のし名入れ:</span> <span>${r.noshiName}</span></p>` : ""}
-        ` : ""}
       </div>
     `;
     document.getElementById("confirm-display").innerHTML = c;
@@ -521,6 +519,9 @@
     e.appendChild(createFormRow("orderer_address", "番地・建物名", "text", !0));
     e.appendChild(createTelRow("orderer", "電話番号"));
     e.appendChild(createFormRow("orderer_email", "メールアドレス", "email", !0, "test@example.com"));
+    // のし項目は常時表示（ご注文者セクション末尾）
+    e.appendChild(document.createElement("hr")).className = "section-divider";
+    e.appendChild(createNoshiRow());
 
     const t = document.getElementById("recipient-section");
     t.appendChild(createFormRow("recipient_name", "お名前", "text", !0, "鈴木 一郎"));
@@ -530,8 +531,6 @@
     t.appendChild(createFormRow("recipient_city", "市区町村", "text", !0));
     t.appendChild(createFormRow("recipient_address", "番地・建物名", "text", !0));
     t.appendChild(createTelRow("recipient", "電話番号"));
-    t.appendChild(document.createElement("hr")).className = "section-divider";
-    t.appendChild(createNoshiRow());
   }
 
   function toggleRecipientForm() {
