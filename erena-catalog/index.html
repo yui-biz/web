@@ -60,6 +60,13 @@
     .multi-input.tel input { width: 30%; flex-grow: 0; }
   }
 </style>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.default.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <style>
+      .ts-wrapper { width: 60%; }
+      .ts-control { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+      .ts-dropdown .optgroup-header { background: #f5f5f5; color: #007BFF; font-weight: bold; padding: 6px 10px; }
+    </style>
   </head>
   <body>
 
@@ -195,15 +202,36 @@
       return;
     }
 
-    select.querySelector('option').textContent = '選択してください';
-    products.forEach(product => {
-      const option = document.createElement('option');
-      option.value = product.name;
-      option.textContent = product.name;
-      option.dataset.imageUrl = product.imageUrl || '';
-      select.appendChild(option);
+    // カテゴリごとに optgroup を生成（カテゴリ初出順を保持）
+    select.innerHTML = '<option value="">選択してください</option>';
+    const groups = {};
+    const groupOrder = [];
+    products.forEach(p => {
+      const cat = p.category || 'その他';
+      if (!groups[cat]) { groups[cat] = []; groupOrder.push(cat); }
+      groups[cat].push(p);
+    });
+    groupOrder.forEach(cat => {
+      const og = document.createElement('optgroup');
+      og.label = cat;
+      groups[cat].forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.name;
+        option.textContent = product.name;
+        option.dataset.imageUrl = product.imageUrl || '';
+        og.appendChild(option);
+      });
+      select.appendChild(og);
     });
     select.disabled = false;
+
+    // Tom Select で検索＋optgroup対応のリッチドロップダウン化
+    // 画像表示は <select> 既存の onchange="displayProductImage(this)" が拾うので onChange は省略
+    new TomSelect(select, {
+      placeholder: '商品名で検索またはカテゴリから選択',
+      maxOptions: 100,
+      searchField: ['text']
+    });
   }
 
   function displayProductImage(selectElement) {
