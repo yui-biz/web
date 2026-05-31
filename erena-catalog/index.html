@@ -78,6 +78,38 @@
       .login-help { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; font-size: 13px; color: #666; line-height: 1.6; }
       .logout-btn { background: transparent; border: 1px solid #888; color: #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
       .logout-btn:hover { background: #f0f0f0; }
+      .admin-badge { display: inline-block; background: #d32f2f; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px; vertical-align: middle; }
+      .home-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 600px; margin: 40px auto; }
+      .home-btn { padding: 40px 20px; border: 2px solid #007BFF; border-radius: 8px; background: white; cursor: pointer; text-align: center; font-size: 18px; font-weight: bold; color: #007BFF; transition: all 0.2s; }
+      .home-btn:hover { background: #007BFF; color: white; transform: translateY(-2px); }
+      .home-btn .icon { font-size: 36px; display: block; margin-bottom: 10px; }
+      .back-btn { background: transparent; border: 1px solid #888; color: #555; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 20px; }
+      .back-btn:hover { background: #f0f0f0; }
+      .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+      .summary-card { background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 16px; text-align: center; }
+      .summary-card .label { color: #666; font-size: 13px; }
+      .summary-card .value { color: #007BFF; font-size: 28px; font-weight: bold; margin-top: 6px; }
+      .orders-filter { margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; }
+      .orders-filter select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+      .orders-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      .orders-table th, .orders-table td { border-bottom: 1px solid #eee; padding: 10px 8px; text-align: left; }
+      .orders-table th { background: #f5f5f5; font-weight: bold; color: #555; }
+      .orders-table tr:hover { background: #fafafa; }
+      .orders-table .detail-btn { background: #007BFF; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+      .modal-overlay.active { display: flex; }
+      .modal-content { background: white; border-radius: 8px; max-width: 600px; max-height: 90vh; width: 90%; overflow-y: auto; padding: 24px; }
+      .modal-content h3 { margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 2px solid #007BFF; }
+      .modal-content dl { margin: 0; }
+      .modal-content dt { font-weight: bold; color: #555; margin-top: 12px; font-size: 13px; }
+      .modal-content dd { margin: 4px 0 0 0; padding-left: 8px; }
+      .modal-close { background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-top: 20px; float: right; }
+      @media (max-width: 600px) {
+        .home-buttons { grid-template-columns: 1fr; }
+        .summary-cards { grid-template-columns: repeat(2, 1fr); }
+        .orders-table { font-size: 12px; }
+        .orders-table th, .orders-table td { padding: 6px 4px; }
+      }
     </style>
   </head>
   <body>
@@ -88,7 +120,7 @@
       </div>
       <div class="content">
         <div id="store-display" style="background:#fff4e8;border:1px solid #f0c896;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;display:none;">
-          ご利用店舗: <span id="store-name"></span>
+          ご利用店舗: <span id="store-name"></span><span id="admin-badge" class="admin-badge" style="display:none;">管理者</span>
           <button class="logout-btn" onclick="logout()">ログアウト</button>
         </div>
 
@@ -110,11 +142,78 @@
         </div>
 
         <div id="main-content" style="display:none;">
+
+        <!-- ホーム画面 -->
+        <div id="home-view">
+          <h3 style="text-align:center;margin-bottom:8px;">メニュー</h3>
+          <p style="text-align:center;color:#666;font-size:14px;">操作を選択してください</p>
+          <div class="home-buttons">
+            <div class="home-btn" onclick="showFormView()">
+              <span class="icon">📝</span>
+              申し込みフォーム
+            </div>
+            <div class="home-btn" onclick="showOrdersView()">
+              <span class="icon">📋</span>
+              申し込み確認
+            </div>
+          </div>
+        </div>
+
+        <!-- 申し込み確認画面 -->
+        <div id="orders-view" style="display:none;">
+          <button class="back-btn" onclick="showHomeView()">← ホームに戻る</button>
+          <h3>申し込み確認</h3>
+          <div class="summary-cards">
+            <div class="summary-card"><div class="label">今日</div><div class="value" id="cnt-today">-</div></div>
+            <div class="summary-card"><div class="label">今週</div><div class="value" id="cnt-week">-</div></div>
+            <div class="summary-card"><div class="label">今月</div><div class="value" id="cnt-month">-</div></div>
+            <div class="summary-card"><div class="label">累計</div><div class="value" id="cnt-total">-</div></div>
+          </div>
+          <div class="orders-filter" id="orders-filter" style="display:none;">
+            <label>店舗で絞り込み:
+              <select id="orders-store-filter" onchange="loadOrders()">
+                <option value="">すべての店舗</option>
+              </select>
+            </label>
+          </div>
+          <div id="orders-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
+          <div id="orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">申し込みはまだありません</div>
+          <div style="overflow-x:auto;">
+            <table class="orders-table" id="orders-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>申込日時</th>
+                  <th>注文者</th>
+                  <th>商品</th>
+                  <th>数量</th>
+                  <th>配達日</th>
+                  <th class="admin-only" style="display:none;">店舗</th>
+                  <th>詳細</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 注文詳細モーダル -->
+        <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
+          <div class="modal-content">
+            <h3>注文詳細</h3>
+            <div id="order-detail-body"></div>
+            <button class="modal-close" onclick="closeOrderDetail()">閉じる</button>
+            <div style="clear:both;"></div>
+          </div>
+        </div>
+
+        <!-- 申し込みフォーム（既存） -->
+        <div id="form-view" style="display:none;">
         <div class="progress-bar">
           <span class="progress-item active" id="step-input">入力</span>
           <span class="progress-item" id="step-confirm">確認</span>
           <span class="progress-item" id="step-complete">完了</span>
         </div>
+        <button class="back-btn" onclick="showHomeView()" style="margin-bottom:0;">← ホームに戻る</button>
         <div id="form-input">
           <form id="entryForm" onsubmit="return false;">
             <div class="form-section" id="orderer-section">
@@ -145,9 +244,11 @@
           <p>「お客様控えを印刷する」ボタンから、このお申し込み内容を印刷・保存できます。</p>
           <div class="btn-container">
             <button type="button" class="btn btn-primary" onclick="printReceipt()">お客様控えを印刷する</button>
-            <button type="button" class="btn btn-secondary" onclick="location.reload()">TOPに戻る</button>
+            <button type="button" class="btn btn-primary" onclick="continueOrdering()" style="background:#17a2b8;">続けて申し込む</button>
+            <button type="button" class="btn btn-secondary" onclick="showHomeView()">TOPに戻る</button>
           </div>
         </div>
+        </div><!-- /#form-view -->
         </div><!-- /#main-content -->
       </div>
     </div>
@@ -180,6 +281,7 @@
 
   let currentStoreName = '';
   let currentStoreId = '';
+  let currentIsAdmin = false;
 
   // === 認証関連 ===
   const AUTH_KEY = 'erena_auth';
@@ -198,9 +300,9 @@
     } catch (e) { return null; }
   }
 
-  function saveAuth(storeId, storeName) {
+  function saveAuth(storeId, storeName, isAdmin) {
     localStorage.setItem(AUTH_KEY, JSON.stringify({
-      storeId, storeName,
+      storeId, storeName, isAdmin: !!isAdmin,
       expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
     }));
   }
@@ -217,14 +319,157 @@
     document.getElementById('store-display').style.display = 'none';
   }
 
-  function showMainContent(storeId, storeName) {
+  function showMainContent(storeId, storeName, isAdmin) {
     currentStoreId = storeId;
     currentStoreName = storeName;
+    currentIsAdmin = !!isAdmin;
     document.getElementById('store-name').textContent = storeName;
+    document.getElementById('admin-badge').style.display = currentIsAdmin ? 'inline-block' : 'none';
     document.getElementById('store-display').style.display = 'block';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('auth-verifying').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
+    showHomeView();
+  }
+
+  // === ビュー切替 ===
+  function showHomeView() {
+    document.getElementById('home-view').style.display = 'block';
+    document.getElementById('orders-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'none';
+  }
+
+  function showFormView() {
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('orders-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'block';
+    switchView('input');  // フォーム最初の状態に
+  }
+
+  function showOrdersView() {
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('orders-view').style.display = 'block';
+    loadOrders();
+  }
+
+  function continueOrdering() {
+    document.getElementById('entryForm').reset();
+    const ps = document.getElementById('productName');
+    if (ps && ps.tomselect) ps.tomselect.clear();
+    document.getElementById('shipToDifferentAddress').checked = false;
+    toggleRecipientForm();
+    document.getElementById('quantity').value = '1';
+    const img = document.getElementById('product-image');
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    const imgC = document.getElementById('product-image-container');
+    if (imgC) imgC.style.display = 'none';
+    switchView('input');
+    window.scrollTo(0, 0);
+  }
+
+  // === 申し込み確認画面 ===
+  function loadOrders() {
+    const filterStore = currentIsAdmin
+      ? (document.getElementById('orders-store-filter') || {}).value || ''
+      : '';
+    document.getElementById('orders-loading').style.display = 'block';
+    document.getElementById('orders-empty').style.display = 'none';
+    document.getElementById('orders-table').style.display = 'none';
+
+    gasPost({
+      action: 'getOrders',
+      params: { storeId: currentStoreId, isAdmin: currentIsAdmin, filterStore: filterStore }
+    }).then(result => {
+      document.getElementById('orders-loading').style.display = 'none';
+      if (result.error) {
+        alert('読み込みエラー: ' + result.error);
+        return;
+      }
+      // 集計
+      document.getElementById('cnt-today').textContent = result.summary.today;
+      document.getElementById('cnt-week').textContent = result.summary.thisWeek;
+      document.getElementById('cnt-month').textContent = result.summary.thisMonth;
+      document.getElementById('cnt-total').textContent = result.summary.total;
+
+      // 管理者用フィルタ
+      if (currentIsAdmin && result.storeList && result.storeList.length > 0) {
+        document.getElementById('orders-filter').style.display = 'block';
+        const sel = document.getElementById('orders-store-filter');
+        const currentValue = sel.value;
+        sel.innerHTML = '<option value="">すべての店舗</option>';
+        result.storeList.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s; opt.textContent = s;
+          if (s === currentValue) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = 'table-cell'; });
+      }
+
+      // テーブル描画
+      const orders = result.orders || [];
+      if (orders.length === 0) {
+        document.getElementById('orders-empty').style.display = 'block';
+        return;
+      }
+      const tbody = document.querySelector('#orders-table tbody');
+      tbody.innerHTML = '';
+      window._orderCache = {};
+      orders.forEach((o, i) => {
+        window._orderCache[i] = o;
+        const dt = new Date(o.timestamp);
+        const pad = n => String(n).padStart(2, '0');
+        const timeStr = dt.getFullYear() + '/' + pad(dt.getMonth()+1) + '/' + pad(dt.getDate())
+          + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + timeStr + '</td>' +
+          '<td>' + escapeHtml(o.ordererName || '') + '</td>' +
+          '<td>' + escapeHtml(o.productName || '') + '</td>' +
+          '<td>' + (o.quantity || '') + '</td>' +
+          '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
+          (currentIsAdmin ? '<td>' + escapeHtml(o.store || '') + '</td>' : '') +
+          '<td><button class="detail-btn" onclick="showOrderDetail(' + i + ')">詳細</button></td>';
+        tbody.appendChild(tr);
+      });
+      document.getElementById('orders-table').style.display = 'table';
+    }).catch(err => {
+      document.getElementById('orders-loading').style.display = 'none';
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function showOrderDetail(idx) {
+    const o = (window._orderCache || {})[idx];
+    if (!o) return;
+    const dt = new Date(o.timestamp);
+    const html =
+      '<dl>' +
+      '<dt>申込日時</dt><dd>' + dt.toLocaleString('ja-JP') + '</dd>' +
+      '<dt>店舗</dt><dd>' + escapeHtml(o.store || '') + '</dd>' +
+      '<dt>受付者社員番号</dt><dd>' + escapeHtml(o.staffId || '') + '</dd>' +
+      '<dt>商品</dt><dd>' + escapeHtml(o.productName) + ' × ' + o.quantity + '</dd>' +
+      '<dt>希望配達日</dt><dd>' + (o.deliveryDate || '指定なし') + '</dd>' +
+      '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>' +
+      '<dt>ご注文者</dt><dd>' + escapeHtml(o.ordererName) + (o.ordererFurigana ? ' (' + escapeHtml(o.ordererFurigana) + ')' : '') +
+        '<br>〒' + escapeHtml(o.ordererZip) + ' ' + escapeHtml(o.ordererPref) + escapeHtml(o.ordererCity) + escapeHtml(o.ordererAddress) +
+        '<br>TEL: ' + escapeHtml(o.ordererTel) +
+        (o.ordererEmail ? '<br>Mail: ' + escapeHtml(o.ordererEmail) : '') + '</dd>' +
+      '<dt>お届け先</dt><dd>' + escapeHtml(o.recipientName) + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') +
+        '<br>〒' + escapeHtml(o.recipientZip) + ' ' + escapeHtml(o.recipientPref) + escapeHtml(o.recipientCity) + escapeHtml(o.recipientAddress) +
+        '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
+      '</dl>';
+    document.getElementById('order-detail-body').innerHTML = html;
+    document.getElementById('order-detail-modal').classList.add('active');
+  }
+
+  function closeOrderDetail() {
+    document.getElementById('order-detail-modal').classList.remove('active');
   }
 
   function showVerifying() {
@@ -280,10 +525,10 @@
       return gasPost({ action: 'verifyToken', storeId: sid, token: token })
         .then(result => {
           if (result.valid) {
-            saveAuth(result.storeId, result.storeName);
+            saveAuth(result.storeId, result.storeName, result.isAdmin);
             // URLからトークン除去（履歴汚染&リロードでの再検証エラー防止）
             history.replaceState(null, '', location.pathname + '?s=' + encodeURIComponent(result.storeId));
-            return { storeId: result.storeId, storeName: result.storeName };
+            return { storeId: result.storeId, storeName: result.storeName, isAdmin: result.isAdmin };
           } else {
             const reasons = {
               expired: 'リンクの有効期限が切れています',
@@ -307,7 +552,7 @@
     // ?s= のみ or なし → localStorage確認
     const stored = getStoredAuth();
     if (stored && (!sid || stored.storeId === sid)) {
-      return Promise.resolve({ storeId: stored.storeId, storeName: stored.storeName });
+      return Promise.resolve({ storeId: stored.storeId, storeName: stored.storeName, isAdmin: stored.isAdmin });
     }
 
     // 未認証 → ログイン画面
@@ -332,7 +577,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     authenticate().then(auth => {
       if (!auth) return;  // ログイン画面表示中
-      showMainContent(auth.storeId, auth.storeName);
+      showMainContent(auth.storeId, auth.storeName, auth.isAdmin);
       buildFormStructure();
       gasPost({ action: 'getProducts' })
         .then(result => {
