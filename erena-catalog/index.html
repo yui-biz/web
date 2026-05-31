@@ -168,7 +168,6 @@
 
   let formDataGlobal = {};
   let originalBodyHtml;
-  let imageCache = {};
 
   document.addEventListener('DOMContentLoaded', function() {
     if (!initStore()) return;
@@ -201,7 +200,7 @@
       const option = document.createElement('option');
       option.value = product.name;
       option.textContent = product.name;
-      option.dataset.fileId = product.fileId;
+      option.dataset.imageUrl = product.imageUrl || '';
       select.appendChild(option);
     });
     select.disabled = false;
@@ -209,39 +208,16 @@
 
   function displayProductImage(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const fileId = selectedOption.dataset.fileId;
+    const imageUrl = selectedOption.dataset.imageUrl;
     const imageContainer = document.getElementById('product-image-container');
     const imageEl = document.getElementById('product-image');
 
-    if (fileId) {
-      imageEl.style.display = 'none';
+    if (imageUrl) {
+      imageContainer.innerHTML = '';
+      imageContainer.appendChild(imageEl);
       imageContainer.style.display = 'block';
-
-      if (imageCache[fileId]) {
-        imageEl.src = imageCache[fileId];
-        imageEl.style.display = 'block';
-        return;
-      }
-
-      imageContainer.innerHTML = '<span>画像を読み込み中...</span>';
-
-      gasPost({ action: 'getProductImage', fileId: fileId })
-        .then(result => {
-          const base64data = result.image;
-          if (base64data) {
-            imageCache[fileId] = base64data;
-            imageContainer.innerHTML = '';
-            imageEl.src = base64data;
-            imageEl.style.display = 'block';
-            imageContainer.appendChild(imageEl);
-          } else {
-            imageContainer.innerHTML = '<span>画像の表示に失敗しました</span>';
-          }
-        })
-        .catch(err => {
-          imageContainer.innerHTML = '<span>画像の表示に失敗しました</span>';
-          console.error(err);
-        });
+      imageEl.src = imageUrl;
+      imageEl.style.display = 'block';
     } else {
       imageContainer.style.display = 'none';
       imageEl.src = '';
@@ -293,7 +269,7 @@
     const t = document.getElementById("shipToDifferentAddress").checked;
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
-    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: n.startsWith("data:image") ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "", store: currentStoreName };
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: t ? getValue("noshiType") : "", noshiName: t ? getValue("noshiName") : "", store: currentStoreName };
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
