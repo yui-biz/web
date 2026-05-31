@@ -486,40 +486,68 @@
   function printOrderDetail() {
     const o = window._currentDetailOrder;
     if (!o) return;
-    const dt = new Date(o.timestamp);
-    const printHtml =
-      '<div style="font-family:sans-serif;padding:30px;color:#333;">' +
-      '<h2 style="text-align:center;border-bottom:2px solid #007BFF;padding-bottom:10px;">エレナ カタログギフト お申し込み控え</h2>' +
-      '<table style="width:100%;border-collapse:collapse;margin-top:20px;">' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;width:35%;">申込日時</th><td style="padding:8px;border-bottom:1px solid #eee;">' + dt.toLocaleString('ja-JP') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">店舗</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.store || '') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">受付者社員番号</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.staffId || '') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">商品名</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.productName) + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">数量</th><td style="padding:8px;border-bottom:1px solid #eee;">' + o.quantity + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">希望配達日</th><td style="padding:8px;border-bottom:1px solid #eee;">' + (o.deliveryDate || '指定なし') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">のしの種類</th><td style="padding:8px;border-bottom:1px solid #eee;">' + (o.noshiType || 'なし') + '</td></tr>' +
-      (o.noshiName ? '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">のし名入れ</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.noshiName) + '</td></tr>' : '') +
-      '</table>' +
-      '<h3 style="margin-top:24px;padding-bottom:6px;border-bottom:1px solid #007BFF;">ご注文者様</h3>' +
-      '<table style="width:100%;border-collapse:collapse;">' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;width:35%;">お名前</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.ordererName) + (o.ordererFurigana ? ' (' + escapeHtml(o.ordererFurigana) + ')' : '') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">ご住所</th><td style="padding:8px;border-bottom:1px solid #eee;">〒' + escapeHtml(o.ordererZip) + ' ' + escapeHtml(o.ordererPref) + escapeHtml(o.ordererCity) + escapeHtml(o.ordererAddress) + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">電話番号</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.ordererTel) + '</td></tr>' +
-      (o.ordererEmail ? '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">メールアドレス</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.ordererEmail) + '</td></tr>' : '') +
-      '</table>' +
-      '<h3 style="margin-top:24px;padding-bottom:6px;border-bottom:1px solid #007BFF;">お届け先様</h3>' +
-      '<table style="width:100%;border-collapse:collapse;">' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;width:35%;">お名前</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.recipientName) + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">ご住所</th><td style="padding:8px;border-bottom:1px solid #eee;">〒' + escapeHtml(o.recipientZip) + ' ' + escapeHtml(o.recipientPref) + escapeHtml(o.recipientCity) + escapeHtml(o.recipientAddress) + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;background:#f5f5f5;">電話番号</th><td style="padding:8px;border-bottom:1px solid #eee;">' + escapeHtml(o.recipientTel) + '</td></tr>' +
-      '</table>' +
-      '<p style="margin-top:24px;font-size:11px;color:#888;text-align:right;">印刷日時: ' + new Date().toLocaleString('ja-JP') + '</p>' +
+
+    // 商品画像URLをキャッシュから取得
+    const product = (window._cachedProducts || []).find(function(p) { return p.name === o.productName; });
+    const imageUrl = product ? product.imageUrl : '';
+
+    // 申し込みフォーム控えと同じHTML構造で生成
+    const personHtml = function(p) {
+      return '<p><span>お名前:</span> <span>' + escapeHtml(p.name) + ' (' + escapeHtml(p.furigana) + ')</span></p>' +
+        '<p><span>ご住所:</span> <span>〒' + escapeHtml(p.zipcode) + ' ' + escapeHtml(p.pref) + escapeHtml(p.city) + escapeHtml(p.address) + '</span></p>' +
+        '<p><span>電話番号:</span> <span>' + escapeHtml(p.tel) + '</span></p>' +
+        (p.email ? '<p><span>メールアドレス:</span> <span>' + escapeHtml(p.email) + '</span></p>' : '');
+    };
+
+    const ordererForPrint = {
+      name: o.ordererName, furigana: o.ordererFurigana,
+      zipcode: o.ordererZip, pref: o.ordererPref, city: o.ordererCity, address: o.ordererAddress,
+      tel: o.ordererTel, email: o.ordererEmail
+    };
+    const recipientForPrint = {
+      name: o.recipientName, furigana: o.recipientFurigana,
+      zipcode: o.recipientZip, pref: o.recipientPref, city: o.recipientCity, address: o.recipientAddress,
+      tel: o.recipientTel
+    };
+
+    const printableHtml =
+      '<div class="printable-area">' +
+      '<h2 style="text-align:center; margin-bottom:20px;">ご注文内容の確認</h2>' +
+      '<div class="form-section">' +
+        '<h3>ご注文者様・ご注文品情報</h3>' +
+        '<p><span>店舗:</span> <span>' + escapeHtml(o.store || '') + '</span></p>' +
+        '<p><span>受付者社員番号:</span> <span>' + escapeHtml(o.staffId || '') + '</span></p>' +
+        '<p><span>商品名:</span> <span>' + escapeHtml(o.productName) + '</span></p>' +
+        (imageUrl ? '<div><img id="confirm-image" src="' + imageUrl + '"></div>' : '') +
+        '<p><span>数量:</span> <span>' + o.quantity + '</span></p>' +
+        '<p><span>希望配達日:</span> <span>' + (o.deliveryDate || '指定なし') + '</span></p>' +
+        '<hr class="section-divider">' +
+        personHtml(ordererForPrint) +
+        '<hr class="section-divider">' +
+        '<p><span>のしの種類:</span> <span>' + (o.noshiType || 'なし') + '</span></p>' +
+        (o.noshiName ? '<p><span>のし名入れ:</span> <span>' + escapeHtml(o.noshiName) + '</span></p>' : '') +
+      '</div>' +
+      '<div class="form-section">' +
+        '<h3>お届け先様情報</h3>' +
+        personHtml(recipientForPrint) +
+      '</div>' +
       '</div>';
+
+    // 申し込みフォームと同じCSSを引き継ぐため、現在のページのstyleタグをすべて持ち込む
+    const styleTags = Array.from(document.querySelectorAll('style')).map(function(s) { return s.outerHTML; }).join('\n');
+    const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(function(l) { return l.outerHTML; }).join('\n');
+
     const w = window.open('', '_blank', 'width=800,height=900');
     w.document.open();
-    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>お申し込み控え - ' + escapeHtml(o.ordererName) + '</title></head><body>' + printHtml + '</body></html>');
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<title>お申し込み控え - ' + escapeHtml(o.ordererName) + '</title>' +
+      linkTags + styleTags +
+      '<style>body { background:white; margin:0; padding:20px; } #confirm-image { max-width:300px; max-height:300px; }</style>' +
+      '</head><body><div class="container"><div class="content">' + printableHtml + '</div></div></body></html>'
+    );
     w.document.close();
-    setTimeout(function() { w.print(); }, 200);
+    setTimeout(function() { w.print(); }, 500);
   }
 
   function enterEditMode() {
