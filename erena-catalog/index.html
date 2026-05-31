@@ -149,21 +149,25 @@
               <h4>店舗担当者の方</h4>
               <p class="role-desc">エレナ各店舗の担当者向け<br>お申し込み入力・確認ができます</p>
               <input type="email" id="loginEmail" placeholder="例: 〇〇@ellena.co.jp" autocomplete="email">
-              <button type="button" id="loginBtn" onclick="requestLogin()">ログインリンクを送信</button>
+              <button type="button" id="loginBtn" onclick="requestLogin()">ログインURLを送信</button>
               <div id="login-msg" class="login-msg" style="display:none;"></div>
             </div>
             <div class="login-card maker">
               <h4>メーカー担当者の方</h4>
               <p class="role-desc">商品を発送するメーカー担当者向け<br>自社商品の発注情報を確認できます</p>
               <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
-              <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインリンクを送信</button>
+              <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインURLを送信</button>
               <div id="login-msg-maker" class="login-msg" style="display:none;"></div>
             </div>
           </div>
           <div class="login-help">
-            <strong>ログインリンクが届かない場合：</strong><br>
+            <strong>ログインURLが届かない場合：</strong><br>
             ・迷惑メールフォルダをご確認ください<br>
-            ・メールアドレスが登録済みかご不明な場合はカスタマーサポート（03-6441-0931）までご連絡ください
+            ・メールアドレスが登録済みかご不明な場合は下記までご連絡ください<br>
+            <br>
+            <strong>株式会社yui カスタマーサポート</strong><br>
+            TEL: 03-6441-0931<br>
+            Mail: <a href="mailto:customer@yui.gift" style="color:#007BFF;">customer@yui.gift</a>
           </div>
         </div>
 
@@ -789,7 +793,7 @@
       })
       .catch(err => setLoginMessageMaker('通信エラー: ' + err.message, 'error'))
       .finally(() => {
-        btn.disabled = false; btn.textContent = 'ログインリンクを送信';
+        btn.disabled = false; btn.textContent = 'ログインURLを送信';
       });
   }
 
@@ -813,7 +817,7 @@
       })
       .catch(err => setLoginMessage('通信エラー: ' + err.message, 'error'))
       .finally(() => {
-        btn.disabled = false; btn.textContent = 'ログインリンクを送信';
+        btn.disabled = false; btn.textContent = 'ログインURLを送信';
       });
   }
 
