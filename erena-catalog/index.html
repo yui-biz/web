@@ -254,14 +254,14 @@
         <div id="form-input">
           <form id="entryForm" onsubmit="return false;">
             <div class="form-section" id="orderer-section">
-              <h3>ご注文者様・ご注文品情報</h3>
+              <h3>購入者情報・ご注文品情報</h3>
             </div>
             <div class="checkbox-row">
               <input type="checkbox" id="shipToDifferentAddress" onchange="toggleRecipientForm()">
               <label for="shipToDifferentAddress">商品のお届け先を別住所に変更する場合、チェックを入れてください。</label>
             </div>
             <div class="form-section" id="recipient-section" style="display:none;">
-              <h3>お届け先様情報</h3>
+              <h3>お届け先情報</h3>
             </div>
             <div class="btn-container">
               <button type="button" class="btn btn-primary" onclick="showConfirmation()">内容確認画面に進む</button>
@@ -601,7 +601,7 @@
       '<div class="printable-area">' +
       '<h2 style="text-align:center; margin-bottom:20px;">ご注文内容の確認</h2>' +
       '<div class="form-section">' +
-        '<h3>ご注文者様・ご注文品情報</h3>' +
+        '<h3>購入者情報・ご注文品情報</h3>' +
         '<p><span>店舗:</span> <span>' + escapeHtml(o.store || '') + '</span></p>' +
         '<p><span>受付者社員番号:</span> <span>' + escapeHtml(o.staffId || '') + '</span></p>' +
         '<p><span>商品名:</span> <span>' + escapeHtml(o.productName) + '</span></p>' +
@@ -615,7 +615,7 @@
         (o.noshiName ? '<p><span>のし名入れ:</span> <span>' + escapeHtml(o.noshiName) + '</span></p>' : '') +
       '</div>' +
       '<div class="form-section">' +
-        '<h3>お届け先様情報</h3>' +
+        '<h3>お届け先情報</h3>' +
         personHtml(recipientForPrint) +
       '</div>' +
       '</div>';
@@ -1166,7 +1166,7 @@
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
-        <h3>ご注文者様・ご注文品情報</h3>
+        <h3>購入者情報・ご注文品情報</h3>
         <p><span>店舗:</span> <span>${r.store}</span></p>
         <p><span>受付者社員番号:</span> <span>${r.staffId}</span></p>
         <p><span>商品名:</span> <span>${r.productName}</span></p>
@@ -1180,7 +1180,7 @@
         ${r.noshiName ? `<p><span>のし名入れ:</span> <span>${r.noshiName}</span></p>` : ""}
       </div>
       <div class="form-section">
-        <h3>お届け先様情報</h3>
+        <h3>お届け先情報</h3>
         ${generateConfirmPersonHtml(o)}
       </div>
     `;
@@ -1220,26 +1220,26 @@
     e.appendChild(createProductRow());
     e.appendChild(createDeliveryDateRow());
     e.appendChild(document.createElement("hr")).className = "section-divider";
-    e.appendChild(createFormRow("orderer_name", "お名前", "text", !0, "山田 太郎"));
-    e.appendChild(createFormRow("orderer_furigana", "フリガナ", "text", !0, "ヤマダ タロウ"));
-    e.appendChild(createZipRow("orderer", "郵便番号"));
-    e.appendChild(createPrefRow("orderer_pref", "都道府県"));
-    e.appendChild(createFormRow("orderer_city", "市区町村", "text", !0));
-    e.appendChild(createFormRow("orderer_address", "番地・建物名", "text", !0));
-    e.appendChild(createTelRow("orderer", "電話番号"));
-    e.appendChild(createFormRow("orderer_email", "メールアドレス", "email", !0, "test@example.com"));
+    e.appendChild(createFormRow("orderer_name", "購入者お名前", "text", !0, "山田 太郎"));
+    e.appendChild(createFormRow("orderer_furigana", "購入者フリガナ", "text", !0, "ヤマダ タロウ"));
+    e.appendChild(createZipRow("orderer", "購入者郵便番号"));
+    e.appendChild(createPrefRow("orderer_pref", "購入者都道府県"));
+    e.appendChild(createFormRow("orderer_city", "購入者市区町村", "text", !0));
+    e.appendChild(createFormRow("orderer_address", "購入者番地・建物名", "text", !0));
+    e.appendChild(createTelRow("orderer", "購入者電話番号"));
+    e.appendChild(createFormRow("orderer_email", "購入者メールアドレス", "email", !0, "test@example.com"));
     // のし項目は常時表示（ご注文者セクション末尾）
     e.appendChild(document.createElement("hr")).className = "section-divider";
     e.appendChild(createNoshiRow());
 
     const t = document.getElementById("recipient-section");
-    t.appendChild(createFormRow("recipient_name", "お名前", "text", !0, "鈴木 一郎"));
-    t.appendChild(createFormRow("recipient_furigana", "フリガナ", "text", !0, "スズキ イチロウ"));
-    t.appendChild(createZipRow("recipient", "郵便番号"));
-    t.appendChild(createPrefRow("recipient_pref", "都道府県"));
-    t.appendChild(createFormRow("recipient_city", "市区町村", "text", !0));
-    t.appendChild(createFormRow("recipient_address", "番地・建物名", "text", !0));
-    t.appendChild(createTelRow("recipient", "電話番号"));
+    t.appendChild(createFormRow("recipient_name", "お届け先お名前", "text", !0, "鈴木 一郎"));
+    t.appendChild(createFormRow("recipient_furigana", "お届け先フリガナ", "text", !0, "スズキ イチロウ"));
+    t.appendChild(createZipRow("recipient", "お届け先郵便番号"));
+    t.appendChild(createPrefRow("recipient_pref", "お届け先都道府県"));
+    t.appendChild(createFormRow("recipient_city", "お届け先市区町村", "text", !0));
+    t.appendChild(createFormRow("recipient_address", "お届け先番地・建物名", "text", !0));
+    t.appendChild(createTelRow("recipient", "お届け先電話番号"));
   }
 
   function toggleRecipientForm() {
