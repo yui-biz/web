@@ -1162,7 +1162,7 @@
     const t = document.getElementById("shipToDifferentAddress").checked;
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
-    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName };
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName, storeId: currentStoreId };
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
