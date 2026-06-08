@@ -317,7 +317,7 @@
               <table class="orders-table" id="maker-orders-table" style="display:none;">
                 <thead><tr>
                   <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>配達日</th><th>店舗</th><th>詳細</th><th>発送処理</th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>配達日</th><th>詳細</th><th>発送処理</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -1086,7 +1086,6 @@
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
-            '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
             '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#e53935;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tbody.appendChild(tr);
@@ -1268,7 +1267,7 @@
   // === CSVダウンロード（未発送一覧） ===
   function downloadUnshippedCsv() {
     const orders = window._makerOrderCache || {};
-    const rows = [['rowIdx', '申込日時', '商品名', '数量', 'お届け先名', '住所', '配達日', '店舗', '運送会社', '追跡番号']];
+    const rows = [['rowIdx', '申込日時', '商品名', '数量', 'お届け先名', '住所', '配達日', '運送会社', '追跡番号']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.rowIdx,
@@ -1278,7 +1277,6 @@
         o.recipientName || '',
         (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
         o.deliveryDate || '',
-        o.store || '',
         '',  // 運送会社（空欄 → 記入する）
         ''   // 追跡番号（空欄 → 記入する）
       ]);
