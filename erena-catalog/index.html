@@ -232,17 +232,6 @@
           </div>
         </div>
 
-        <!-- 注文詳細モーダル -->
-        <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
-          <div class="modal-content">
-            <h3 id="order-detail-title">注文詳細</h3>
-            <div id="order-detail-body"></div>
-            <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
-            <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
-            <div style="clear:both;"></div>
-          </div>
-        </div>
-
         <!-- 申し込みフォーム（既存） -->
         <div id="form-view" style="display:none;">
         <div class="progress-bar">
@@ -315,10 +304,19 @@
           <div id="maker-orders-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
           <!-- 未発送テーブル -->
           <div id="maker-unshipped-wrap" style="display:none;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+              <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">✔ 選択した注文を発送処理</button>
+              <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ CSVダウンロード</button>
+              <label style="padding:6px 14px;background:#388e3c;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;">
+                ↑ CSVアップロードで一括発送
+                <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
+              </label>
+            </div>
             <div id="maker-orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">未発送の発注はありません ✓</div>
             <div style="overflow-x:auto;">
               <table class="orders-table" id="maker-orders-table" style="display:none;">
                 <thead><tr>
+                  <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
                   <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>配達日</th><th>店舗</th><th>詳細</th><th>発送処理</th>
                 </tr></thead>
                 <tbody></tbody>
@@ -367,6 +365,17 @@
         </div>
       </div>
     </div>
+
+        <!-- 注文詳細モーダル（store/maker 両方から使用・main-content外に配置） -->
+        <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
+          <div class="modal-content">
+            <h3 id="order-detail-title">注文詳細</h3>
+            <div id="order-detail-body"></div>
+            <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
+            <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
+            <div style="clear:both;"></div>
+          </div>
+        </div>
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKlZQFhOpxk71eL9WLfMeSW5bDGp6UrpV7EfkYUIY-kKteMKe9oby9OiCUH7joltYj/exec';
@@ -1069,7 +1078,9 @@
         unshipped.forEach(function(o, i) {
           window._makerOrderCache[i] = o;
           const tr = document.createElement('tr');
+          tr.dataset.cacheIdx = i;
           tr.innerHTML =
+            '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
             '<td>' + _fmtTime(o.timestamp) + '</td>' +
             '<td>' + escapeHtml(o.productName || '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
@@ -1123,10 +1134,14 @@
 
   // === 発送処理モーダル ===
   let _shipTargetIdx = null;
+  let _bulkQueue = [];
+  let _bulkIdx = 0;
 
   function showShipModal(idx) {
     const o = (window._makerOrderCache || {})[idx];
     if (!o) return;
+    _bulkQueue = [];
+    _bulkIdx = 0;
     _shipTargetIdx = idx;
     document.getElementById('ship-modal-product').textContent =
       o.productName + ' × ' + o.quantity + ' / お届け先: ' + o.recipientName + ' 様';
@@ -1137,44 +1152,8 @@
     document.getElementById('ship-modal').style.display = 'flex';
   }
 
-  function closeShipModal() {
-    document.getElementById('ship-modal').style.display = 'none';
-    _shipTargetIdx = null;
-  }
-
-  function submitShipment() {
-    if (_shipTargetIdx === null) return;
-    const o = (window._makerOrderCache || {})[_shipTargetIdx];
-    if (!o) return;
-    const carrier = document.getElementById('ship-carrier').value.trim();
-    const trackingNo = document.getElementById('ship-tracking').value.trim();
-    const msgEl = document.getElementById('ship-modal-msg');
-
-    if (!carrier) { _showShipMsg('運送会社を選択してください', 'error'); return; }
-    if (!trackingNo) { _showShipMsg('追跡番号を入力してください', 'error'); return; }
-
-    const btn = document.getElementById('ship-submit-btn');
-    btn.disabled = true;
-    btn.textContent = '処理中...';
-
-    gasPost({
-      action: 'updateShipment',
-      params: { rowIdx: o.rowIdx, carrier: carrier, trackingNo: trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
-    }).then(function(result) {
-      btn.textContent = '発送済みにする';
-      if (result.success) {
-        closeShipModal();
-        loadMakerOrders();
-      } else {
-        btn.disabled = false;
-        _showShipMsg(result.error || 'エラーが発生しました', 'error');
-      }
-    }).catch(function(err) {
-      btn.disabled = false;
-      btn.textContent = '発送済みにする';
-      _showShipMsg('通信エラー: ' + err.message, 'error');
-    });
-  }
+  let submitShipment;
+  let closeShipModal;
 
   function _showShipMsg(msg, type) {
     const el = document.getElementById('ship-modal-msg');
@@ -1197,10 +1176,214 @@
     const o = (window._makerOrderCache || {})[idx];
     if (!o) return;
     window._currentDetailOrder = JSON.parse(JSON.stringify(o));
-    // 既存の renderDetailView を流用して表示するが、編集ボタンは非表示にする
     renderDetailViewReadOnly(o);
     document.getElementById('order-detail-modal').classList.add('active');
     setDetailMessage('', null);
+  }
+
+  // === チェックボックス全選択 ===
+  function toggleAllUnshippedChecks(checked) {
+    document.querySelectorAll('.unshipped-check').forEach(function(cb) { cb.checked = checked; });
+  }
+
+  // === 一括発送処理（チェック分を順番にモーダル表示） ===
+  function bulkShipSelected() {
+    _bulkQueue = [];
+    document.querySelectorAll('.unshipped-check:checked').forEach(function(cb) {
+      const idx = parseInt(cb.dataset.idx, 10);
+      if (!isNaN(idx)) _bulkQueue.push(idx);
+    });
+    if (_bulkQueue.length === 0) { alert('発送処理する注文を選択してください。'); return; }
+    _bulkIdx = 0;
+    _showNextBulkModal();
+  }
+
+  function _showNextBulkModal() {
+    if (_bulkIdx >= _bulkQueue.length) {
+      loadMakerOrders();
+      return;
+    }
+    const idx = _bulkQueue[_bulkIdx];
+    const o = (window._makerOrderCache || {})[idx];
+    if (!o) { _bulkIdx++; _showNextBulkModal(); return; }
+    _shipTargetIdx = idx;
+    document.getElementById('ship-modal-product').textContent =
+      '(' + (_bulkIdx + 1) + '/' + _bulkQueue.length + ') ' +
+      o.productName + ' × ' + o.quantity + ' / お届け先: ' + o.recipientName + ' 様';
+    document.getElementById('ship-carrier').value = '';
+    document.getElementById('ship-tracking').value = '';
+    document.getElementById('ship-modal-msg').style.display = 'none';
+    document.getElementById('ship-submit-btn').disabled = false;
+    document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  // submitShipment をバルクモード対応に実装
+  submitShipment = function() {
+    if (_shipTargetIdx === null) return;
+    const o = (window._makerOrderCache || {})[_shipTargetIdx];
+    if (!o) return;
+    const carrier = document.getElementById('ship-carrier').value.trim();
+    const trackingNo = document.getElementById('ship-tracking').value.trim();
+
+    if (!carrier) { _showShipMsg('運送会社を選択してください', 'error'); return; }
+    if (!trackingNo) { _showShipMsg('追跡番号を入力してください', 'error'); return; }
+
+    const btn = document.getElementById('ship-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '処理中...';
+
+    gasPost({
+      action: 'updateShipment',
+      params: { rowIdx: o.rowIdx, carrier: carrier, trackingNo: trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.textContent = '発送済みにする';
+      if (result.success) {
+        document.getElementById('ship-modal').style.display = 'none';
+        _shipTargetIdx = null;
+        if (_bulkQueue.length > 0) {
+          _bulkIdx++;
+          _showNextBulkModal();
+        } else {
+          loadMakerOrders();
+        }
+      } else {
+        btn.disabled = false;
+        _showShipMsg(result.error || 'エラーが発生しました', 'error');
+      }
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = '発送済みにする';
+      _showShipMsg('通信エラー: ' + err.message, 'error');
+    });
+  };
+
+  // closeShipModal もバルクキューをリセット
+  closeShipModal = function() {
+    document.getElementById('ship-modal').style.display = 'none';
+    _shipTargetIdx = null;
+    _bulkQueue = [];
+    _bulkIdx = 0;
+  };
+
+  // === CSVダウンロード（未発送一覧） ===
+  function downloadUnshippedCsv() {
+    const orders = window._makerOrderCache || {};
+    const rows = [['rowIdx', '申込日時', '商品名', '数量', 'お届け先名', '住所', '配達日', '店舗', '運送会社', '追跡番号']];
+    Object.values(orders).forEach(function(o) {
+      rows.push([
+        o.rowIdx,
+        _fmtTime(o.timestamp),
+        o.productName || '',
+        o.quantity || '',
+        o.recipientName || '',
+        (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
+        o.deliveryDate || '',
+        o.store || '',
+        '',  // 運送会社（空欄 → 記入する）
+        ''   // 追跡番号（空欄 → 記入する）
+      ]);
+    });
+    const csv = rows.map(function(r) {
+      return r.map(function(v) {
+        const s = String(v == null ? '' : v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    const bom = '﻿';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '未発送注文_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // === CSVアップロードで一括発送処理 ===
+  function uploadShipmentCsv(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      let text = e.target.result;
+      // BOM除去
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) { alert('データが見つかりません。'); return; }
+      const headers = _parseCsvLine(lines[0]);
+      const colRowIdx = headers.indexOf('rowIdx');
+      const colCarrier = headers.indexOf('運送会社');
+      const colTracking = headers.indexOf('追跡番号');
+      if (colRowIdx < 0 || colCarrier < 0 || colTracking < 0) {
+        alert('CSVの列名が正しくありません。ダウンロードしたCSVを使用してください。');
+        return;
+      }
+      const targets = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = _parseCsvLine(lines[i]);
+        const rowIdx = cells[colRowIdx];
+        const carrier = (cells[colCarrier] || '').trim();
+        const trackingNo = (cells[colTracking] || '').trim();
+        if (rowIdx && carrier && trackingNo) {
+          targets.push({ rowIdx: rowIdx, carrier: carrier, trackingNo: trackingNo });
+        }
+      }
+      if (targets.length === 0) {
+        alert('運送会社と追跡番号が両方入力されている行が見つかりません。');
+        input.value = '';
+        return;
+      }
+      if (!confirm(targets.length + '件を発送済みに更新します。よろしいですか？')) {
+        input.value = '';
+        return;
+      }
+      _processCsvBatch(targets, 0, [], input);
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function _parseCsvLine(line) {
+    const result = [];
+    let cur = '';
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQ) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQ = false; }
+        else { cur += c; }
+      } else {
+        if (c === '"') { inQ = true; }
+        else if (c === ',') { result.push(cur); cur = ''; }
+        else { cur += c; }
+      }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function _processCsvBatch(targets, i, errors, input) {
+    if (i >= targets.length) {
+      input.value = '';
+      if (errors.length > 0) {
+        alert('完了しましたが、' + errors.length + '件のエラーがありました:\n' + errors.join('\n'));
+      } else {
+        alert(targets.length + '件を発送済みに更新しました。');
+      }
+      loadMakerOrders();
+      return;
+    }
+    const t = targets[i];
+    gasPost({
+      action: 'updateShipment',
+      params: { rowIdx: t.rowIdx, carrier: t.carrier, trackingNo: t.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (!result.success) errors.push('rowIdx=' + t.rowIdx + ': ' + (result.error || 'エラー'));
+      _processCsvBatch(targets, i + 1, errors, input);
+    }).catch(function(err) {
+      errors.push('rowIdx=' + t.rowIdx + ': 通信エラー');
+      _processCsvBatch(targets, i + 1, errors, input);
+    });
   }
 
   function renderDetailViewReadOnly(o) {
