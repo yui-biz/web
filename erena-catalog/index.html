@@ -283,11 +283,12 @@
             ログインアカウント: <span id="maker-name"></span><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
-          <div class="summary-cards">
+          <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
             <div class="summary-card"><div class="label">今日</div><div class="value" id="maker-cnt-today">-</div></div>
             <div class="summary-card"><div class="label">今週</div><div class="value" id="maker-cnt-week">-</div></div>
             <div class="summary-card"><div class="label">今月</div><div class="value" id="maker-cnt-month">-</div></div>
             <div class="summary-card"><div class="label">未発送</div><div class="value" id="maker-cnt-unshipped" style="color:#e53935;">-</div></div>
+            <div class="summary-card"><div class="label">計上/報告 未完了</div><div class="value" id="maker-cnt-unwebedi" style="color:#f57c00;">-</div></div>
           </div>
           <div class="orders-filter" id="maker-orders-filter" style="display:none;">
             <label>商品で絞り込み:
@@ -329,7 +330,7 @@
             <div style="overflow-x:auto;">
               <table class="orders-table" id="maker-shipped-table" style="display:none;">
                 <thead><tr>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>詳細</th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>計上/報告</th><th>詳細</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -1046,10 +1047,12 @@
       const unshipped = orders.filter(function(o) { return o.shipStatus !== '発送済'; });
       const shipped   = orders.filter(function(o) { return o.shipStatus === '発送済'; });
 
+      const unwebedi = shipped.filter(function(o) { return o.webediStatus !== '計上済'; });
       document.getElementById('maker-cnt-today').textContent = result.summary.today;
       document.getElementById('maker-cnt-week').textContent = result.summary.thisWeek;
       document.getElementById('maker-cnt-month').textContent = result.summary.thisMonth;
       document.getElementById('maker-cnt-unshipped').textContent = unshipped.length;
+      document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
 
       if (result.productList && result.productList.length > 0) {
         document.getElementById('maker-orders-filter').style.display = 'block';
@@ -1104,6 +1107,13 @@
         shipped.forEach(function(o, i) {
           window._makerShippedCache[i] = o;
           const tr = document.createElement('tr');
+          const isWebediDone = o.webediStatus === '計上済';
+          const isDirect = o.productRoute === '直納';
+          const doneLabel = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
+          const btnLabel  = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
+          const webediCell = isWebediDone
+            ? '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small>'
+            : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
           tr.innerHTML =
             '<td>' + _fmtTime(o.timestamp) + '</td>' +
             '<td>' + escapeHtml(o.productName || '') + '</td>' +
@@ -1112,6 +1122,7 @@
             '<td>' + escapeHtml(o.carrier || '') + '</td>' +
             '<td>' + escapeHtml(o.trackingNo || '') + '</td>' +
             '<td>' + (o.shippedAt || '') + '</td>' +
+            '<td>' + webediCell + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button></td>';
           tbody2.appendChild(tr);
         });
@@ -1160,6 +1171,41 @@
     el.style.display = 'block';
     el.style.background = type === 'error' ? '#fdecea' : '#e8f5e9';
     el.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+  }
+
+  // === WEBEDI計上/発送報告処理 ===
+  function submitWebedi(idx, btn) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    const isDirect = o.productRoute === '直納';
+    const doneLabel  = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
+    const btnLabel   = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
+    const confirmMsg = isDirect
+      ? 'WEBEDI計上済みにします。よろしいですか？'
+      : '問屋への発送報告を完了済みにします。よろしいですか？';
+    if (!confirm(escapeHtml(o.productName) + ' ×' + o.quantity + ' / ' + escapeHtml(o.recipientName) + ' 様\n\n' + confirmMsg)) return;
+    btn.disabled = true;
+    btn.textContent = '処理中...';
+    gasPost({
+      action: 'updateWebedi',
+      params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (result.success) {
+        btn.outerHTML = '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (result.webediAt || '') + '</small>';
+        o.webediStatus = '計上済';
+        o.webediAt = result.webediAt || '';
+        const unwebediCount = Object.values(window._makerShippedCache || {}).filter(function(x) { return x.webediStatus !== '計上済'; }).length;
+        document.getElementById('maker-cnt-unwebedi').textContent = unwebediCount;
+      } else {
+        btn.disabled = false;
+        btn.textContent = btnLabel;
+        alert('エラー: ' + (result.error || '不明なエラー'));
+      }
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = btnLabel;
+      alert('通信エラー: ' + err.message);
+    });
   }
 
   function showMakerShippedDetail(idx) {
