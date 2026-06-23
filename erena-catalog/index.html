@@ -1570,6 +1570,9 @@
         option.value = product.name;
         option.textContent = product.name;
         option.dataset.imageUrl = product.imageUrl || '';
+        option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
+        option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
+        option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
         og.appendChild(option);
       });
       select.appendChild(og);
@@ -1577,17 +1580,17 @@
     select.disabled = false;
 
     // Tom Select で検索＋optgroup対応のリッチドロップダウン化
-    // 画像表示は <select> 既存の onchange="displayProductImage(this)" が拾うので onChange は省略
     new TomSelect(select, {
       placeholder: '商品名で検索またはカテゴリから選択',
       maxOptions: 100,
-      searchField: ['text']
+      searchField: ['text'],
+      onChange: function() { displayProductImage(select); }
     });
   }
 
   function displayProductImage(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const imageUrl = selectedOption.dataset.imageUrl;
+    const imageUrl = selectedOption ? selectedOption.dataset.imageUrl : '';
     const imageContainer = document.getElementById('product-image-container');
     const imageEl = document.getElementById('product-image');
 
@@ -1600,6 +1603,69 @@
     } else {
       imageContainer.style.display = 'none';
       imageEl.src = '';
+    }
+    applyProductConstraints(selectedOption);
+  }
+
+  function applyProductConstraints(opt) {
+    const hasProduct = opt && opt.value;
+    const leadTime = hasProduct ? (parseInt(opt.dataset.leadTime, 10) || 14) : 14;
+    const dateSpec = !hasProduct || opt.dataset.dateSpecifiable !== '0';
+    const noshiAvail = !hasProduct || opt.dataset.noshiAvailable !== '0';
+
+    // --- 希望配達日 ---
+    const noneRadio = document.querySelector('input[name="deliveryPref"][value="none"]');
+    const specifyRadio = document.querySelector('input[name="deliveryPref"][value="specify"]');
+    const dateInput = document.getElementById('deliveryDate');
+    let dateNote = document.getElementById('date-spec-note');
+
+    if (!dateSpec) {
+      noneRadio.checked = true;
+      dateInput.style.display = 'none';
+      specifyRadio.disabled = true;
+      specifyRadio.parentElement.style.cssText += ';opacity:0.4;cursor:not-allowed;';
+      if (!dateNote) {
+        dateNote = document.createElement('span');
+        dateNote.id = 'date-spec-note';
+        dateNote.style.cssText = 'font-size:11px;color:#c00;margin-left:6px;';
+        dateNote.textContent = '（この商品は着日指定不可）';
+        specifyRadio.parentElement.appendChild(dateNote);
+      }
+    } else {
+      specifyRadio.disabled = false;
+      specifyRadio.parentElement.style.opacity = '';
+      specifyRadio.parentElement.style.cursor = '';
+      if (dateNote) dateNote.remove();
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + leadTime);
+      const minStr = minDate.toISOString().split('T')[0];
+      dateInput.min = minStr;
+      if (dateInput.value && dateInput.value < minStr) dateInput.value = '';
+    }
+
+    // --- のし ---
+    const noshiSelect = document.getElementById('noshiType');
+    const noshiName = document.getElementById('noshiName');
+    const noshiSection = document.getElementById('noshi-section');
+    let noshiNote = document.getElementById('noshi-note');
+
+    if (!noshiAvail) {
+      noshiSelect.value = '';
+      noshiSelect.disabled = true;
+      noshiName.disabled = true;
+      if (noshiSection) noshiSection.style.opacity = '0.4';
+      if (!noshiNote && noshiSection) {
+        noshiNote = document.createElement('div');
+        noshiNote.id = 'noshi-note';
+        noshiNote.style.cssText = 'font-size:11px;color:#c00;margin-top:4px;';
+        noshiNote.textContent = '※この商品はのし対応不可です';
+        noshiSection.appendChild(noshiNote);
+      }
+    } else {
+      noshiSelect.disabled = false;
+      noshiName.disabled = false;
+      if (noshiSection) noshiSection.style.opacity = '';
+      if (noshiNote) noshiNote.remove();
     }
   }
 
@@ -1897,6 +1963,7 @@
 
   function createNoshiRow() {
     const e = document.createElement("div");
+    e.id = 'noshi-section';
     const t = ["なし","御祝","内祝","御礼","御中元","御歳暮","その他"];
     const o = createSelect("noshiType", "のしの種類", t, !1);
     const n = createFormRow("noshiName", "のし名入れ", "text", !1, "山田 太郎");
