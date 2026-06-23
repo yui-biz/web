@@ -1573,6 +1573,17 @@
         option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
         option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
         option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
+        option.dataset.orderDeadline = product.orderDeadline || '';
+        if (product.orderDeadline) {
+          const deadline = new Date(product.orderDeadline);
+          const canOrderUntil = new Date(deadline);
+          canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadTime || 14));
+          canOrderUntil.setHours(23, 59, 59, 999);
+          if (new Date() > canOrderUntil) {
+            option.disabled = true;
+            option.textContent = '【受注締切】' + product.name;
+          }
+        }
         og.appendChild(option);
       });
       select.appendChild(og);
