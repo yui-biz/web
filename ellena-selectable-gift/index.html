@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>エレナ 選べるギフト メーカー様向けご案内</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #E65100;
+  --accent2: #FF8F00;
+  --accent-soft: rgba(230,81,0,0.07);
+  --accent-mid: rgba(230,81,0,0.15);
+  --note: #1565C0;
+  --note-soft: rgba(21,101,192,0.07);
+  --note-border: rgba(21,101,192,0.25);
+  --green: #1B5E20;
+  --green-soft: rgba(27,94,32,0.07);
+  --text-main: #1A1A2E;
+  --text-body: #3D3D5C;
+  --text-sub: #6B6B8A;
+  --text-note: #9999B0;
+  --bg: #FFFFFF;
+  --bg-warm: #FFF8F5;
+  --bg-card: #FDFAF8;
+  --border: #EDE8E4;
+  --slide-num: #C8C0B8;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { font-family:'Noto Sans JP',sans-serif; background:#CBD5E1; }
+body { padding:40px 0; }
+
+@media print {
+  html { background: white; }
+  body { padding:0; }
+  .slide { box-shadow:none !important; margin:0 !important; page-break-after:always; }
+  .slide:last-child { page-break-after:auto; }
+}
+@page { size:1280px 720px; margin:0; }
+
+/* ── Slide shell ─────────────────────── */
+.slide {
+  position:relative; width:1280px; height:720px;
+  margin:16px auto; overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
+  background:#fff; page-break-after:always;
+}
+.slide:last-child { page-break-after:auto; }
+.slide::before {
+  content:''; position:absolute; left:0; top:0;
+  width:6px; height:100%;
+  background:linear-gradient(180deg, var(--accent) 0%, var(--accent2) 100%);
+  z-index:20;
+}
+.sn {
+  position:absolute; bottom:18px; right:28px;
+  font-size:12px; color:var(--slide-num); font-weight:300; z-index:20;
+  letter-spacing:0.05em;
+}
+
+/* ── Shared layout ───────────────────── */
+.slide-header { padding:48px 72px 0 84px; }
+.slide-header h2 { font-size:34px; font-weight:700; color:var(--text-main); line-height:1.25; }
+.slide-header .rule { width:calc(100% - 12px); height:1.5px; background:var(--border); margin:14px 0 0; }
+.body { padding:24px 72px 0 84px; }
+
+/* ── Cover ───────────────────────────── */
+.slide-cover { background:linear-gradient(135deg, #BF360C 0%, #E64A19 50%, #FF7043 100%); }
+.slide-cover::before { background:rgba(255,255,255,0.12); }
+.cover-inner { display:flex; flex-direction:column; justify-content:center; height:100%; padding:0 96px; }
+.cover-eyebrow { font-size:13px; font-weight:500; color:rgba(255,255,255,0.65); letter-spacing:0.12em; margin-bottom:20px; }
+.cover-title { font-size:54px; font-weight:900; color:#fff; line-height:1.2; margin-bottom:12px; }
+.cover-sub { font-size:24px; font-weight:400; color:rgba(255,255,255,0.88); margin-bottom:48px; }
+.cover-badge {
+  display:inline-block; padding:6px 18px; border:1.5px solid rgba(255,255,255,0.4);
+  border-radius:100px; font-size:13px; color:rgba(255,255,255,0.8); font-weight:500;
+}
+.cover-deco {
+  position:absolute; right:72px; top:50%; transform:translateY(-50%);
+  width:320px; height:320px; border-radius:50%;
+  background:rgba(255,255,255,0.05);
+  border:1.5px solid rgba(255,255,255,0.1);
+  display:flex; align-items:center; justify-content:center;
+}
+.cover-deco::before {
+  content:''; display:block; width:220px; height:220px; border-radius:50%;
+  background:rgba(255,255,255,0.05);
+  border:1.5px solid rgba(255,255,255,0.12);
+}
+
+/* ── Chip ────────────────────────────── */
+.chip {
+  display:inline-block; padding:3px 10px; border-radius:100px;
+  font-size:11px; font-weight:700; letter-spacing:0.06em;
+}
+.chip-accent { background:var(--accent-soft); color:var(--accent); }
+.chip-note   { background:var(--note-soft);   color:var(--note);   }
+.chip-green  { background:var(--green-soft);  color:var(--green);  }
+.chip-gray   { background:#F0F0F5; color:var(--text-sub); }
+
+/* ── Stats ───────────────────────────── */
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px; }
+.stat-card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:12px; padding:24px 20px; text-align:center;
+  border-top:3px solid var(--accent);
+}
+.stat-card .sv { font-size:32px; font-weight:900; color:var(--accent); line-height:1; margin-bottom:6px; }
+.stat-card .sl { font-size:13px; color:var(--text-sub); font-weight:500; }
+
+/* ── Info list ───────────────────────── */
+.info-list { display:flex; gap:12px; margin-top:16px; }
+.info-item {
+  flex:1;
+  background:var(--bg-warm); border:1px solid var(--border);
+  border-radius:8px; padding:14px 18px;
+}
+.info-item .il { font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:4px; letter-spacing:0.05em; }
+.info-item .iv { font-size:15px; font-weight:700; color:var(--text-main); }
+.info-item .in { font-size:11px; color:var(--text-note); margin-top:2px; }
+
+/* ── Flow ────────────────────────────── */
+.flow-wrap { display:flex; align-items:stretch; gap:0; margin-top:8px; }
+.flow-node {
+  flex:1; background:var(--bg-card); border:1px solid var(--border);
+  border-radius:10px; padding:20px 14px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.flow-node.accent { background:var(--accent-soft); border-color:var(--accent); }
+.flow-node .fn-icon { font-size:28px; margin-bottom:6px; }
+.flow-node .fn-label { font-size:10px; color:var(--text-sub); margin-bottom:4px; font-weight:500; }
+.flow-node .fn-name { font-size:15px; font-weight:700; color:var(--text-main); }
+.flow-node .fn-note { font-size:10px; color:var(--text-sub); margin-top:4px; line-height:1.5; }
+.flow-arrow { display:flex; align-items:center; padding:0 6px; flex-shrink:0; }
+.flow-arrow svg { width:28px; height:20px; }
+
+/* ── Steps ───────────────────────────── */
+.steps-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; margin-top:4px; }
+.step {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:11px 16px; border-radius:8px;
+  border:1px solid var(--border); background:var(--bg-card);
+}
+.step.hl { background:var(--accent-soft); border-color:var(--accent); }
+.step-num {
+  flex-shrink:0; width:28px; height:28px; border-radius:50%;
+  background:var(--border); color:var(--text-sub);
+  font-size:12px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+.step.hl .step-num { background:var(--accent); color:#fff; }
+.step-body .st { font-size:13px; font-weight:700; color:var(--text-main); line-height:1.3; }
+.step-body .ss { font-size:11px; color:var(--text-sub); margin-top:2px; line-height:1.5; }
+
+/* ── Role cards ──────────────────────── */
+.role-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px; }
+.role-card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:12px; padding:24px 20px;
+  border-top:3px solid var(--border);
+}
+.role-card.mine  { border-top-color:var(--note); }
+.role-card.maker { border-top-color:var(--accent); }
+.role-card.elena { border-top-color:var(--green); }
+.role-card .rc-title { font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+.role-card ul { list-style:none; }
+.role-card li {
+  font-size:13px; color:var(--text-body); line-height:1.7;
+  padding:4px 0; border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; gap:6px;
+}
+.role-card li:last-child { border-bottom:none; }
+.role-card li::before { content:'·'; font-weight:900; flex-shrink:0; margin-top:1px; }
+.role-card.mine  li::before { color:var(--note); }
+.role-card.maker li::before { color:var(--accent); }
+.role-card.elena li::before { color:var(--green); }
+
+/* ── Money ───────────────────────────── */
+.money-big { display:flex; align-items:center; justify-content:center; gap:20px; margin-top:16px; }
+.money-node {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:12px; padding:24px 32px; text-align:center; min-width:200px;
+}
+.money-node.accent { background:var(--accent-soft); border-color:var(--accent); }
+.money-node .mn-name { font-size:20px; font-weight:700; color:var(--text-main); }
+.money-node .mn-note { font-size:11px; color:var(--text-sub); margin-top:5px; }
+.money-arrow { text-align:center; }
+.money-arrow .ma-line { font-size:12px; color:var(--accent); font-weight:700; margin-bottom:2px; }
+.money-arrow .ma-icon { font-size:26px; color:var(--accent); }
+
+/* ── Note callout ────────────────────── */
+.note-callout {
+  background:var(--note-soft); border:1.5px solid var(--note-border);
+  border-radius:10px; padding:18px 22px;
+  display:flex; gap:14px; align-items:flex-start; margin-top:16px;
+}
+.note-callout .nc-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
+.note-callout .nc-title { font-size:14px; font-weight:700; color:var(--note); margin-bottom:4px; }
+.note-callout .nc-body { font-size:13px; color:var(--text-body); line-height:1.7; }
+
+/* ── Table ───────────────────────────── */
+.tbl { width:100%; border-collapse:collapse; font-size:14px; margin-top:8px; }
+.tbl th { background:var(--accent); color:#fff; padding:12px 16px; text-align:left; font-weight:700; font-size:13px; }
+.tbl td { border-bottom:1px solid var(--border); padding:13px 16px; color:var(--text-body); vertical-align:top; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:nth-child(even) td { background:var(--bg-warm); }
+.tbl td:first-child { font-weight:500; color:var(--text-main); }
+
+/* ── Schedule ────────────────────────── */
+.sch-wrap { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:8px; }
+.sch-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.sch-head { background:var(--accent); color:#fff; padding:14px 20px; font-size:16px; font-weight:700; }
+.sch-card.note-card .sch-head { background:var(--note); }
+.sch-row { display:flex; align-items:center; padding:13px 20px; border-bottom:1px solid var(--border); gap:16px; }
+.sch-row:last-child { border-bottom:none; }
+.sch-row .sr-label { font-size:12px; font-weight:700; color:var(--text-sub); min-width:110px; }
+.sch-row .sr-val { font-size:14px; font-weight:500; color:var(--text-main); }
+.sch-row .sr-chip { margin-left:auto; }
+
+/* ── Contact ─────────────────────────── */
+.contact-outer { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:8px; }
+.contact-card { background:var(--bg-warm); border:1px solid var(--border); border-radius:12px; padding:28px 32px; }
+.contact-card h3 { font-size:15px; font-weight:700; color:var(--text-sub); margin-bottom:16px; }
+.contact-row { display:flex; align-items:flex-start; gap:14px; padding:10px 0; border-bottom:1px solid var(--border); }
+.contact-row:last-child { border-bottom:none; }
+.contact-row .cr-label { font-size:12px; font-weight:700; color:var(--text-sub); min-width:56px; padding-top:2px; }
+.contact-row .cr-val { font-size:15px; color:var(--text-main); font-weight:500; }
+.contact-row .cr-val a { color:var(--accent); text-decoration:none; }
+.url-card { background:var(--accent-soft); border:1px solid var(--accent-mid); border-radius:12px; padding:28px 32px; }
+.url-card h3 { font-size:15px; font-weight:700; color:var(--accent); margin-bottom:16px; }
+.url-card .url-item { padding:10px 0; border-bottom:1px solid var(--accent-mid); }
+.url-card .url-item:last-child { border-bottom:none; }
+.url-card .url-label { font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:4px; }
+.url-card .url-val { font-size:13px; color:var(--accent); font-weight:500; word-break:break-all; }
+
+/* ── 見やすさ改善 ───────────────────────── */
+/* 影でカードに立体感 */
+.stat-card { box-shadow:0 3px 12px rgba(0,0,0,.08); }
+.info-item  { box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.role-card  { box-shadow:0 3px 12px rgba(0,0,0,.08); }
+.sch-card   { box-shadow:0 3px 12px rgba(0,0,0,.08); }
+.contact-card, .url-card { box-shadow:0 3px 12px rgba(0,0,0,.08); }
+.note-callout { box-shadow:0 2px 8px rgba(21,101,192,.1); }
+.step { box-shadow:0 1px 4px rgba(0,0,0,.05); }
+
+/* フォントサイズ */
+.stat-card .sv { font-size:40px; letter-spacing:-.02em; }
+.stat-card .sl { font-size:14px; font-weight:600; }
+.info-item .il { font-size:12px; letter-spacing:.06em; }
+.info-item .iv { font-size:16px; }
+.info-item .in { font-size:12px; line-height:1.65; }
+.flow-node .fn-label { font-size:11px; }
+.flow-node .fn-name  { font-size:16px; }
+.flow-node .fn-note  { font-size:11px; line-height:1.65; }
+.chip { font-size:12px; padding:4px 12px; }
+.step-body .st { font-size:14px; }
+.step-body .ss { font-size:12px; line-height:1.65; }
+.step-num { font-size:13px; }
+.role-card li { font-size:14px; line-height:1.8; }
+.rc-title  { font-size:17px; }
+.tbl { font-size:14px; }
+.tbl th { padding:14px 20px; font-size:14px; }
+.tbl td { padding:15px 20px; }
+.sch-row .sr-label { font-size:13px; min-width:120px; }
+.sch-row .sr-val   { font-size:15px; }
+.contact-row .cr-val { font-size:16px; }
+.contact-row .cr-label { font-size:13px; min-width:64px; }
+.url-card .url-label { font-size:12px; margin-bottom:5px; }
+.url-card .url-val   { font-size:14px; }
+.note-callout .nc-title { font-size:15px; }
+.note-callout .nc-body  { font-size:14px; line-height:1.75; }
+
+/* hl ステップをより目立たせる */
+.step.hl { border-width:1.5px; }
+.step.hl .step-body .st { color:var(--accent); }
+
+/* マネーフローの文字 */
+.money-node .mn-name { font-size:22px; }
+.money-node .mn-note { font-size:12px; }
+.money-arrow .ma-line { font-size:13px; font-weight:700; }
+.money-arrow .ma-icon { font-size:28px; }
+
+/* 注記・補足テキストの底上げ */
+.slide .body > div[style*="font-size:12px"] { font-size:13px !important; }
+
+/* ── レイアウト改善 ───────────────────────── */
+/* 統計カードを縦に余裕 */
+.stats { gap:20px; margin-top:16px; }
+.stat-card { padding:46px 20px; }
+
+/* info-list を 2×2 グリッドに変更して各アイテムを大きく */
+.info-list {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-top:22px;
+}
+.info-item { padding:28px 28px; }
+.info-item .il { font-size:12px; margin-bottom:8px; }
+.info-item .iv { font-size:18px; }
+.info-item .in { font-size:12px; margin-top:8px; line-height:1.7; }
+
+/* ステップを縦に余裕 */
+.steps-grid { gap:10px 18px; margin-top:8px; }
+.step { padding:16px 20px; }
+
+/* フロー図ノードを大きく */
+.flow-wrap { margin-top:12px; }
+.flow-node { padding:28px 16px; }
+
+/* ロールカードを縦に余裕 */
+.role-grid { margin-top:12px; }
+.role-card { padding:30px 24px; }
+.role-card .rc-title { margin-bottom:18px; font-size:18px; }
+.role-card li { padding:7px 0; }
+
+/* スケジュール */
+.sch-wrap { margin-top:12px; }
+.sch-head { padding:16px 24px; font-size:17px; }
+.sch-row { padding:16px 24px; }
+.sch-row .sr-label { min-width:128px; }
+
+/* テーブル */
+.tbl th { padding:15px 22px; }
+.tbl td { padding:17px 22px; }
+
+/* コンタクト */
+.contact-outer { margin-top:12px; }
+.contact-card { padding:32px 36px; }
+.contact-card h3 { font-size:16px; margin-bottom:18px; }
+.contact-row { padding:13px 0; }
+.url-card { padding:32px 36px; }
+.url-card h3 { font-size:16px; margin-bottom:18px; }
+.url-item { padding:13px 0; }
+
+/* マネーフロー */
+.money-big { margin-top:20px; }
+.money-node { padding:28px 40px; min-width:220px; }
+
+/* note callout */
+.note-callout { margin-top:20px; padding:20px 26px; }
+
+/* fn-badge（絵文字の代替） */
+.fn-badge {
+  width:38px; height:38px; border-radius:50%;
+  background:var(--border); color:var(--text-sub);
+  font-size:11px; font-weight:700; letter-spacing:0;
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 8px; flex-shrink:0;
+}
+.fn-badge.primary { background:var(--accent); color:#fff; }
+.fn-badge.dim { background:#E8EAF0; color:var(--text-sub); }
+
+/* note-tag */
+.note-tag {
+  display:inline-block; padding:1px 8px; border-radius:4px;
+  font-size:11px; font-weight:700; margin-right:6px; vertical-align:middle;
+}
+.note-tag.info   { background:var(--note-soft); color:var(--note); }
+.note-tag.warn   { background:rgba(230,81,0,0.1); color:var(--accent); }
+.note-tag.tip    { background:#F3F4F6; color:var(--text-sub); }
+</style>
+</head>
+<body>
+
+<!-- ①表紙 -->
+<div class="slide slide-cover">
+  <div class="cover-deco"></div>
+  <div class="cover-inner">
+    <div class="cover-eyebrow">株式会社yui ／ 2026年</div>
+    <div class="cover-title">エレナ 選べるギフト</div>
+    <div class="cover-sub">ベンダー・メーカー様向けご案内</div>
+    <div class="cover-badge">受注・出荷・お支払いの流れを解説します</div>
+  </div>
+  <div class="sn">1 / 14</div>
+</div>
+
+<!-- ②サービス概要 -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>サービス概要</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="info-list">
+      <div class="info-item">
+        <div class="il">商品ラインナップ・定価（税抜）</div>
+        <div class="iv">HIMAWARI ¥4,000 / AJISAI ¥6,000</div>
+        <div class="in">
+          サンプルカタログ：
+          <a href="https://sample.yui.gift/6cd41470-0389-48e8-a4cf-b31877724398" style="color:var(--accent);text-decoration:none;" target="_blank">HIMAWARI</a>
+          ／
+          <a href="https://sample.yui.gift/794fa64b-35c5-42a2-b5d7-f73cad83a038" style="color:var(--accent);text-decoration:none;" target="_blank">AJISAI</a>
+          <br>メーカー様への支払いは卸値＋500円 × 出荷数量
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="il">申込方法</div>
+        <div class="iv">WEBカタログ または ハガキ</div>
+        <div class="in">WEBカタログ：お客様がURLで商品選択 / ハガキ：弊社でデータ入力後に発注通知<br>※ のし・名入れ・配送日指定は対応しておりません</div>
+      </div>
+      <div class="info-item">
+        <div class="il">販売期間 / 受注締切（2026年）</div>
+        <div class="iv">販売 7/1〜9/15 ／ 受注締切 9/30（水）</div>
+        <div class="in">WEB申込 23:59まで / ハガキ申込 当日消印有効 / ※10/15まで発注が入る可能性あり</div>
+      </div>
+      <div class="info-item">
+        <div class="il">受注フロー</div>
+        <div class="iv">WEBカタログ / ハガキ → Providersアプリ → 発注通知</div>
+        <div class="in">注文が入ると自動でProvidersアプリに注文データが反映されます</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; padding:12px 22px; background:var(--note-soft); border:1px solid var(--note-border); border-radius:8px; font-size:13px; color:var(--text-body); line-height:1.7;">
+      <span class="note-tag info">情報</span>弊社に登録いただいた商品は、選べるギフト以外の弊社販路（Wedding・Corporate）にも提案させていただく場合があります。エレナ様の選べるギフトへの商品提供のみご希望の場合は、yuiまでご相談ください。
+    </div>
+  </div>
+  <div class="sn">2 / 14</div>
+</div>
+
+<!-- ③掲載開始までの流れ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>掲載開始までの流れ</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="st">契約書の押印</div>
+          <div class="ss">取引開始にあたり、弊社との契約書にご署名・押印をお願いします</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="st">企業情報・商品情報をyuiへ提供</div>
+          <div class="ss">会社名・担当者情報・商品詳細（商品名・価格・画像等）をメールにてご提出ください。詳細は弊社より個別にご案内します</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="st">yuiがシステムへ商品登録・アカウント作成</div>
+          <div class="ss">ご提供いただいた情報をもとに、弊社にてWEBカタログへの商品登録およびProvidersアプリのアカウントを作成します</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="st">ログイン情報をメールでご案内</div>
+          <div class="ss">Providersアプリへのログイン情報（ID・パスワード）を弊社よりメールにてお送りします</div>
+        </div>
+      </div>
+      <div class="step hl">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="st">WEBカタログに掲載開始・販売スタート</div>
+          <div class="ss">商品がWEBカタログに掲載され、お客様からのご注文をお受けできる状態になります</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">3 / 14</div>
+</div>
+
+<!-- ④商流 -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>商流・代金決済ルート</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div style="font-size:11px; font-weight:700; color:var(--text-sub); letter-spacing:.06em; margin-bottom:8px;">商品の流れ</div>
+    <div class="flow-wrap">
+      <div class="flow-node">
+        <div class="fn-label">販売・配布</div>
+        <div class="fn-name">エレナ</div>
+        <div class="fn-note">ギフトチケットを<br>店頭でお客様に提供</div>
+      </div>
+      <div class="flow-arrow">
+        <svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="flow-node">
+        <div class="fn-label">購入者</div>
+        <div class="fn-name">お客様</div>
+        <div class="fn-note">WEBカタログで<br>商品選択・配送先登録</div>
+      </div>
+      <div class="flow-arrow">
+        <svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="flow-node accent">
+        <div class="fn-label">受付・管理</div>
+        <div class="fn-name">株式会社yui</div>
+        <div class="fn-note">WEBカタログで受付・<br>Providersアプリで通知</div>
+      </div>
+      <div class="flow-arrow">
+        <svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="flow-node">
+        <div class="fn-label">出荷</div>
+        <div class="fn-name">メーカー様</div>
+        <div class="fn-note">商品を梱包・<br>ご指定の運送会社で出荷</div>
+      </div>
+      <div class="flow-arrow">
+        <svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="flow-node">
+        <div class="fn-label">受取</div>
+        <div class="fn-name">お客様</div>
+        <div class="fn-note">選んだ商品が<br>ご自宅へ届く</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px; font-weight:700; color:var(--text-sub); letter-spacing:.06em; margin:18px 0 8px;">代金の流れ</div>
+    <div class="flow-wrap">
+      <div class="flow-node">
+        <div class="fn-label">定価支払い</div>
+        <div class="fn-name">お客様</div>
+        <div class="fn-note">エレナでギフトを<br>定価にて購入</div>
+      </div>
+      <div class="flow-arrow"><svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="flow-node">
+        <div class="fn-label">卸値・月次精算</div>
+        <div class="fn-name">エレナ</div>
+        <div class="fn-note">卸値でyuiへ<br>月次精算</div>
+      </div>
+      <div class="flow-arrow"><svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="flow-node accent">
+        <div class="fn-label">月次振込</div>
+        <div class="fn-name">株式会社yui</div>
+        <div class="fn-note">出荷実績ベースで<br>メーカー様へ振込</div>
+      </div>
+      <div class="flow-arrow"><svg viewBox="0 0 28 20"><path d="M18 2l8 8-8 8M2 10h24" fill="none" stroke="#E65100" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="flow-node">
+        <div class="fn-label">月次受取</div>
+        <div class="fn-name">メーカー様</div>
+        <div class="fn-note">請求書不要・<br>Providersアプリで確認</div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">4 / 14</div>
+</div>
+
+<!-- ⑤発送フロー -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>発送フロー（7ステップ）</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="st">お客様がWEBカタログまたはハガキで申込</div>
+          <div class="ss">WEBカタログ：URLで商品選択・配送先登録 / ハガキ：申込書を郵送・弊社がデータ入力</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="st">yuiのWEBカタログが受付・確認</div>
+          <div class="ss">お客様情報・商品・お届け先を自動で受付</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="st">メーカー様へ発注通知</div>
+          <div class="ss">お客様の注文が入ると自動でProvidersアプリに注文データが反映されます</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="st">発注通知の受信・確認</div>
+          <div class="ss">Providersアプリ（provider.yui.gift）にログインして内容確認。未発送があれば毎朝10時にメール通知</div>
+        </div>
+      </div>
+      <div class="step hl">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="st">在庫確認・梱包</div>
+          <div class="ss">欠品の場合はyuiカスタマーサポートへ速やかに連絡</div>
+        </div>
+      </div>
+      <div class="step hl">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="st">ご指定の運送会社で出荷</div>
+          <div class="ss">運送会社・送り状はメーカー様にてご手配ください</div>
+        </div>
+      </div>
+      <div class="step hl">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="st">Providersアプリで発送情報を入力</div>
+          <div class="ss">運送会社・追跡番号を入力すると、運送会社名・追跡番号を記載した発送完了メールがお客様に自動で届きます</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px; padding:9px 16px; background:var(--accent-soft); border-radius:6px; font-size:12px; color:var(--text-sub);">
+      <span class="note-tag warn">ポイント</span>オレンジ枠（⑤〜⑦）がメーカー様の主な対応業務です。⑦の発送情報入力をお忘れなくお願いします。
+    </div>
+  </div>
+  <div class="sn">5 / 14</div>
+</div>
+
+<!-- ⑥業務分担 -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>業務分担</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="role-grid">
+      <div class="role-card mine">
+        <div class="rc-title">株式会社yui</div>
+        <ul>
+          <li>WEBカタログの運営・管理</li>
+          <li>発注通知の配信</li>
+          <li>Providersアプリの提供</li>
+          <li>月次精算・メーカー様への振込</li>
+          <li>発送完了メールの自動配信（Providersアプリ経由）</li>
+          <li>カスタマーサポート</li>
+        </ul>
+      </div>
+      <div class="role-card maker">
+        <div class="rc-title">メーカー様</div>
+        <ul>
+          <li>在庫管理・確保</li>
+          <li>梱包・出荷作業</li>
+          <li>ご指定の運送会社での発送</li>
+          <li>Providersアプリへの発送情報入力</li>
+          <li>欠品時のyuiへの連絡</li>
+        </ul>
+      </div>
+      <div class="role-card elena">
+        <div class="rc-title">エレナ</div>
+        <ul>
+          <li>カタログ・QRコードの店頭配布</li>
+          <li>店頭でのギフト案内・接客</li>
+          <li>エンドユーザー対応（一次）</li>
+        </ul>
+      </div>
+    </div>
+    <div style="margin-top:16px; padding:12px 20px; background:var(--bg-warm); border-radius:8px; font-size:12px; color:var(--text-sub); line-height:1.7;">
+      <span class="note-tag warn">注意</span>Providersアプリの月次請求画面の金額をyuiからお振込みします。メーカー様からの請求書は不要です。
+    </div>
+  </div>
+  <div class="sn">6 / 14</div>
+</div>
+
+<!-- ⑦お金の流れ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>お金の流れ</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="money-big">
+      <div class="money-node">
+        <div class="mn-name">株式会社yui</div>
+        <div class="mn-note">事務局・精算担当</div>
+      </div>
+      <div class="money-arrow">
+        <div class="ma-line">月次振込（翌月末払い）</div>
+        <div class="ma-icon">→</div>
+      </div>
+      <div class="money-node accent">
+        <div class="mn-name">メーカー様</div>
+        <div class="mn-note">商品出荷</div>
+      </div>
+    </div>
+    <div style="margin-top:16px; background:var(--bg-warm); border:1px solid var(--border); border-radius:10px; padding:14px 20px;">
+      <table class="tbl" style="margin-top:0;">
+        <tr>
+          <th>項目</th><th>内容</th>
+        </tr>
+        <tr>
+          <td>精算方法</td>
+          <td>yuiからメーカー様の指定口座へ銀行振込</td>
+        </tr>
+        <tr>
+          <td>請求書</td>
+          <td><strong>不要</strong>（Providersアプリの月次請求画面の金額をyuiが確認・振込）</td>
+        </tr>
+        <tr>
+          <td>締め日・支払日</td>
+          <td>毎月末締め → 翌月末払い</td>
+        </tr>
+        <tr>
+          <td>算出基準</td>
+          <td>卸値＋500円 × 当月出荷数量（離島等で追加送料が発生する場合はyuiへご相談ください）</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="sn">7 / 14</div>
+</div>
+
+<!-- ⑧イレギュラー対応 -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>イレギュラー対応</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <table class="tbl">
+      <thead>
+        <tr><th style="width:220px;">ケース</th><th>対応手順</th><th style="width:200px;">連絡先</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>在庫切れ・欠品</td>
+          <td>出荷できない旨を速やかにyuiカスタマーサポートへ連絡。代替品がある場合は提案可</td>
+          <td>info@yui.gift<br>03-6441-0931</td>
+        </tr>
+        <tr>
+          <td>お届け先変更の依頼</td>
+          <td>お客様からの変更依頼はyuiが一次対応。出荷前ならProvidersアプリで確認・調整</td>
+          <td>yui事務局が調整</td>
+        </tr>
+        <tr>
+          <td>配送トラブル（遅延・破損）</td>
+          <td>ご利用の運送会社へ問い合わせの上、内容をyuiへ報告。お客様対応はyuiが担当</td>
+          <td>yui事務局に報告</td>
+        </tr>
+        <tr>
+          <td>発注通知が届かない</td>
+          <td>Providersアプリにログインして未処理の発注を確認。迷惑メールフォルダも確認</td>
+          <td>info@yui.gift</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px; padding:10px 18px; background:var(--accent-soft); border-radius:6px; font-size:12px; color:var(--text-sub);">
+      <span class="note-tag tip">ポイント</span>イレギュラーが発生した際はお早めにご連絡ください。メーカー様からお客様へ直接連絡する必要はありません。お客様対応はyui事務局が行います。
+    </div>
+  </div>
+  <div class="sn">8 / 14</div>
+</div>
+
+<!-- ⑨主要日程 -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>主要日程</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="sch-wrap">
+      <div class="sch-card">
+        <div class="sch-head">2026年 HIMAWARI・AJISAI</div>
+        <div class="sch-row">
+          <div class="sr-label">販売開始</div>
+          <div class="sr-val">2026年7月1日（水）</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">販売終了</div>
+          <div class="sr-val">2026年9月15日（火）</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">受注締切</div>
+          <div class="sr-val">2026年9月30日（水）</div>
+          <div class="sr-chip"><span class="chip chip-accent">重要</span></div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">申込方法</div>
+          <div class="sr-val" style="font-size:13px;">WEB 23:59まで / ハガキ 当日消印有効</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">配送完了目標</div>
+          <div class="sr-val">別途案内</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">精算</div>
+          <div class="sr-val">末締め翌月末払い（発送実績ベース・月次）</div>
+        </div>
+      </div>
+      <div class="sch-card note-card">
+        <div class="sch-head">スケジュールのポイント</div>
+        <div class="sch-row">
+          <div class="sr-label">ポイント</div>
+          <div class="sr-val" style="font-size:13px;">販売終了（9/15）後も受注締切（9/30）までWEB選択・ハガキ申込期間があります</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">長期在庫注意</div>
+          <div class="sr-val" style="font-size:13px;">販売期間終了後〜締切まで間欠的に発注が入ります。在庫を一定量確保しておいてください</div>
+        </div>
+        <div class="sch-row">
+          <div class="sr-label">次回シーズン</div>
+          <div class="sr-val" style="font-size:13px;">次回の選べるギフト詳細は別途ご連絡します</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px; padding:12px 20px; background:var(--accent-soft); border:1px solid rgba(230,81,0,0.2); border-radius:8px; font-size:12px; color:var(--text-sub); line-height:1.8;">
+      <span class="note-tag warn">注意</span><strong style="color:var(--accent);">10月15日まで発注が入る可能性があります。</strong><br>
+      受注締切（9/30）後も、購入はされたが商品未選択のお客様に対して、弊社が指定商品を代わりに注文する対応を行います（対応期限：10/15）。
+    </div>
+  </div>
+  <div class="sn">9 / 14</div>
+</div>
+
+<!-- ⑩お問合せ -->
+<div class="slide">
+  <div class="slide-header">
+    <h2>お問合せ・アクセス先</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="body">
+    <div class="contact-outer">
+      <div class="contact-card">
+        <h3>事務局（株式会社yui）</h3>
+        <div class="contact-row">
+          <div class="cr-label">電話</div>
+          <div class="cr-val">03-6441-0931</div>
+        </div>
+        <div class="contact-row">
+          <div class="cr-label">メール</div>
+          <div class="cr-val"><a href="mailto:info@yui.gift">info@yui.gift</a></div>
+        </div>
+        <div class="contact-row">
+          <div class="cr-label">受付時間</div>
+          <div class="cr-val" style="font-size:13px;">平日 11:00〜17:00<br>（土日祝除く）</div>
+        </div>
+        <div class="contact-row">
+          <div class="cr-label">緊急連絡</div>
+          <div class="cr-val" style="font-size:13px; color:var(--text-sub);">時間外は翌営業日に折り返します</div>
+        </div>
+      </div>
+      <div class="url-card">
+        <h3>Providersアプリ</h3>
+        <div class="url-item">
+          <div class="url-label">発注確認・発送情報入力</div>
+          <div class="url-val">provider.yui.gift</div>
+        </div>
+        <div class="url-item">
+          <div class="url-label">ログイン情報</div>
+          <div class="url-val" style="font-size:12px; color:var(--text-sub);">IDとパスワードは別途メールにてご案内しています</div>
+        </div>
+        <div class="url-item">
+          <div class="url-label">操作マニュアル</div>
+          <div class="url-val">yui.noco.sale/share/d/01KT5XJ6YMH2Q7ATC465YXJPGC</div>
+        </div>
+        <div class="url-item">
+          <div class="url-label">未発送通知</div>
+          <div class="url-val" style="font-size:12px; color:var(--text-sub);">未発送の発注がある場合は毎朝10時にメールでお知らせします</div>
+        </div>
+        <div class="url-item">
+          <div class="url-label">ログインできない場合</div>
+          <div class="url-val" style="font-size:12px; color:var(--text-sub);">迷惑メールフォルダをご確認のうえ、上記サポートまでご連絡ください</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">10 / 14</div>
+</div>
+
+
+
+<!-- ポータル操作マニュアル CSS -->
+<style>
+.prov-frame{background:#F5F5F5;border-radius:8px;overflow:hidden;border:1px solid #DDD;box-shadow:0 3px 12px rgba(0,0,0,.1);}
+.prov-nav{background:#fff;border-bottom:1px solid #E0E0E0;display:flex;align-items:center;padding:0 16px;height:40px;gap:0;}
+.prov-logo{font-size:16px;font-weight:700;color:#00ACC1;font-family:Georgia,serif;font-style:italic;margin-right:24px;}
+.prov-tab{font-size:11px;color:#888;padding:0 14px;height:40px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;}
+.prov-tab.active{color:#00ACC1;border-bottom-color:#00ACC1;font-weight:700;}
+.prov-user{margin-left:auto;font-size:11px;color:#888;display:flex;align-items:center;gap:6px;}
+.prov-body{padding:16px;}
+.prov-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.prov-toolbar-left{font-size:11px;color:#888;}
+.prov-toolbar-right{display:flex;gap:8px;}
+.prov-btn-teal{background:#00ACC1;color:#fff;border:none;border-radius:4px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;}
+.prov-btn-outline{background:#fff;color:#00ACC1;border:1.5px solid #00ACC1;border-radius:4px;padding:4px 12px;font-size:10px;font-weight:700;}
+.prov-tbl{width:100%;border-collapse:collapse;font-size:10px;}
+.prov-tbl th{background:#FAFAFA;border-bottom:1.5px solid #E0E0E0;padding:6px 8px;text-align:left;font-weight:700;color:#555;white-space:nowrap;}
+.prov-tbl td{border-bottom:1px solid #F0F0F0;padding:6px 8px;color:#333;vertical-align:middle;white-space:nowrap;}
+.prov-tbl tr:hover td{background:#F9F9F9;}
+.prov-badge-detail{background:#fff;color:#00ACC1;border:1px solid #00ACC1;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;display:inline-block;margin-bottom:3px;}
+.prov-badge-send{background:#00ACC1;color:#fff;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;display:inline-block;}
+.prov-date-red{color:#E53935;font-weight:700;}
+.prov-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
+.prov-pager button{border:1px solid #DDD;background:#fff;border-radius:4px;padding:3px 10px;font-size:10px;color:#888;}
+.prov-pager .cur{background:#00ACC1;color:#fff;border-color:#00ACC1;}
+.prov-login-card{background:#fff;border-radius:8px;padding:24px 28px;width:280px;box-shadow:0 2px 12px rgba(0,0,0,.1);margin:0 auto;}
+.prov-login-logo{text-align:center;font-size:22px;font-weight:700;color:#00ACC1;font-family:Georgia,serif;font-style:italic;margin-bottom:16px;}
+.prov-login-field{border:1px solid #DDD;border-radius:4px;padding:8px 10px;width:100%;font-size:11px;margin-bottom:8px;display:flex;align-items:center;gap:6px;color:#BBB;background:#fff;}
+.prov-login-btn{background:linear-gradient(90deg,#00BCD4,#26C6DA);color:#fff;border:none;border-radius:4px;padding:10px;width:100%;font-size:12px;font-weight:700;text-align:center;margin-top:4px;}
+.prov-highlight{background:rgba(0,172,193,0.12);border:2px solid #00ACC1;border-radius:6px;}
+.step-callout{background:#FFF8E1;border:1.5px solid #FFB300;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:11px;color:#5D4037;line-height:1.6;}
+.step-callout strong{color:#E65100;}
+.prov-modal{background:#fff;border-radius:8px;padding:16px 18px;border:1px solid #DDD;box-shadow:0 4px 16px rgba(0,0,0,.15);width:260px;}
+.prov-modal h4{font-size:11px;font-weight:700;color:#333;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #EEE;}
+.prov-modal label{font-size:9.5px;font-weight:700;color:#555;margin-bottom:3px;display:block;}
+.prov-modal select,.prov-modal input{border:1px solid #CCC;border-radius:4px;padding:5px 8px;font-size:10px;width:100%;margin-bottom:8px;}
+</style>
+
+<!-- ①ログイン -->
+<div class="slide">
+  <div class="slide-header" style="padding:36px 68px 0 80px;">
+    <div style="display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:2px;letter-spacing:.08em;margin-bottom:6px;">ポータル操作マニュアル</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--text-main);">① ログインする</h2>
+    <div style="width:100%;height:1.5px;background:#EDE8E4;margin:10px 0 0;"></div>
+  </div>
+  <div style="padding:16px 68px 0 80px;display:grid;grid-template-columns:1fr 1.4fr;gap:36px;align-items:start;">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:6px;">ポータルURL</div>
+      <div style="background:#E0F7FA;border:1.5px solid #00ACC1;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:700;color:#006064;font-family:'Courier New',monospace;margin-bottom:14px;">https://provider.yui.gift/</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px;">手順</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 13px;border-radius:8px;background:#FFF8F5;border:1px solid #EDE8E4;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--text-main);">上記URLにアクセス</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">ブックマーク登録推奨</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 13px;border-radius:8px;background:#FFF8F5;border:1px solid #EDE8E4;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--text-main);">メールアドレス・パスワードを入力してログイン</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">ログイン情報は出展者登録完了後にメールでご案内します</div></div>
+        </div>
+      </div>
+      <div style="background:#FFF8F5;border:1px solid #EDE8E4;border-radius:8px;padding:10px 13px;margin-top:10px;font-size:11px;color:var(--text-body);line-height:1.7;">
+        ❓ ログインできない場合<br>
+        yui事務局（info@yui.gift）までご連絡ください
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;padding-top:8px;">
+      <div class="prov-frame" style="width:340px;">
+        <div style="background:#F5F5F5;height:28px;display:flex;align-items:center;padding:0 12px;gap:5px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#ffbd2e;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#28c840;"></div>
+          <div style="flex:1;background:#fff;border-radius:3px;height:16px;margin-left:8px;display:flex;align-items:center;padding:0 8px;font-size:9px;color:#AAA;">https://provider.yui.gift/</div>
+        </div>
+        <div style="background:#F5F5F5;padding:40px 20px;display:flex;align-items:center;justify-content:center;">
+          <div class="prov-login-card">
+            <div class="prov-login-logo">yui</div>
+            <div class="prov-login-field">✉ <span>メールアドレス</span></div>
+            <div class="prov-login-field">🔒 <span>パスワード</span></div>
+            <div class="prov-login-btn">ログイン</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">11 / 14</div>
+</div>
+
+
+<!-- ②発送要求の確認 -->
+<div class="slide">
+  <div class="slide-header" style="padding:32px 68px 0 80px;">
+    <div style="display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:2px;letter-spacing:.08em;margin-bottom:6px;">ポータル操作マニュアル</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--text-main);">② 発送要求の確認</h2>
+    <div style="width:100%;height:1.5px;background:#EDE8E4;margin:10px 0 0;"></div>
+  </div>
+  <div style="padding:12px 68px 0 80px;display:grid;grid-template-columns:1fr 1.8fr;gap:28px;align-items:start;">
+    <div>
+      <div style="font-size:12px;color:var(--text-body);line-height:1.8;margin-bottom:10px;">ログイン後、「<strong>発送要求</strong>」タブに発送が必要な注文が表示されます。表示情報をもとに商品を発送してください。</div>
+      <div style="background:#FFF8F5;border:1px solid #EDE8E4;border-radius:8px;padding:10px 13px;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-main);margin-bottom:4px;">📋 確認する項目</div>
+        <div style="font-size:11px;color:var(--text-body);line-height:1.8;">・注文日・発送期限<br>・商品名・品番<br>・注文者名・住所・電話番号<br>・ご両家名（贈り主名）</div>
+      </div>
+      <div class="step-callout">
+        <strong>⚠ 発送期限が赤字の注文</strong>は期限超過です。<br>早急に発送し、yui事務局へご連絡ください。<br><br>
+        未発送の注文がある場合、<strong>注文日翌日AM10:00</strong>にメールで自動通知が届きます。
+      </div>
+    </div>
+    <div>
+      <div class="prov-frame">
+        <div class="prov-nav">
+          <div class="prov-logo">yui</div>
+          <div class="prov-tab active">発送要求</div>
+          <div class="prov-tab">発送履歴</div>
+          <div class="prov-tab">商品</div>
+          <div class="prov-tab">月額請求</div>
+          <div class="prov-tab">運営からのお知らせ</div>
+          <div class="prov-user">👤 エレナ〇〇様</div>
+        </div>
+        <div class="prov-body">
+          <div class="prov-toolbar">
+            <div class="prov-toolbar-left">1 〜 3件</div>
+            <div class="prov-toolbar-right">
+              <div class="prov-btn-teal">▶ まとめて発送</div>
+              <div class="prov-btn-outline">↓ CSVダウンロード</div>
+            </div>
+          </div>
+          <table class="prov-tbl">
+            <tr><th style="width:20px;"><input type="checkbox"></th><th></th><th>注文日</th><th>発送期限</th><th>商品名</th><th>品番</th><th>注文者名</th><th>郵便番号</th><th>住所</th><th>電話番号</th><th>ご両家名</th></tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send">▶ 発送</div></td>
+              <td>2026-07-01</td><td class="prov-date-red">2026-07-05</td>
+              <td>長崎和牛ローススライス</td><td>2001</td><td>山田 太郎</td><td>850-0000</td><td>長崎市〇〇町1-2</td><td>095-000-0000</td><td>山田家</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send">▶ 発送</div></td>
+              <td>2026-07-02</td><td>2026-07-10</td>
+              <td>長崎和牛ヒレステーキ</td><td>2002</td><td>鈴木 花子</td><td>852-0000</td><td>長崎市△△町3-4</td><td>095-111-1111</td><td>株式会社〇〇様</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send">▶ 発送</div></td>
+              <td>2026-07-03</td><td>2026-07-12</td>
+              <td>長崎和牛ローススライス</td><td>2001</td><td>田中 一郎</td><td>851-0000</td><td>長崎市□□町5-6</td><td>095-222-2222</td><td>田中・佐藤家</td>
+            </tr>
+          </table>
+          <div class="prov-pager"><button>戻る</button><button class="cur">1</button><button>次へ</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">12 / 14</div>
+</div>
+
+
+<!-- ③商品を発送する -->
+<div class="slide">
+  <div class="slide-header" style="padding:32px 68px 0 80px;">
+    <div style="display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:2px;letter-spacing:.08em;margin-bottom:6px;">ポータル操作マニュアル</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--text-main);">③ 商品を発送する</h2>
+    <div style="width:100%;height:1.5px;background:#EDE8E4;margin:10px 0 0;"></div>
+  </div>
+  <div style="padding:12px 68px 0 80px;display:grid;grid-template-columns:1fr 1.8fr;gap:28px;align-items:start;">
+    <div>
+      <div style="font-size:12px;color:var(--text-body);line-height:1.8;margin-bottom:10px;">商品を発送したら、当該行の「<strong style="color:#00ACC1;">▶ 発送</strong>」ボタンをクリックしてください。</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 13px;border-radius:8px;background:#FFF8F5;border:1px solid #EDE8E4;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--text-main);">商品を発送する</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 13px;border-radius:8px;background:#FFF8F5;border:1px solid #EDE8E4;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--text-main);">発送当日に「▶ 発送」ボタンをクリック</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">複数件まとめて処理する場合はチェックボックスで選択後「まとめて発送」</div></div>
+        </div>
+      </div>
+      <div class="step-callout">
+        <strong>⚠ 必ず発送日当日にボタンを押してください</strong><br>
+        クリックした日が発送日として記録されます。<br>お問い合わせ時にこの日付をお伝えするため、<br>後日の操作は不正確な情報になります。
+      </div>
+    </div>
+    <div>
+      <div class="prov-frame">
+        <div class="prov-nav">
+          <div class="prov-logo">yui</div>
+          <div class="prov-tab active">発送要求</div>
+          <div class="prov-tab">発送履歴</div>
+          <div class="prov-tab">商品</div>
+          <div class="prov-tab">月額請求</div>
+          <div class="prov-tab">運営からのお知らせ</div>
+          <div class="prov-user">👤 エレナ〇〇様</div>
+        </div>
+        <div class="prov-body">
+          <div class="prov-toolbar">
+            <div class="prov-toolbar-left">1 〜 3件</div>
+            <div class="prov-toolbar-right">
+              <div class="prov-btn-teal prov-highlight" style="padding:5px 16px;">▶ まとめて発送</div>
+              <div class="prov-btn-outline">↓ CSVダウンロード</div>
+            </div>
+          </div>
+          <table class="prov-tbl">
+            <tr><th style="width:20px;"><input type="checkbox"></th><th></th><th>注文日</th><th>発送期限</th><th>商品名</th><th>品番</th><th>注文者名</th><th>郵便番号</th><th>住所</th><th>電話番号</th><th>ご両家名</th></tr>
+            <tr style="background:rgba(0,172,193,0.05);">
+              <td><input type="checkbox" checked></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send prov-highlight" style="font-size:10px;padding:3px 10px;">▶ 発送</div></td>
+              <td>2026-07-01</td><td class="prov-date-red">2026-07-05</td>
+              <td>長崎和牛ローススライス</td><td>2001</td><td>山田 太郎</td><td>850-0000</td><td>長崎市〇〇町1-2</td><td>095-000-0000</td><td>山田家</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send">▶ 発送</div></td>
+              <td>2026-07-02</td><td>2026-07-10</td>
+              <td>長崎和牛ヒレステーキ</td><td>2002</td><td>鈴木 花子</td><td>852-0000</td><td>長崎市△△町3-4</td><td>095-111-1111</td><td>株式会社〇〇様</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td><div class="prov-badge-detail">① 詳細</div><div class="prov-badge-send">▶ 発送</div></td>
+              <td>2026-07-03</td><td>2026-07-12</td>
+              <td>長崎和牛ローススライス</td><td>2001</td><td>田中 一郎</td><td>851-0000</td><td>長崎市□□町5-6</td><td>095-222-2222</td><td>田中・佐藤家</td>
+            </tr>
+          </table>
+          <div class="prov-pager"><button>戻る</button><button class="cur">1</button><button>次へ</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">13 / 14</div>
+</div>
+
+
+<!-- ④発送履歴の確認 -->
+<div class="slide">
+  <div class="slide-header" style="padding:32px 68px 0 80px;">
+    <div style="display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:2px;letter-spacing:.08em;margin-bottom:6px;">ポータル操作マニュアル</div>
+    <h2 style="font-size:26px;font-weight:700;color:var(--text-main);">④ 発送履歴の確認</h2>
+    <div style="width:100%;height:1.5px;background:#EDE8E4;margin:10px 0 0;"></div>
+  </div>
+  <div style="padding:12px 68px 0 80px;display:grid;grid-template-columns:1fr 1.8fr;gap:28px;align-items:start;">
+    <div>
+      <div style="font-size:12px;color:var(--text-body);line-height:1.8;margin-bottom:12px;">「<strong>▶ 発送</strong>」ボタンを押した注文は「<strong>発送履歴</strong>」タブに移動します。この画面で発送済み一覧を確認できます。</div>
+      <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:8px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:#1B5E20;line-height:1.7;">
+        ✅ 発送履歴に移動していれば<strong>発送対応は完了</strong>です。
+      </div>
+      <div style="background:#FFF8F5;border:1px solid #EDE8E4;border-radius:8px;padding:10px 13px;font-size:11px;color:var(--text-body);line-height:1.7;">
+        📥 CSVダウンロードで発送済み一覧をExcelで確認・保管することもできます。
+      </div>
+    </div>
+    <div>
+      <div class="prov-frame">
+        <div class="prov-nav">
+          <div class="prov-logo">yui</div>
+          <div class="prov-tab">発送要求</div>
+          <div class="prov-tab active">発送履歴</div>
+          <div class="prov-tab">商品</div>
+          <div class="prov-tab">月額請求</div>
+          <div class="prov-tab">運営からのお知らせ</div>
+          <div class="prov-user">👤 エレナ〇〇様</div>
+        </div>
+        <div class="prov-body">
+          <div class="prov-toolbar">
+            <div class="prov-toolbar-left">1 〜 3件</div>
+            <div class="prov-toolbar-right"><div class="prov-btn-outline">↓ CSVダウンロード</div></div>
+          </div>
+          <table class="prov-tbl">
+            <tr><th></th><th>注文日</th><th>発送日</th><th>商品名</th><th>品番</th><th>注文者名</th><th>郵便番号</th><th>住所</th><th>電話番号</th><th>ご両家名</th></tr>
+            <tr>
+              <td><div class="prov-badge-detail">① 詳細</div></td>
+              <td>2026-07-01</td><td style="color:#2E7D32;font-weight:700;">2026-07-05</td>
+              <td>長崎和牛ローススライス</td><td>2001</td><td>山田 太郎</td><td>850-0000</td><td>長崎市〇〇町1-2</td><td>095-000-0000</td><td>山田家</td>
+            </tr>
+            <tr>
+              <td><div class="prov-badge-detail">① 詳細</div></td>
+              <td>2026-07-02</td><td style="color:#2E7D32;font-weight:700;">2026-07-08</td>
+              <td>長崎和牛ヒレステーキ</td><td>2002</td><td>鈴木 花子</td><td>852-0000</td><td>長崎市△△町3-4</td><td>095-111-1111</td><td>株式会社〇〇様</td>
+            </tr>
+          </table>
+          <div class="prov-pager"><button>戻る</button><button class="cur">1</button><button>次へ</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sn">14 / 14</div>
+</div>
+
+</body>
+</html>
