@@ -414,13 +414,13 @@
           <!-- 未発送テーブル -->
           <div id="maker-unshipped-wrap" style="display:none;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-              <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択した注文を発送処理</button>
+              <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分を発送処理</button>
               <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
               <label style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">
                 CSVアップロードで一括発送
                 <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
               </label>
-              <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:transparent;color:#666;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:12px;">CSV一括発送の使い方</button>
+              <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:transparent;color:#666;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:12px;">CSV一括発送の手順</button>
             </div>
             <div id="csv-help-box" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
@@ -461,9 +461,17 @@
           </div>
           <!-- 発送済みテーブル -->
           <div id="maker-shipped-wrap" style="display:none;">
+            <!-- 計上日フィルタ(管理者のみ) -->
+            <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px 12px;margin-bottom:10px;font-size:13px;">
+              <b style="margin-right:8px;">計上/報告日でフィルタ:</b>
+              <label style="margin-right:6px;">開始: <input type="date" id="webedi-from" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:13px;"></label>
+              <label style="margin-right:6px;">終了: <input type="date" id="webedi-to" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:13px;"></label>
+              <button onclick="clearWebediFilter()" style="padding:4px 10px;background:#fff;color:#666;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;margin-left:8px;">クリア</button>
+              <span id="webedi-filter-count" style="margin-left:12px;color:#666;font-size:12px;"></span>
+            </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-              <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択した注文をまとめて計上</button>
-              <button onclick="downloadShippedCsv()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ 発送済CSVダウンロード</button>
+              <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
+              <button onclick="downloadShippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
             </div>
             <div id="maker-shipped-empty" style="display:none;text-align:center;padding:40px;color:#999;">発送済みの発注はまだありません</div>
             <div style="overflow-x:auto;">
@@ -1284,6 +1292,12 @@
 
       window._makerOrderCache = {};
       window._makerShippedCache = {};
+      window._allShipped = shipped; // フィルタ前の全発送済データを保持
+
+      // 管理者なら計上日フィルタUI表示
+      const isAdmin = !!currentIsAdmin;
+      const dateFilter = document.getElementById('webedi-date-filter');
+      if (dateFilter) dateFilter.style.display = isAdmin ? 'block' : 'none';
 
       // 未発送テーブル描画
       const tbody = document.querySelector('#maker-orders-table tbody');
@@ -1313,51 +1327,8 @@
         document.getElementById('maker-orders-table').style.display = 'table';
       }
 
-      // 発送済みテーブル描画
-      const tbody2 = document.querySelector('#maker-shipped-table tbody');
-      tbody2.innerHTML = '';
-      if (shipped.length === 0) {
-        document.getElementById('maker-shipped-empty').style.display = 'block';
-        document.getElementById('maker-shipped-table').style.display = 'none';
-      } else {
-        document.getElementById('maker-shipped-empty').style.display = 'none';
-        shipped.forEach(function(o, i) {
-          window._makerShippedCache[i] = o;
-          const tr = document.createElement('tr');
-          if (o.isTest) tr.classList.add('test-row');
-          const isWebediDone = o.webediStatus === '計上済';
-          const isDirect = o.productRoute === '直納';
-          const doneLabel = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
-          const btnLabel  = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
-          const webediCell = isWebediDone
-            ? '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small><br><button onclick="confirmUndoWebedi(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;">↶ 計上取消</button>'
-            : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
-          const checkboxCell = isWebediDone
-            ? '<td></td>'
-            : '<td style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
-          // 追跡番号複数対応: カンマ区切りを改行で表示
-          const carrierHtml = escapeHtml(o.carrier || '').replace(/, ?/g, '<br>');
-          const trackingHtml = escapeHtml(o.trackingNo || '').replace(/, ?/g, '<br>');
-          tr.innerHTML =
-            checkboxCell +
-            '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
-            '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
-            '<td>' + (o.quantity || '') + '</td>' +
-            '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
-            '<td>' + escapeHtml(o.store || '') + '</td>' +
-            '<td>' + carrierHtml + '</td>' +
-            '<td>' + trackingHtml + '</td>' +
-            '<td>' + (o.shippedAt || '') + '</td>' +
-            '<td>' + webediCell + '</td>' +
-            '<td>' +
-              '<button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button>' +
-              '<br><button onclick="showAddTrackingModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">+ 伝票追加</button>' +
-              '<br><button onclick="confirmUndoShipment(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">↶ 発送取消</button>' +
-            '</td>';
-          tbody2.appendChild(tr);
-        });
-        document.getElementById('maker-shipped-table').style.display = 'table';
-      }
+      // 発送済みテーブル描画(初回はフィルタなし)
+      _renderShippedTable(shipped);
 
       switchMakerTab(_currentMakerTab);
     }).catch(function(err) {
@@ -1370,6 +1341,78 @@
     const dt = new Date(ts);
     const pad = n => String(n).padStart(2, '0');
     return dt.getFullYear() + '/' + pad(dt.getMonth()+1) + '/' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  }
+
+  function _renderShippedTable(rows) {
+    const tbody2 = document.querySelector('#maker-shipped-table tbody');
+    tbody2.innerHTML = '';
+    window._makerShippedCache = {};
+    if (!rows || rows.length === 0) {
+      document.getElementById('maker-shipped-empty').style.display = 'block';
+      document.getElementById('maker-shipped-table').style.display = 'none';
+      return;
+    }
+    document.getElementById('maker-shipped-empty').style.display = 'none';
+    rows.forEach(function(o, i) {
+      window._makerShippedCache[i] = o;
+      const tr = document.createElement('tr');
+      if (o.isTest) tr.classList.add('test-row');
+      const isWebediDone = o.webediStatus === '計上済';
+      const isDirect = o.productRoute === '直納';
+      const doneLabel = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
+      const btnLabel  = isDirect ? 'WEBEDI計上' : '問屋へ報告';
+      const webediCell = isWebediDone
+        ? '<span style="color:#2e7d32;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small><br><button onclick="confirmUndoWebedi(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;">計上取消</button>'
+        : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
+      const checkboxCell = isWebediDone
+        ? '<td></td>'
+        : '<td style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
+      const carrierHtml = escapeHtml(o.carrier || '').replace(/, ?/g, '<br>');
+      const trackingHtml = escapeHtml(o.trackingNo || '').replace(/, ?/g, '<br>');
+      tr.innerHTML =
+        checkboxCell +
+        '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
+        '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
+        '<td>' + (o.quantity || '') + '</td>' +
+        '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+        '<td>' + escapeHtml(o.store || '') + '</td>' +
+        '<td>' + carrierHtml + '</td>' +
+        '<td>' + trackingHtml + '</td>' +
+        '<td>' + (o.shippedAt || '') + '</td>' +
+        '<td>' + webediCell + '</td>' +
+        '<td>' +
+          '<button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button>' +
+          '<br><button onclick="showAddTrackingModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">伝票追加</button>' +
+          '<br><button onclick="confirmUndoShipment(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">発送取消</button>' +
+        '</td>';
+      tbody2.appendChild(tr);
+    });
+    document.getElementById('maker-shipped-table').style.display = 'table';
+  }
+
+  function applyShippedFilter() {
+    const all = window._allShipped || [];
+    const from = document.getElementById('webedi-from').value;
+    const to = document.getElementById('webedi-to').value;
+    let filtered = all;
+    if (from || to) {
+      const fromMs = from ? new Date(from + 'T00:00:00+09:00').getTime() : 0;
+      const toMs = to ? new Date(to + 'T23:59:59+09:00').getTime() : Infinity;
+      filtered = all.filter(function(o) {
+        if (!o.webediAt) return false; // 計上日なし=フィルタ対象外
+        const t = new Date(o.webediAt).getTime();
+        return t >= fromMs && t <= toMs;
+      });
+    }
+    _renderShippedTable(filtered);
+    const cnt = document.getElementById('webedi-filter-count');
+    if (cnt) cnt.textContent = (from || to) ? '(' + filtered.length + ' / ' + all.length + ' 件表示)' : '';
+  }
+
+  function clearWebediFilter() {
+    document.getElementById('webedi-from').value = '';
+    document.getElementById('webedi-to').value = '';
+    applyShippedFilter();
   }
 
   // === 発送処理モーダル ===
