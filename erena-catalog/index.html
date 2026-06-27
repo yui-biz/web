@@ -108,6 +108,15 @@
       .summary-card { background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 16px; text-align: center; }
       .summary-card .label { color: #666; font-size: 13px; }
       .summary-card .value { color: #007BFF; font-size: 28px; font-weight: bold; margin-top: 6px; }
+      .summary-card.action { background: #fff; border: 2px solid; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+      .summary-card.action:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+      .summary-card.action.urgent { border-color: #e53935; }
+      .summary-card.action.urgent .value { color: #e53935; }
+      .summary-card.action.warn { border-color: #f57c00; }
+      .summary-card.action.warn .value { color: #f57c00; }
+      .summary-card .sublabel { color: #888; font-size: 11px; margin-top: 4px; }
+      .summary-card.action.zero { opacity: 0.6; border-color: #4caf50; }
+      .summary-card.action.zero .value { color: #4caf50; }
       .orders-filter { margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px; }
       .orders-filter select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
       .orders-table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -374,11 +383,11 @@
             </div>
           </details>
           <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
-            <div class="summary-card"><div class="label">今日</div><div class="value" id="maker-cnt-today">-</div></div>
-            <div class="summary-card"><div class="label">今週</div><div class="value" id="maker-cnt-week">-</div></div>
-            <div class="summary-card"><div class="label">今月</div><div class="value" id="maker-cnt-month">-</div></div>
-            <div class="summary-card"><div class="label">未発送</div><div class="value" id="maker-cnt-unshipped" style="color:#e53935;">-</div></div>
-            <div class="summary-card"><div class="label">計上/報告 未完了</div><div class="value" id="maker-cnt-unwebedi" style="color:#f57c00;">-</div></div>
+            <div class="summary-card"><div class="label">📅 今日の新着</div><div class="value" id="maker-cnt-today">-</div><div class="sublabel">受付件数</div></div>
+            <div class="summary-card"><div class="label">📅 今週の新着</div><div class="value" id="maker-cnt-week">-</div><div class="sublabel">受付件数</div></div>
+            <div class="summary-card"><div class="label">📅 今月の新着</div><div class="value" id="maker-cnt-month">-</div><div class="sublabel">受付件数</div></div>
+            <div id="card-unshipped" class="summary-card action urgent" onclick="switchMakerTab('unshipped')"><div class="label">🚚 未発送・要対応</div><div class="value" id="maker-cnt-unshipped">-</div><div class="sublabel">クリックで未発送タブへ</div></div>
+            <div id="card-unwebedi" class="summary-card action warn" onclick="switchMakerTab('shipped')"><div class="label">📋 WEBEDI計上待ち</div><div class="value" id="maker-cnt-unwebedi">-</div><div class="sublabel">クリックで発送済タブへ</div></div>
           </div>
           <div class="orders-filter" id="maker-orders-filter" style="display:none;">
             <label>商品で絞り込み:
@@ -1244,6 +1253,11 @@
       document.getElementById('maker-cnt-month').textContent = result.summary.thisMonth;
       document.getElementById('maker-cnt-unshipped').textContent = unshipped.length;
       document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
+      // 0件なら緑色(対応不要)表示
+      const cardU = document.getElementById('card-unshipped');
+      const cardW = document.getElementById('card-unwebedi');
+      if (cardU) cardU.classList.toggle('zero', unshipped.length === 0);
+      if (cardW) cardW.classList.toggle('zero', unwebedi.length === 0);
 
       if (result.productList && result.productList.length > 0) {
         const of = document.getElementById('maker-orders-filter');
