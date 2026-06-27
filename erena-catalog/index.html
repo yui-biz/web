@@ -116,6 +116,40 @@
       .test-badge { display: inline-block; background: #ff9800; color: white; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
       .test-row td { background: #fff8e1 !important; }
       .test-banner { background: #fff8e1; border: 2px solid #ff9800; color: #c45200; font-weight: bold; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; }
+      /* 商品カード(登録商品タブ) */
+      .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+      .product-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
+      .product-card .pc-head { display: flex; gap: 12px; margin-bottom: 10px; }
+      .product-card .pc-img { width: 96px; height: 96px; flex-shrink: 0; background: #f5f5f5; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+      .product-card .pc-img img { width: 100%; height: 100%; object-fit: cover; }
+      .product-card .pc-img .pc-no-img { color: #999; font-size: 11px; }
+      .product-card .pc-name { font-weight: bold; font-size: 14px; line-height: 1.3; margin-bottom: 4px; }
+      .product-card .pc-meta { font-size: 11px; color: #888; }
+      .product-card .pc-no { font-family: monospace; background: #333; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
+      .product-card .pc-price { color: #c45200; font-weight: bold; font-size: 16px; margin: 6px 0; }
+      .product-card .pc-detail { font-size: 12px; line-height: 1.5; }
+      .product-card .pc-detail-row { display: flex; padding: 3px 0; border-bottom: 1px dashed #eee; }
+      .product-card .pc-detail-row:last-child { border-bottom: none; }
+      .product-card .pc-detail-label { width: 90px; color: #666; flex-shrink: 0; }
+      .product-card .pc-detail-val { flex: 1; word-break: break-all; }
+      /* 発注詳細モーダル改良 */
+      .detail-hero { display: flex; gap: 14px; padding: 14px; background: #fafafa; border-radius: 6px; margin-bottom: 14px; }
+      .detail-hero-img { width: 100px; height: 100px; flex-shrink: 0; background: #fff; border-radius: 4px; border: 1px solid #eee; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+      .detail-hero-img img { width: 100%; height: 100%; object-fit: cover; }
+      .detail-hero-body { flex: 1; min-width: 0; }
+      .detail-hero-order-no { font-family: monospace; background: #1565c0; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+      .detail-hero-product { font-size: 16px; font-weight: bold; margin: 8px 0 4px; line-height: 1.3; }
+      .detail-hero-qty { color: #c45200; font-size: 18px; font-weight: bold; }
+      .detail-section { margin-bottom: 14px; }
+      .detail-section h4 { margin: 0 0 6px; padding: 6px 0; border-bottom: 1px solid #ddd; color: #1565c0; font-size: 13px; }
+      .detail-section dl { margin: 0; }
+      .detail-section dt { font-weight: bold; color: #666; margin-top: 6px; font-size: 12px; }
+      .detail-section dd { margin: 2px 0 0; padding-left: 8px; font-size: 13px; }
+      .detail-status-chip { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; margin-right: 4px; }
+      .chip-unshipped { background: #ffebee; color: #c62828; }
+      .chip-shipped { background: #e8f5e9; color: #2e7d32; }
+      .chip-webedi-done { background: #e3f2fd; color: #1565c0; }
+      .chip-webedi-todo { background: #fff3e0; color: #ef6c00; }
       .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
       .modal-overlay.active { display: flex; }
       .modal-content { background: white; border-radius: 8px; max-width: 600px; max-height: 90vh; width: 90%; overflow-y: auto; padding: 24px; }
@@ -300,10 +334,11 @@
               </select>
             </label>
           </div>
-          <!-- 未発送/発送済みタブ -->
-          <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0;">
+          <!-- 未発送/発送済み/登録商品タブ -->
+          <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0;flex-wrap:wrap;">
             <button id="tab-unshipped" onclick="switchMakerTab('unshipped')" style="padding:8px 20px;border:none;border-bottom:3px solid #e53935;background:none;font-weight:bold;color:#e53935;cursor:pointer;font-size:14px;">未発送</button>
             <button id="tab-shipped" onclick="switchMakerTab('shipped')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">発送済み</button>
+            <button id="tab-products" onclick="switchMakerTab('products')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">登録商品</button>
           </div>
           <div id="maker-orders-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
           <!-- 未発送テーブル -->
@@ -326,6 +361,12 @@
                 <tbody></tbody>
               </table>
             </div>
+          </div>
+          <!-- 登録商品 -->
+          <div id="maker-products-wrap" style="display:none;">
+            <div id="maker-products-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
+            <div id="maker-products-empty" style="display:none;text-align:center;padding:40px;color:#999;">登録商品がありません</div>
+            <div id="maker-products-grid" style="display:none;"></div>
           </div>
           <!-- 発送済みテーブル -->
           <div id="maker-shipped-wrap" style="display:none;">
@@ -1014,32 +1055,98 @@
 
   function switchMakerTab(tab) {
     _currentMakerTab = tab;
-    const unshippedBtn = document.getElementById('tab-unshipped');
-    const shippedBtn = document.getElementById('tab-shipped');
-    const unshippedWrap = document.getElementById('maker-unshipped-wrap');
-    const shippedWrap = document.getElementById('maker-shipped-wrap');
-    if (tab === 'unshipped') {
-      unshippedBtn.style.borderBottomColor = '#e53935';
-      unshippedBtn.style.color = '#e53935';
-      unshippedBtn.style.fontWeight = 'bold';
-      shippedBtn.style.borderBottomColor = 'transparent';
-      shippedBtn.style.color = '#666';
-      shippedBtn.style.fontWeight = 'normal';
-      unshippedWrap.style.display = 'block';
-      shippedWrap.style.display = 'none';
-    } else {
-      shippedBtn.style.borderBottomColor = '#28a745';
-      shippedBtn.style.color = '#28a745';
-      shippedBtn.style.fontWeight = 'bold';
-      unshippedBtn.style.borderBottomColor = 'transparent';
-      unshippedBtn.style.color = '#666';
-      unshippedBtn.style.fontWeight = 'normal';
-      unshippedWrap.style.display = 'none';
-      shippedWrap.style.display = 'block';
+    const tabs = ['unshipped', 'shipped', 'products'];
+    const wraps = { unshipped: 'maker-unshipped-wrap', shipped: 'maker-shipped-wrap', products: 'maker-products-wrap' };
+    const colors = { unshipped: '#e53935', shipped: '#28a745', products: '#1565c0' };
+    tabs.forEach(function(t) {
+      const btn = document.getElementById('tab-' + t);
+      const wrap = document.getElementById(wraps[t]);
+      if (!btn || !wrap) return;
+      if (t === tab) {
+        btn.style.borderBottomColor = colors[t];
+        btn.style.color = colors[t];
+        btn.style.fontWeight = 'bold';
+        wrap.style.display = 'block';
+      } else {
+        btn.style.borderBottomColor = 'transparent';
+        btn.style.color = '#666';
+        btn.style.fontWeight = 'normal';
+        wrap.style.display = 'none';
+      }
+    });
+    if (tab === 'products' && !window._makerProductsLoaded) {
+      loadMakerProducts();
     }
   }
 
+  function loadMakerProducts() {
+    document.getElementById('maker-products-loading').style.display = 'block';
+    document.getElementById('maker-products-empty').style.display = 'none';
+    document.getElementById('maker-products-grid').style.display = 'none';
+    gasPost({
+      action: 'getMakerProducts',
+      params: { email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      document.getElementById('maker-products-loading').style.display = 'none';
+      if (result.error) { alert('読み込みエラー: ' + result.error); return; }
+      const products = result.products || [];
+      if (products.length === 0) {
+        document.getElementById('maker-products-empty').style.display = 'block';
+        return;
+      }
+      window._makerProductsLoaded = true;
+      const grid = document.getElementById('maker-products-grid');
+      grid.className = 'product-grid';
+      grid.innerHTML = products.map(renderProductCard).join('');
+      grid.style.display = 'grid';
+    }).catch(function(err) {
+      document.getElementById('maker-products-loading').style.display = 'none';
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  function renderProductCard(p) {
+    const imgHtml = p.imageUrl
+      ? '<img src="' + escapeHtml(p.imageUrl) + '" alt="" loading="lazy">'
+      : '<span class="pc-no-img">画像なし</span>';
+    const row = (label, val) => val ? '<div class="pc-detail-row"><div class="pc-detail-label">' + label + '</div><div class="pc-detail-val">' + escapeHtml(String(val)) + '</div></div>' : '';
+    return ''
+      + '<div class="product-card">'
+      +   '<div class="pc-head">'
+      +     '<div class="pc-img">' + imgHtml + '</div>'
+      +     '<div style="flex:1;min-width:0;">'
+      +       '<div><span class="pc-no">' + escapeHtml(p.productNo || '') + '</span><span class="pc-meta">' + escapeHtml(p.category || '') + '</span></div>'
+      +       '<div class="pc-name">' + escapeHtml(p.name || '') + '</div>'
+      +       '<div class="pc-meta">' + escapeHtml(p.makerName || '') + '</div>'
+      +       '<div class="pc-price">¥' + (p.priceIncl ? Number(p.priceIncl).toLocaleString() : '-') + ' <span style="font-size:11px;color:#888;font-weight:normal;">税込</span></div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="pc-detail">'
+      +     row('JAN', p.jan)
+      +     row('内容量', p.content)
+      +     row('賞味期限', p.bestBefore)
+      +     row('保存温度', p.storageTemp)
+      +     row('アレルギー', p.allergy)
+      +     row('包装形態', p.packaging)
+      +     row('のし可否', p.noshi)
+      +     row('お盆休み', p.obonHoliday)
+      +     row('お盆前締切', p.obonShipDeadline)
+      +     row('リードタイム', p.leadTime)
+      +     row('着日指定', p.dateSpecifiable)
+      +     row('配送不可地域', p.unshippableArea)
+      +     row('受注メール', p.makerEmail)
+      +   '</div>'
+      + '</div>';
+  }
+
   function loadMakerOrders() {
+    // 詳細モーダルで商品画像表示するため、商品リストキャッシュもバックグラウンドで取得
+    if (!window._cachedProducts || window._cachedProducts.length === 0) {
+      gasPost({ action: 'getMakerProducts', params: { email: currentMakerEmail, isAdmin: currentIsAdmin } })
+        .then(function(r) {
+          window._cachedProducts = (r.products || []).map(function(p) { return { name: p.name, imageUrl: p.imageUrl, category: p.category }; });
+        }).catch(function() {});
+    }
     const filterProduct = (document.getElementById('maker-product-filter') || {}).value || '';
     document.getElementById('maker-orders-loading').style.display = 'block';
     document.getElementById('maker-unshipped-wrap').style.display = 'none';
@@ -1528,18 +1635,60 @@
     document.getElementById('order-detail-title').textContent = '発注詳細';
     const dt = new Date(o.timestamp);
     const testBanner = o.isTest ? '<div class="test-banner">⚠️ テスト注文 — 店舗スタッフのテスト入力分のためご対応不要です</div>' : '';
-    const html = testBanner +
-      '<dl>' +
-      '<dt>申込日時</dt><dd>' + dt.toLocaleString('ja-JP') + '</dd>' +
-      '<dt>店舗</dt><dd>' + escapeHtml(o.store || '') + '</dd>' +
-      '<dt>商品</dt><dd>' + escapeHtml(o.productName) + ' × ' + o.quantity + '</dd>' +
-      '<dt>希望配達日</dt><dd>' + (o.deliveryDate || '指定なし') + '</dd>' +
-      '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>' +
-      '<dt>お届け先</dt><dd>' + escapeHtml(o.recipientName) + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') +
-        '<br>〒' + escapeHtml(o.recipientZip) + ' ' + escapeHtml(o.recipientPref) + escapeHtml(o.recipientCity) + escapeHtml(o.recipientAddress) +
-        '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
-      '<dt>ご注文者（発注元店舗の受付担当）</dt><dd>' + escapeHtml(o.ordererName || '') + ' / TEL: ' + escapeHtml(o.ordererTel || '') + '</dd>' +
-      '</dl>';
+
+    // 商品画像取得(商品リストキャッシュから)
+    const product = (window._cachedProducts || []).find(function(p) { return p.name === o.productName; });
+    const imgHtml = product && product.imageUrl
+      ? '<img src="' + escapeHtml(product.imageUrl) + '" alt="">'
+      : '<span style="color:#999;font-size:11px;">画像なし</span>';
+
+    // 発送状況チップ
+    const isShipped = o.shipStatus === '発送済';
+    const shipChip = isShipped
+      ? '<span class="detail-status-chip chip-shipped">✓ 発送済</span>'
+      : '<span class="detail-status-chip chip-unshipped">未発送</span>';
+    const isWebediDone = o.webediStatus === '計上済';
+    const isDirect = o.productRoute === '直納';
+    const webediLabel = isDirect ? 'WEBEDI計上' : '問屋報告';
+    const webediChip = isShipped
+      ? (isWebediDone
+        ? '<span class="detail-status-chip chip-webedi-done">✓ ' + webediLabel + '済</span>'
+        : '<span class="detail-status-chip chip-webedi-todo">' + webediLabel + '未完了</span>')
+      : '';
+
+    const shipInfo = isShipped
+      ? '<div class="detail-section"><h4>発送・追跡</h4><dl>'
+        + '<dt>運送会社</dt><dd>' + escapeHtml(o.carrier || '-') + '</dd>'
+        + '<dt>追跡番号</dt><dd style="font-family:monospace;">' + escapeHtml(o.trackingNo || '-') + '</dd>'
+        + '<dt>発送日時</dt><dd>' + escapeHtml(o.shippedAt || '-') + '</dd>'
+        + (isWebediDone ? '<dt>' + webediLabel + '日時</dt><dd>' + escapeHtml(o.webediAt || '-') + '</dd>' : '')
+        + '</dl></div>'
+      : '';
+
+    const html = testBanner
+      + '<div class="detail-hero">'
+      +   '<div class="detail-hero-img">' + imgHtml + '</div>'
+      +   '<div class="detail-hero-body">'
+      +     (o.orderNo ? '<span class="detail-hero-order-no">' + escapeHtml(o.orderNo) + '</span> ' : '')
+      +     shipChip + webediChip
+      +     '<div class="detail-hero-product">' + escapeHtml(o.productName) + '</div>'
+      +     '<div class="detail-hero-qty">数量: ' + o.quantity + '</div>'
+      +     '<div style="color:#666;font-size:12px;margin-top:6px;">申込日時: ' + dt.toLocaleString('ja-JP') + '</div>'
+      +   '</div>'
+      + '</div>'
+      + shipInfo
+      + '<div class="detail-section"><h4>お届け先</h4><dl>'
+      +   '<dt>お名前</dt><dd>' + escapeHtml(o.recipientName || '') + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') + '</dd>'
+      +   '<dt>住所</dt><dd>〒' + escapeHtml(o.recipientZip || '') + '<br>' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + escapeHtml(o.recipientAddress || '') + '</dd>'
+      +   '<dt>電話</dt><dd>' + escapeHtml(o.recipientTel || '-') + '</dd>'
+      +   '<dt>希望配達日</dt><dd>' + (o.deliveryDate || '指定なし') + '</dd>'
+      +   '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>'
+      + '</dl></div>'
+      + '<div class="detail-section"><h4>発注元（エレナ店舗）</h4><dl>'
+      +   '<dt>店舗</dt><dd>' + escapeHtml(o.store || '-') + '</dd>'
+      +   '<dt>受付担当</dt><dd>' + escapeHtml(o.ordererName || '-') + (o.ordererTel ? ' / TEL: ' + escapeHtml(o.ordererTel) : '') + '</dd>'
+      + '</dl></div>';
+
     document.getElementById('order-detail-body').innerHTML = html;
     document.getElementById('order-detail-buttons').innerHTML =
       '<button class="modal-close" onclick="closeOrderDetail()">閉じる</button>';
