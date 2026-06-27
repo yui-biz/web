@@ -235,17 +235,6 @@
           </div>
         </div>
 
-        <!-- 注文詳細モーダル -->
-        <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
-          <div class="modal-content">
-            <h3 id="order-detail-title">注文詳細</h3>
-            <div id="order-detail-body"></div>
-            <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
-            <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
-            <div style="clear:both;"></div>
-          </div>
-        </div>
-
         <!-- 申し込みフォーム（既存） -->
         <div id="form-view" style="display:none;">
         <div class="progress-bar">
@@ -257,14 +246,14 @@
         <div id="form-input">
           <form id="entryForm" onsubmit="return false;">
             <div class="form-section" id="orderer-section">
-              <h3>ご注文者様・ご注文品情報</h3>
+              <h3>購入者情報・ご注文品情報</h3>
             </div>
             <div class="checkbox-row">
               <input type="checkbox" id="shipToDifferentAddress" onchange="toggleRecipientForm()">
               <label for="shipToDifferentAddress">商品のお届け先を別住所に変更する場合、チェックを入れてください。</label>
             </div>
             <div class="form-section" id="recipient-section" style="display:none;">
-              <h3>お届け先様情報</h3>
+              <h3>お届け先情報</h3>
             </div>
             <div class="btn-container">
               <button type="button" class="btn btn-primary" onclick="showConfirmation()">内容確認画面に進む</button>
@@ -297,13 +286,12 @@
             ログインアカウント: <span id="maker-name"></span><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
-          <h3 style="margin-bottom:8px;">発注情報</h3>
-          <p style="color:#666;font-size:13px;margin-bottom:16px;" id="maker-product-note">自社で取り扱う商品の発注情報を表示しています。</p>
-          <div class="summary-cards">
+          <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
             <div class="summary-card"><div class="label">今日</div><div class="value" id="maker-cnt-today">-</div></div>
             <div class="summary-card"><div class="label">今週</div><div class="value" id="maker-cnt-week">-</div></div>
             <div class="summary-card"><div class="label">今月</div><div class="value" id="maker-cnt-month">-</div></div>
-            <div class="summary-card"><div class="label">累計</div><div class="value" id="maker-cnt-total">-</div></div>
+            <div class="summary-card"><div class="label">未発送</div><div class="value" id="maker-cnt-unshipped" style="color:#e53935;">-</div></div>
+            <div class="summary-card"><div class="label">計上/報告 未完了</div><div class="value" id="maker-cnt-unwebedi" style="color:#f57c00;">-</div></div>
           </div>
           <div class="orders-filter" id="maker-orders-filter" style="display:none;">
             <label>商品で絞り込み:
@@ -312,27 +300,90 @@
               </select>
             </label>
           </div>
+          <!-- 未発送/発送済みタブ -->
+          <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0;">
+            <button id="tab-unshipped" onclick="switchMakerTab('unshipped')" style="padding:8px 20px;border:none;border-bottom:3px solid #e53935;background:none;font-weight:bold;color:#e53935;cursor:pointer;font-size:14px;">未発送</button>
+            <button id="tab-shipped" onclick="switchMakerTab('shipped')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">発送済み</button>
+          </div>
           <div id="maker-orders-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
-          <div id="maker-orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">該当する発注はまだありません</div>
-          <div style="overflow-x:auto;">
-            <table class="orders-table" id="maker-orders-table" style="display:none;">
-              <thead>
-                <tr>
-                  <th>申込日時</th>
-                  <th>商品</th>
-                  <th>数量</th>
-                  <th>お届け先</th>
-                  <th>配達日</th>
-                  <th>店舗</th>
-                  <th>詳細</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+          <!-- 未発送テーブル -->
+          <div id="maker-unshipped-wrap" style="display:none;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+              <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#e53935;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">✔ 選択した注文を発送処理</button>
+              <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ CSVダウンロード</button>
+              <label style="padding:6px 14px;background:#388e3c;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;">
+                ↑ CSVアップロードで一括発送
+                <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
+              </label>
+            </div>
+            <div id="maker-orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">未発送の発注はありません ✓</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="maker-orders-table" style="display:none;">
+                <thead><tr>
+                  <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>配達日</th><th>詳細</th><th>発送処理</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- 発送済みテーブル -->
+          <div id="maker-shipped-wrap" style="display:none;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+              <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">✔ 選択した注文をまとめて計上</button>
+            </div>
+            <div id="maker-shipped-empty" style="display:none;text-align:center;padding:40px;color:#999;">発送済みの発注はまだありません</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="maker-shipped-table" style="display:none;">
+                <thead><tr>
+                  <th><input type="checkbox" id="check-all-shipped" onchange="toggleAllShippedChecks(this.checked)" title="全選択"></th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>計上/報告</th><th>詳細</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 発送処理モーダル -->
+        <div id="ship-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:8px;padding:24px;width:min(480px,90vw);max-height:90vh;overflow-y:auto;">
+            <h3 style="margin:0 0 8px;">発送処理</h3>
+            <p id="ship-modal-product" style="color:#555;font-size:13px;margin:0 0 20px;"></p>
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-weight:bold;margin-bottom:6px;">運送会社 <span style="color:#e53935;">*</span></label>
+              <select id="ship-carrier" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:14px;">
+                <option value="">選択してください</option>
+                <option value="ヤマト運輸">ヤマト運輸</option>
+                <option value="佐川急便">佐川急便</option>
+                <option value="日本郵便">日本郵便</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+            <div style="margin-bottom:20px;">
+              <label style="display:block;font-weight:bold;margin-bottom:6px;">追跡番号 <span style="color:#e53935;">*</span></label>
+              <input type="text" id="ship-tracking" placeholder="例: 1234-5678-9012" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div id="ship-modal-msg" style="display:none;margin-bottom:12px;padding:8px;border-radius:4px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+              <button onclick="closeShipModal()" style="padding:8px 16px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer;">キャンセル</button>
+              <button id="ship-submit-btn" onclick="submitShipment()" style="padding:8px 20px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">発送済みにする</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+        <!-- 注文詳細モーダル（store/maker 両方から使用・main-content外に配置） -->
+        <div id="order-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeOrderDetail()">
+          <div class="modal-content">
+            <h3 id="order-detail-title">注文詳細</h3>
+            <div id="order-detail-body"></div>
+            <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
+            <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
+            <div style="clear:both;"></div>
+          </div>
+        </div>
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxKlZQFhOpxk71eL9WLfMeSW5bDGp6UrpV7EfkYUIY-kKteMKe9oby9OiCUH7joltYj/exec';
@@ -354,10 +405,8 @@
     'nagayo': 'エレナ長与店','togitsu': 'エレナ時津店','pratto-nagasaki': 'エレナプラっとモール長崎店',
     'inasa': 'エレナ稲佐店','koebaru': 'エレナ小江原店','kamikoshima': 'エレナ上小島店','fukuda': 'エレナ福田店',
     'himi': 'エレナ日見店','yagami': 'エレナ矢上店','fukabori': 'エレナ深堀店','sanwa': 'エレナ三和店',
-    // 五島エリア
-    'fc-kamigoto': 'エレナFC上五島店','fc-arikawa': 'エレナFC有川店','fc-fukue': 'エレナFC福江店',
-    // 壱岐エリア
-    'fc-iki-gonoura': 'エレナFC壱岐郷ノ浦店'
+    // なかよし村
+    'uki': 'エレナなかよし村有喜店','kitahata': 'エレナなかよし村北波多店'
   };
 
   let currentStoreName = '';
@@ -606,7 +655,7 @@
       '<div class="printable-area">' +
       '<h2 style="text-align:center; margin-bottom:20px;">ご注文内容の確認</h2>' +
       '<div class="form-section">' +
-        '<h3>ご注文者様・ご注文品情報</h3>' +
+        '<h3>購入者情報・ご注文品情報</h3>' +
         '<p><span>店舗:</span> <span>' + escapeHtml(o.store || '') + '</span></p>' +
         '<p><span>受付者社員番号:</span> <span>' + escapeHtml(o.staffId || '') + '</span></p>' +
         '<p><span>商品名:</span> <span>' + escapeHtml(o.productName) + '</span></p>' +
@@ -620,7 +669,7 @@
         (o.noshiName ? '<p><span>のし名入れ:</span> <span>' + escapeHtml(o.noshiName) + '</span></p>' : '') +
       '</div>' +
       '<div class="form-section">' +
-        '<h3>お届け先様情報</h3>' +
+        '<h3>お届け先情報</h3>' +
         personHtml(recipientForPrint) +
       '</div>' +
       '</div>';
@@ -945,6 +994,8 @@
   });
 
   // === メーカービュー ===
+  let _currentMakerTab = 'unshipped';
+
   function showMakerContent(email, makerName, isAdmin) {
     currentRole = 'maker';
     currentMakerEmail = email;
@@ -952,22 +1003,47 @@
     currentIsAdmin = !!isAdmin;
     document.getElementById('maker-name').textContent = makerName || '(担当者)';
     document.getElementById('maker-admin-badge').style.display = currentIsAdmin ? 'inline-block' : 'none';
-    if (currentIsAdmin) {
-      document.getElementById('maker-product-note').textContent = '管理者権限で全メーカーの発注情報を表示しています。';
-    }
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('auth-verifying').style.display = 'none';
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('store-display').style.display = 'none';
     document.getElementById('maker-content').style.display = 'block';
+    _currentMakerTab = 'unshipped';
     loadMakerOrders();
+  }
+
+  function switchMakerTab(tab) {
+    _currentMakerTab = tab;
+    const unshippedBtn = document.getElementById('tab-unshipped');
+    const shippedBtn = document.getElementById('tab-shipped');
+    const unshippedWrap = document.getElementById('maker-unshipped-wrap');
+    const shippedWrap = document.getElementById('maker-shipped-wrap');
+    if (tab === 'unshipped') {
+      unshippedBtn.style.borderBottomColor = '#e53935';
+      unshippedBtn.style.color = '#e53935';
+      unshippedBtn.style.fontWeight = 'bold';
+      shippedBtn.style.borderBottomColor = 'transparent';
+      shippedBtn.style.color = '#666';
+      shippedBtn.style.fontWeight = 'normal';
+      unshippedWrap.style.display = 'block';
+      shippedWrap.style.display = 'none';
+    } else {
+      shippedBtn.style.borderBottomColor = '#28a745';
+      shippedBtn.style.color = '#28a745';
+      shippedBtn.style.fontWeight = 'bold';
+      unshippedBtn.style.borderBottomColor = 'transparent';
+      unshippedBtn.style.color = '#666';
+      unshippedBtn.style.fontWeight = 'normal';
+      unshippedWrap.style.display = 'none';
+      shippedWrap.style.display = 'block';
+    }
   }
 
   function loadMakerOrders() {
     const filterProduct = (document.getElementById('maker-product-filter') || {}).value || '';
     document.getElementById('maker-orders-loading').style.display = 'block';
-    document.getElementById('maker-orders-empty').style.display = 'none';
-    document.getElementById('maker-orders-table').style.display = 'none';
+    document.getElementById('maker-unshipped-wrap').style.display = 'none';
+    document.getElementById('maker-shipped-wrap').style.display = 'none';
 
     gasPost({
       action: 'getOrdersForMaker',
@@ -976,10 +1052,16 @@
       document.getElementById('maker-orders-loading').style.display = 'none';
       if (result.error) { alert('読み込みエラー: ' + result.error); return; }
 
+      const orders = result.orders || [];
+      const unshipped = orders.filter(function(o) { return o.shipStatus !== '発送済'; });
+      const shipped   = orders.filter(function(o) { return o.shipStatus === '発送済'; });
+
+      const unwebedi = shipped.filter(function(o) { return o.webediStatus !== '計上済'; });
       document.getElementById('maker-cnt-today').textContent = result.summary.today;
       document.getElementById('maker-cnt-week').textContent = result.summary.thisWeek;
       document.getElementById('maker-cnt-month').textContent = result.summary.thisMonth;
-      document.getElementById('maker-cnt-total').textContent = result.summary.total;
+      document.getElementById('maker-cnt-unshipped').textContent = unshipped.length;
+      document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
 
       if (result.productList && result.productList.length > 0) {
         document.getElementById('maker-orders-filter').style.display = 'block';
@@ -994,46 +1076,452 @@
         });
       }
 
-      const orders = result.orders || [];
-      if (orders.length === 0) {
-        document.getElementById('maker-orders-empty').style.display = 'block';
-        return;
-      }
+      window._makerOrderCache = {};
+      window._makerShippedCache = {};
+
+      // 未発送テーブル描画
       const tbody = document.querySelector('#maker-orders-table tbody');
       tbody.innerHTML = '';
-      window._makerOrderCache = {};
-      orders.forEach(function(o, i) {
-        window._makerOrderCache[i] = o;
-        const dt = new Date(o.timestamp);
-        const pad = n => String(n).padStart(2, '0');
-        const timeStr = dt.getFullYear() + '/' + pad(dt.getMonth()+1) + '/' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
-        const tr = document.createElement('tr');
-        if (o.isTest) tr.classList.add('test-row');
-        tr.innerHTML =
-          '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + timeStr + '</td>' +
-          '<td>' + escapeHtml(o.productName || '') + '</td>' +
-          '<td>' + (o.quantity || '') + '</td>' +
-          '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
-          '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
-          '<td>' + escapeHtml(o.store || '') + '</td>' +
-          '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>';
-        tbody.appendChild(tr);
-      });
-      document.getElementById('maker-orders-table').style.display = 'table';
+      if (unshipped.length === 0) {
+        document.getElementById('maker-orders-empty').style.display = 'block';
+        document.getElementById('maker-orders-table').style.display = 'none';
+      } else {
+        document.getElementById('maker-orders-empty').style.display = 'none';
+        unshipped.forEach(function(o, i) {
+          window._makerOrderCache[i] = o;
+          const tr = document.createElement('tr');
+          if (o.isTest) tr.classList.add('test-row');
+          tr.dataset.cacheIdx = i;
+          tr.innerHTML =
+            '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
+            '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') + '</td>' +
+            '<td>' + (o.quantity || '') + '</td>' +
+            '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+            '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
+            '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
+            '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#e53935;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
+          tbody.appendChild(tr);
+        });
+        document.getElementById('maker-orders-table').style.display = 'table';
+      }
+
+      // 発送済みテーブル描画
+      const tbody2 = document.querySelector('#maker-shipped-table tbody');
+      tbody2.innerHTML = '';
+      if (shipped.length === 0) {
+        document.getElementById('maker-shipped-empty').style.display = 'block';
+        document.getElementById('maker-shipped-table').style.display = 'none';
+      } else {
+        document.getElementById('maker-shipped-empty').style.display = 'none';
+        shipped.forEach(function(o, i) {
+          window._makerShippedCache[i] = o;
+          const tr = document.createElement('tr');
+          if (o.isTest) tr.classList.add('test-row');
+          const isWebediDone = o.webediStatus === '計上済';
+          const isDirect = o.productRoute === '直納';
+          const doneLabel = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
+          const btnLabel  = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
+          const webediCell = isWebediDone
+            ? '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small>'
+            : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
+          const checkboxCell = isWebediDone
+            ? '<td></td>'
+            : '<td style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
+          tr.innerHTML =
+            checkboxCell +
+            '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
+            '<td>' + (o.quantity || '') + '</td>' +
+            '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+            '<td>' + escapeHtml(o.carrier || '') + '</td>' +
+            '<td>' + escapeHtml(o.trackingNo || '') + '</td>' +
+            '<td>' + (o.shippedAt || '') + '</td>' +
+            '<td>' + webediCell + '</td>' +
+            '<td><button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button></td>';
+          tbody2.appendChild(tr);
+        });
+        document.getElementById('maker-shipped-table').style.display = 'table';
+      }
+
+      switchMakerTab(_currentMakerTab);
     }).catch(function(err) {
       document.getElementById('maker-orders-loading').style.display = 'none';
       alert('通信エラー: ' + err.message);
     });
   }
 
+  function _fmtTime(ts) {
+    const dt = new Date(ts);
+    const pad = n => String(n).padStart(2, '0');
+    return dt.getFullYear() + '/' + pad(dt.getMonth()+1) + '/' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  }
+
+  // === 発送処理モーダル ===
+  let _shipTargetIdx = null;
+  let _bulkQueue = [];
+  let _bulkIdx = 0;
+  let _bulkResults = []; // バルクモード時に収集した {rowIdx, carrier, trackingNo}
+
+  function showShipModal(idx) {
+    const o = (window._makerOrderCache || {})[idx];
+    if (!o) return;
+    _bulkQueue = [];
+    _bulkIdx = 0;
+    _shipTargetIdx = idx;
+    document.getElementById('ship-modal-product').textContent =
+      o.productName + ' × ' + o.quantity + ' / お届け先: ' + o.recipientName + ' 様';
+    document.getElementById('ship-carrier').value = '';
+    document.getElementById('ship-tracking').value = '';
+    document.getElementById('ship-modal-msg').style.display = 'none';
+    document.getElementById('ship-submit-btn').disabled = false;
+    document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  let submitShipment;
+  let closeShipModal;
+
+  function _showShipMsg(msg, type) {
+    const el = document.getElementById('ship-modal-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.background = type === 'error' ? '#fdecea' : '#e8f5e9';
+    el.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+  }
+
+  // === WEBEDI計上/発送報告処理 ===
+  function submitWebedi(idx, btn) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    const isDirect = o.productRoute === '直納';
+    const doneLabel  = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
+    const btnLabel   = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
+    const confirmMsg = isDirect
+      ? 'WEBEDI計上済みにします。よろしいですか？'
+      : '問屋への発送報告を完了済みにします。よろしいですか？';
+    if (!confirm(escapeHtml(o.productName) + ' ×' + o.quantity + ' / ' + escapeHtml(o.recipientName) + ' 様\n\n' + confirmMsg)) return;
+    btn.disabled = true;
+    btn.textContent = '処理中...';
+    gasPost({
+      action: 'updateWebedi',
+      params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (result.success) {
+        btn.outerHTML = '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (result.webediAt || '') + '</small>';
+        o.webediStatus = '計上済';
+        o.webediAt = result.webediAt || '';
+        const unwebediCount = Object.values(window._makerShippedCache || {}).filter(function(x) { return x.webediStatus !== '計上済'; }).length;
+        document.getElementById('maker-cnt-unwebedi').textContent = unwebediCount;
+      } else {
+        btn.disabled = false;
+        btn.textContent = btnLabel;
+        alert('エラー: ' + (result.error || '不明なエラー'));
+      }
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = btnLabel;
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  function showMakerShippedDetail(idx) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    window._currentDetailOrder = JSON.parse(JSON.stringify(o));
+    renderDetailViewReadOnly(o);
+    document.getElementById('order-detail-modal').classList.add('active');
+    setDetailMessage('', null);
+  }
+
   function showMakerOrderDetail(idx) {
     const o = (window._makerOrderCache || {})[idx];
     if (!o) return;
     window._currentDetailOrder = JSON.parse(JSON.stringify(o));
-    // 既存の renderDetailView を流用して表示するが、編集ボタンは非表示にする
     renderDetailViewReadOnly(o);
     document.getElementById('order-detail-modal').classList.add('active');
     setDetailMessage('', null);
+  }
+
+  // === チェックボックス全選択 ===
+  function toggleAllUnshippedChecks(checked) {
+    document.querySelectorAll('.unshipped-check').forEach(function(cb) { cb.checked = checked; });
+  }
+  function toggleAllShippedChecks(checked) {
+    document.querySelectorAll('.shipped-check').forEach(function(cb) { cb.checked = checked; });
+  }
+
+  // === 一括発送処理（チェック分を順番にモーダル表示 → 最後にまとめてAPI送信） ===
+  function bulkShipSelected() {
+    _bulkQueue = [];
+    _bulkResults = [];
+    document.querySelectorAll('.unshipped-check:checked').forEach(function(cb) {
+      const idx = parseInt(cb.dataset.idx, 10);
+      if (!isNaN(idx)) _bulkQueue.push(idx);
+    });
+    if (_bulkQueue.length === 0) { alert('発送処理する注文を選択してください。'); return; }
+    _bulkIdx = 0;
+    _showNextBulkModal();
+  }
+
+  function _showNextBulkModal() {
+    if (_bulkIdx >= _bulkQueue.length) {
+      // 全件入力完了 → まとめてAPI送信
+      _submitShipmentBatch();
+      return;
+    }
+    const idx = _bulkQueue[_bulkIdx];
+    const o = (window._makerOrderCache || {})[idx];
+    if (!o) { _bulkIdx++; _showNextBulkModal(); return; }
+    _shipTargetIdx = idx;
+    document.getElementById('ship-modal-product').textContent =
+      '(' + (_bulkIdx + 1) + '/' + _bulkQueue.length + ') ' +
+      o.productName + ' × ' + o.quantity;
+    document.getElementById('ship-carrier').value = '';
+    document.getElementById('ship-tracking').value = '';
+    document.getElementById('ship-modal-msg').style.display = 'none';
+    document.getElementById('ship-submit-btn').disabled = false;
+    document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  // submitShipment: バルクモードは結果を収集、単件モードは即送信
+  submitShipment = function() {
+    if (_shipTargetIdx === null) return;
+    const o = (window._makerOrderCache || {})[_shipTargetIdx];
+    if (!o) return;
+    const carrier = document.getElementById('ship-carrier').value.trim();
+    const trackingNo = document.getElementById('ship-tracking').value.trim();
+    if (!carrier) { _showShipMsg('運送会社を選択してください', 'error'); return; }
+    if (!trackingNo) { _showShipMsg('追跡番号を入力してください', 'error'); return; }
+
+    if (_bulkQueue.length > 0) {
+      // バルクモード: 収集して次へ
+      _bulkResults.push({ rowIdx: o.rowIdx, carrier: carrier, trackingNo: trackingNo });
+      document.getElementById('ship-modal').style.display = 'none';
+      _shipTargetIdx = null;
+      _bulkIdx++;
+      _showNextBulkModal();
+    } else {
+      // 単件モード: 即送信
+      const btn = document.getElementById('ship-submit-btn');
+      btn.disabled = true;
+      btn.textContent = '処理中...';
+      gasPost({
+        action: 'updateShipment',
+        params: { rowIdx: o.rowIdx, carrier: carrier, trackingNo: trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+      }).then(function(result) {
+        btn.textContent = '発送済みにする';
+        if (result.success) {
+          document.getElementById('ship-modal').style.display = 'none';
+          _shipTargetIdx = null;
+          loadMakerOrders();
+        } else {
+          btn.disabled = false;
+          _showShipMsg(result.error || 'エラーが発生しました', 'error');
+        }
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = '発送済みにする';
+        _showShipMsg('通信エラー: ' + err.message, 'error');
+      });
+    }
+  };
+
+  function _submitShipmentBatch() {
+    if (_bulkResults.length === 0) { loadMakerOrders(); return; }
+    const btn = document.getElementById('ship-submit-btn');
+    // モーダルは閉じた状態で処理中表示
+    const wrap = document.getElementById('maker-unshipped-wrap');
+    const notice = document.createElement('div');
+    notice.id = 'bulk-processing-notice';
+    notice.textContent = '発送処理中... (' + _bulkResults.length + '件)';
+    notice.style.cssText = 'padding:12px;background:#fff3e0;border-radius:4px;margin-bottom:8px;font-weight:bold;';
+    wrap.prepend(notice);
+
+    gasPost({
+      action: 'updateShipmentBatch',
+      params: { items: _bulkResults, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      const n = document.getElementById('bulk-processing-notice');
+      if (n) n.remove();
+      if (result.success) {
+        let msg = result.succeeded + '件の発送処理が完了しました。確認メールをお送りしました。';
+        if (result.failed > 0) msg += '\n（' + result.failed + '件は処理できませんでした）';
+        alert(msg);
+      } else {
+        alert('エラー: ' + (result.error || '不明なエラー'));
+      }
+      _bulkQueue = [];
+      _bulkResults = [];
+      _bulkIdx = 0;
+      loadMakerOrders();
+    }).catch(function(err) {
+      const n = document.getElementById('bulk-processing-notice');
+      if (n) n.remove();
+      alert('通信エラー: ' + err.message);
+      _bulkQueue = [];
+      _bulkResults = [];
+      _bulkIdx = 0;
+    });
+  }
+
+  // closeShipModal もバルクキューをリセット
+  closeShipModal = function() {
+    document.getElementById('ship-modal').style.display = 'none';
+    _shipTargetIdx = null;
+    _bulkQueue = [];
+    _bulkResults = [];
+    _bulkIdx = 0;
+  };
+
+  // === WEBEDI一括計上 ===
+  function bulkWebediSelected() {
+    const items = [];
+    document.querySelectorAll('.shipped-check:checked').forEach(function(cb) {
+      const idx = parseInt(cb.dataset.idx, 10);
+      if (!isNaN(idx)) {
+        const o = (window._makerShippedCache || {})[idx];
+        if (o && o.webediStatus !== '計上済') items.push({ rowIdx: o.rowIdx });
+      }
+    });
+    if (items.length === 0) { alert('計上する注文を選択してください。'); return; }
+    if (!confirm(items.length + '件をまとめてWEBEDI計上します。よろしいですか？')) return;
+
+    gasPost({
+      action: 'updateWebediBatch',
+      params: { items: items, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (result.success) {
+        let msg = result.succeeded + '件の計上処理が完了しました。確認メールをお送りしました。';
+        if (result.failed > 0) msg += '\n（' + result.failed + '件は処理できませんでした）';
+        alert(msg);
+        document.getElementById('check-all-shipped').checked = false;
+      } else {
+        alert('エラー: ' + (result.error || '不明なエラー'));
+      }
+      loadMakerOrders();
+    }).catch(function(err) {
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  // === CSVダウンロード（未発送一覧） ===
+  function downloadUnshippedCsv() {
+    const orders = window._makerOrderCache || {};
+    const rows = [['rowIdx', '申込日時', '商品名', '数量', 'お届け先名', '住所', '配達日', '運送会社', '追跡番号']];
+    Object.values(orders).forEach(function(o) {
+      rows.push([
+        o.rowIdx,
+        _fmtTime(o.timestamp),
+        o.productName || '',
+        o.quantity || '',
+        o.recipientName || '',
+        (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
+        o.deliveryDate || '',
+        '',  // 運送会社（空欄 → 記入する）
+        ''   // 追跡番号（空欄 → 記入する）
+      ]);
+    });
+    const csv = rows.map(function(r) {
+      return r.map(function(v) {
+        const s = String(v == null ? '' : v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    const bom = '﻿';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '未発送注文_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // === CSVアップロードで一括発送処理 ===
+  function uploadShipmentCsv(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      let text = e.target.result;
+      // BOM除去
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) { alert('データが見つかりません。'); return; }
+      const headers = _parseCsvLine(lines[0]);
+      const colRowIdx = headers.indexOf('rowIdx');
+      const colCarrier = headers.indexOf('運送会社');
+      const colTracking = headers.indexOf('追跡番号');
+      if (colRowIdx < 0 || colCarrier < 0 || colTracking < 0) {
+        alert('CSVの列名が正しくありません。ダウンロードしたCSVを使用してください。');
+        return;
+      }
+      const targets = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = _parseCsvLine(lines[i]);
+        const rowIdx = cells[colRowIdx];
+        const carrier = (cells[colCarrier] || '').trim();
+        const trackingNo = (cells[colTracking] || '').trim();
+        if (rowIdx && carrier && trackingNo) {
+          targets.push({ rowIdx: rowIdx, carrier: carrier, trackingNo: trackingNo });
+        }
+      }
+      if (targets.length === 0) {
+        alert('運送会社と追跡番号が両方入力されている行が見つかりません。');
+        input.value = '';
+        return;
+      }
+      if (!confirm(targets.length + '件を発送済みに更新します。よろしいですか？')) {
+        input.value = '';
+        return;
+      }
+      _processCsvBatch(targets, 0, [], input);
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function _parseCsvLine(line) {
+    const result = [];
+    let cur = '';
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQ) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQ = false; }
+        else { cur += c; }
+      } else {
+        if (c === '"') { inQ = true; }
+        else if (c === ',') { result.push(cur); cur = ''; }
+        else { cur += c; }
+      }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function _processCsvBatch(targets, i, errors, input) {
+    if (i >= targets.length) {
+      input.value = '';
+      if (errors.length > 0) {
+        alert('完了しましたが、' + errors.length + '件のエラーがありました:\n' + errors.join('\n'));
+      } else {
+        alert(targets.length + '件を発送済みに更新しました。');
+      }
+      loadMakerOrders();
+      return;
+    }
+    const t = targets[i];
+    gasPost({
+      action: 'updateShipment',
+      params: { rowIdx: t.rowIdx, carrier: t.carrier, trackingNo: t.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (!result.success) errors.push('rowIdx=' + t.rowIdx + ': ' + (result.error || 'エラー'));
+      _processCsvBatch(targets, i + 1, errors, input);
+    }).catch(function(err) {
+      errors.push('rowIdx=' + t.rowIdx + ': 通信エラー');
+      _processCsvBatch(targets, i + 1, errors, input);
+    });
   }
 
   function renderDetailViewReadOnly(o) {
@@ -1090,6 +1578,20 @@
         option.value = product.name;
         option.textContent = product.name;
         option.dataset.imageUrl = product.imageUrl || '';
+        option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
+        option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
+        option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
+        option.dataset.orderDeadline = product.orderDeadline || '';
+        if (product.orderDeadline) {
+          const deadline = new Date(product.orderDeadline);
+          const canOrderUntil = new Date(deadline);
+          canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadTime || 14));
+          canOrderUntil.setHours(23, 59, 59, 999);
+          if (new Date() > canOrderUntil) {
+            option.disabled = true;
+            option.textContent = '【受注締切】' + product.name;
+          }
+        }
         og.appendChild(option);
       });
       select.appendChild(og);
@@ -1097,17 +1599,17 @@
     select.disabled = false;
 
     // Tom Select で検索＋optgroup対応のリッチドロップダウン化
-    // 画像表示は <select> 既存の onchange="displayProductImage(this)" が拾うので onChange は省略
     new TomSelect(select, {
       placeholder: '商品名で検索またはカテゴリから選択',
       maxOptions: 100,
-      searchField: ['text']
+      searchField: ['text'],
+      onChange: function() { displayProductImage(select); }
     });
   }
 
   function displayProductImage(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const imageUrl = selectedOption.dataset.imageUrl;
+    const imageUrl = selectedOption ? selectedOption.dataset.imageUrl : '';
     const imageContainer = document.getElementById('product-image-container');
     const imageEl = document.getElementById('product-image');
 
@@ -1120,6 +1622,69 @@
     } else {
       imageContainer.style.display = 'none';
       imageEl.src = '';
+    }
+    applyProductConstraints(selectedOption);
+  }
+
+  function applyProductConstraints(opt) {
+    const hasProduct = opt && opt.value;
+    const leadTime = hasProduct ? (parseInt(opt.dataset.leadTime, 10) || 14) : 14;
+    const dateSpec = !hasProduct || opt.dataset.dateSpecifiable !== '0';
+    const noshiAvail = !hasProduct || opt.dataset.noshiAvailable !== '0';
+
+    // --- 希望配達日 ---
+    const noneRadio = document.querySelector('input[name="deliveryPref"][value="none"]');
+    const specifyRadio = document.querySelector('input[name="deliveryPref"][value="specify"]');
+    const dateInput = document.getElementById('deliveryDate');
+    let dateNote = document.getElementById('date-spec-note');
+
+    if (!dateSpec) {
+      noneRadio.checked = true;
+      dateInput.style.display = 'none';
+      specifyRadio.disabled = true;
+      specifyRadio.parentElement.style.cssText += ';opacity:0.4;cursor:not-allowed;';
+      if (!dateNote) {
+        dateNote = document.createElement('span');
+        dateNote.id = 'date-spec-note';
+        dateNote.style.cssText = 'font-size:11px;color:#c00;margin-left:6px;';
+        dateNote.textContent = '（この商品は着日指定不可）';
+        specifyRadio.parentElement.appendChild(dateNote);
+      }
+    } else {
+      specifyRadio.disabled = false;
+      specifyRadio.parentElement.style.opacity = '';
+      specifyRadio.parentElement.style.cursor = '';
+      if (dateNote) dateNote.remove();
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + leadTime);
+      const minStr = minDate.toISOString().split('T')[0];
+      dateInput.min = minStr;
+      if (dateInput.value && dateInput.value < minStr) dateInput.value = '';
+    }
+
+    // --- のし ---
+    const noshiSelect = document.getElementById('noshiType');
+    const noshiName = document.getElementById('noshiName');
+    const noshiSection = document.getElementById('noshi-section');
+    let noshiNote = document.getElementById('noshi-note');
+
+    if (!noshiAvail) {
+      noshiSelect.value = '';
+      noshiSelect.disabled = true;
+      noshiName.disabled = true;
+      if (noshiSection) noshiSection.style.opacity = '0.4';
+      if (!noshiNote && noshiSection) {
+        noshiNote = document.createElement('div');
+        noshiNote.id = 'noshi-note';
+        noshiNote.style.cssText = 'font-size:11px;color:#c00;margin-top:4px;';
+        noshiNote.textContent = '※この商品はのし対応不可です';
+        noshiSection.appendChild(noshiNote);
+      }
+    } else {
+      noshiSelect.disabled = false;
+      noshiName.disabled = false;
+      if (noshiSection) noshiSection.style.opacity = '';
+      if (noshiNote) noshiNote.remove();
     }
   }
 
@@ -1169,11 +1734,11 @@
     const t = document.getElementById("shipToDifferentAddress").checked;
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
-    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName };
+    const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName, storeId: currentStoreId };
     formDataGlobal = { orderer: e, recipient: o, order: r };
     let c = `
       <div class="form-section">
-        <h3>ご注文者様・ご注文品情報</h3>
+        <h3>購入者情報・ご注文品情報</h3>
         <p><span>店舗:</span> <span>${r.store}</span></p>
         <p><span>受付者社員番号:</span> <span>${r.staffId}</span></p>
         <p><span>商品名:</span> <span>${r.productName}</span></p>
@@ -1187,7 +1752,7 @@
         ${r.noshiName ? `<p><span>のし名入れ:</span> <span>${r.noshiName}</span></p>` : ""}
       </div>
       <div class="form-section">
-        <h3>お届け先様情報</h3>
+        <h3>お届け先情報</h3>
         ${generateConfirmPersonHtml(o)}
       </div>
     `;
@@ -1227,26 +1792,26 @@
     e.appendChild(createProductRow());
     e.appendChild(createDeliveryDateRow());
     e.appendChild(document.createElement("hr")).className = "section-divider";
-    e.appendChild(createFormRow("orderer_name", "お名前", "text", !0, "山田 太郎"));
-    e.appendChild(createFormRow("orderer_furigana", "フリガナ", "text", !0, "ヤマダ タロウ"));
-    e.appendChild(createZipRow("orderer", "郵便番号"));
-    e.appendChild(createPrefRow("orderer_pref", "都道府県"));
-    e.appendChild(createFormRow("orderer_city", "市区町村", "text", !0));
-    e.appendChild(createFormRow("orderer_address", "番地・建物名", "text", !0));
-    e.appendChild(createTelRow("orderer", "電話番号"));
-    e.appendChild(createFormRow("orderer_email", "メールアドレス", "email", !0, "test@example.com"));
+    e.appendChild(createFormRow("orderer_name", "購入者お名前", "text", !0, "山田 太郎"));
+    e.appendChild(createFormRow("orderer_furigana", "購入者フリガナ", "text", !0, "ヤマダ タロウ"));
+    e.appendChild(createZipRow("orderer", "購入者郵便番号"));
+    e.appendChild(createPrefRow("orderer_pref", "購入者都道府県"));
+    e.appendChild(createFormRow("orderer_city", "購入者市区町村", "text", !0));
+    e.appendChild(createFormRow("orderer_address", "購入者番地・建物名", "text", !0));
+    e.appendChild(createTelRow("orderer", "購入者電話番号"));
+    e.appendChild(createFormRow("orderer_email", "購入者メールアドレス", "email", !0, "test@example.com"));
     // のし項目は常時表示（ご注文者セクション末尾）
     e.appendChild(document.createElement("hr")).className = "section-divider";
     e.appendChild(createNoshiRow());
 
     const t = document.getElementById("recipient-section");
-    t.appendChild(createFormRow("recipient_name", "お名前", "text", !0, "鈴木 一郎"));
-    t.appendChild(createFormRow("recipient_furigana", "フリガナ", "text", !0, "スズキ イチロウ"));
-    t.appendChild(createZipRow("recipient", "郵便番号"));
-    t.appendChild(createPrefRow("recipient_pref", "都道府県"));
-    t.appendChild(createFormRow("recipient_city", "市区町村", "text", !0));
-    t.appendChild(createFormRow("recipient_address", "番地・建物名", "text", !0));
-    t.appendChild(createTelRow("recipient", "電話番号"));
+    t.appendChild(createFormRow("recipient_name", "お届け先お名前", "text", !0, "鈴木 一郎"));
+    t.appendChild(createFormRow("recipient_furigana", "お届け先フリガナ", "text", !0, "スズキ イチロウ"));
+    t.appendChild(createZipRow("recipient", "お届け先郵便番号"));
+    t.appendChild(createPrefRow("recipient_pref", "お届け先都道府県"));
+    t.appendChild(createFormRow("recipient_city", "お届け先市区町村", "text", !0));
+    t.appendChild(createFormRow("recipient_address", "お届け先番地・建物名", "text", !0));
+    t.appendChild(createTelRow("recipient", "お届け先電話番号"));
   }
 
   function toggleRecipientForm() {
@@ -1417,6 +1982,7 @@
 
   function createNoshiRow() {
     const e = document.createElement("div");
+    e.id = 'noshi-section';
     const t = ["なし","御祝","内祝","御礼","御中元","御歳暮","その他"];
     const o = createSelect("noshiType", "のしの種類", t, !1);
     const n = createFormRow("noshiName", "のし名入れ", "text", !1, "山田 太郎");
