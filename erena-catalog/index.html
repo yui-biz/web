@@ -374,6 +374,7 @@
           <div id="maker-shipped-wrap" style="display:none;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">✔ 選択した注文をまとめて計上</button>
+              <button id="shipped-csv-btn" onclick="downloadShippedCsv()" style="display:none;padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ 発送済CSVダウンロード</button>
             </div>
             <div id="maker-shipped-empty" style="display:none;text-align:center;padding:40px;color:#999;">発送済みの発注はまだありません</div>
             <div style="overflow-x:auto;">
@@ -1172,6 +1173,11 @@
       document.getElementById('maker-cnt-unshipped').textContent = unshipped.length;
       document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
 
+      // エレナアカウントor管理者なら発送済CSVボタン表示
+      window._canSeeShipDetail = !!result.canSeeShipDetail;
+      var csvBtn = document.getElementById('shipped-csv-btn');
+      if (csvBtn) csvBtn.style.display = window._canSeeShipDetail ? 'inline-block' : 'none';
+
       if (result.productList && result.productList.length > 0) {
         document.getElementById('maker-orders-filter').style.display = 'block';
         const sel = document.getElementById('maker-product-filter');
@@ -1542,6 +1548,47 @@
     const a = document.createElement('a');
     a.href = url;
     a.download = '未発送注文_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // === 発送済CSVダウンロード(エレナアカウント/管理者専用) ===
+  function downloadShippedCsv() {
+    const orders = window._makerShippedCache || {};
+    const rows = [['注文番号', '申込日時', '商品名', '数量', 'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
+    Object.values(orders).forEach(function(o) {
+      rows.push([
+        o.orderNo || '',
+        _fmtTime(o.timestamp),
+        o.productName || '',
+        o.quantity || '',
+        o.recipientName || '',
+        o.recipientPref || '',
+        o.recipientCity || '',
+        o.recipientAddress || '',
+        o.recipientTel || '',
+        o.deliveryDate || '',
+        (o.noshiType || 'なし') + (o.noshiName ? ' / ' + o.noshiName : ''),
+        o.store || '',
+        o.carrier || '',
+        o.trackingNo || '',
+        o.shippedAt || '',
+        o.webediStatus || '',
+        o.webediAt || ''
+      ]);
+    });
+    const csv = rows.map(function(r) {
+      return r.map(function(v) {
+        const s = String(v == null ? '' : v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    const bom = '﻿';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '発送済注文_' + new Date().toISOString().slice(0,10) + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   }
