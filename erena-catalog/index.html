@@ -353,6 +353,27 @@
                 ↑ CSVアップロードで一括発送
                 <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
               </label>
+              <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:12px;">❓ CSV一括発送の使い方</button>
+            </div>
+            <div id="csv-help-box" style="display:none;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
+              <div style="font-weight:bold;color:#0d47a1;margin-bottom:6px;">📋 CSVダウンロード→入力→アップロードで一括発送する手順</div>
+              <ol style="margin:0;padding-left:20px;">
+                <li><b>「↓ CSVダウンロード」</b>をクリック → 未発送注文一覧のCSVが保存されます</li>
+                <li>Excel等で開いて、<b style="color:#c62828;">「運送会社」列</b>と<b style="color:#c62828;">「追跡番号」列</b>に値を入力します
+                  <ul style="margin:4px 0;padding-left:20px;color:#555;">
+                    <li>「運送会社」は <code>ヤマト運輸 / 佐川急便 / 日本郵便 / その他</code> のいずれか</li>
+                    <li>「追跡番号」は半角数字・ハイフンで入力</li>
+                    <li><b style="color:#c62828;">「rowIdx」列は絶対に編集しない</b>（システム識別子のため）</li>
+                    <li>発送しない行は空欄のままでOK（処理対象外になります）</li>
+                  </ul>
+                </li>
+                <li>保存（CSV形式のまま）</li>
+                <li><b>「↑ CSVアップロードで一括発送」</b>から保存したCSVを選択</li>
+                <li>運送会社・追跡番号が両方入力された行のみ、一括で発送済みに更新されます</li>
+              </ol>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #90caf9;color:#666;font-size:12px;">
+                💡 1件ずつ処理する場合は各行の<b>「発送処理」ボタン</b>から、複数選択して一括処理する場合は<b>「✔ 選択した注文を発送処理」</b>ボタンから可能です。
+              </div>
             </div>
             <div id="maker-orders-empty" style="display:none;text-align:center;padding:40px;color:#999;">未発送の発注はありません ✓</div>
             <div style="overflow-x:auto;">
@@ -1605,6 +1626,11 @@
     }).catch(function(err) {
       alert('通信エラー: ' + err.message);
     });
+  }
+
+  function toggleCsvHelp() {
+    const box = document.getElementById('csv-help-box');
+    if (box) box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
   }
 
   // === CSVダウンロード（未発送一覧） ===
