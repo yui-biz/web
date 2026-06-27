@@ -1080,6 +1080,11 @@
         wrap.style.display = 'none';
       }
     });
+    // 商品フィルタ(注文タブ用)は登録商品タブでは非表示
+    var orderFilter = document.getElementById('maker-orders-filter');
+    if (orderFilter) {
+      orderFilter.style.display = (tab === 'products') ? 'none' : (orderFilter.dataset.shouldShow === '1' ? 'block' : 'none');
+    }
     if (tab === 'products' && !window._makerProductsLoaded) {
       loadMakerProducts();
     }
@@ -1177,7 +1182,9 @@
       document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
 
       if (result.productList && result.productList.length > 0) {
-        document.getElementById('maker-orders-filter').style.display = 'block';
+        const of = document.getElementById('maker-orders-filter');
+        of.dataset.shouldShow = '1';
+        of.style.display = (_currentMakerTab === 'products') ? 'none' : 'block';
         const sel = document.getElementById('maker-product-filter');
         const currentValue = sel.value;
         sel.innerHTML = '<option value="">すべての商品</option>';
