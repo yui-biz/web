@@ -1377,34 +1377,53 @@
     const idx = list.children.length;
     const row = document.createElement('div');
     row.className = 'ship-tracking-row';
-    row.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;';
+    row.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;flex-wrap:wrap;';
     row.innerHTML =
       '<div style="flex:0 0 130px;">' +
-        '<label style="display:block;font-weight:bold;margin-bottom:4px;font-size:12px;">運送会社<span style="color:#e53935;">*</span></label>' +
-        '<select class="ship-carrier-input" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">' +
+        '<label style="display:block;font-weight:bold;margin-bottom:4px;font-size:12px;">運送会社<span style="color:#c62828;">*</span></label>' +
+        '<select class="ship-carrier-input" onchange="_onCarrierChange(this)" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">' +
           '<option value="">選択</option>' +
           '<option value="ヤマト運輸">ヤマト運輸</option>' +
           '<option value="佐川急便">佐川急便</option>' +
           '<option value="日本郵便">日本郵便</option>' +
-          '<option value="その他">その他</option>' +
+          '<option value="その他">その他(手動入力)</option>' +
         '</select>' +
+        '<input type="text" class="ship-carrier-custom" placeholder="運送会社名を入力" style="display:none;width:100%;padding:6px;border:1px solid #1565c0;border-radius:4px;font-size:13px;box-sizing:border-box;margin-top:4px;">' +
       '</div>' +
-      '<div style="flex:1;">' +
-        '<label style="display:block;font-weight:bold;margin-bottom:4px;font-size:12px;">追跡番号<span style="color:#e53935;">*</span></label>' +
+      '<div style="flex:1;min-width:180px;">' +
+        '<label style="display:block;font-weight:bold;margin-bottom:4px;font-size:12px;">追跡番号<span style="color:#c62828;">*</span></label>' +
         '<input type="text" class="ship-tracking-input" placeholder="例: 1234-5678-9012" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;box-sizing:border-box;">' +
       '</div>' +
       (idx > 0 ? '<button type="button" onclick="this.parentElement.remove()" style="margin-top:18px;padding:4px 8px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:12px;">削除</button>' : '<div style="width:48px;"></div>');
     list.appendChild(row);
   }
 
+  // 運送会社プルダウンchange: 「その他」選択時に手動入力欄を表示
+  function _onCarrierChange(selectEl) {
+    const customInput = selectEl.parentElement.querySelector('.ship-carrier-custom');
+    if (!customInput) return;
+    if (selectEl.value === 'その他') {
+      customInput.style.display = 'block';
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+      customInput.value = '';
+    }
+  }
+
   // モーダルから入力値配列を取得([{carrier, trackingNo}, ...])
+  // 「その他」選択時は手動入力欄の値をcarrierとして採用
   function _collectShipInputs() {
     const list = document.getElementById('ship-tracking-list');
     const rows = list.querySelectorAll('.ship-tracking-row');
     const result = [];
     rows.forEach(function(r) {
-      const carrier = r.querySelector('.ship-carrier-input').value;
+      let carrier = r.querySelector('.ship-carrier-input').value;
       const trackingNo = r.querySelector('.ship-tracking-input').value.trim();
+      if (carrier === 'その他') {
+        const custom = r.querySelector('.ship-carrier-custom').value.trim();
+        carrier = custom || ''; // 手動入力なしならcarrier空扱い(バリデーションで弾く)
+      }
       if (carrier || trackingNo) result.push({ carrier: carrier, trackingNo: trackingNo });
     });
     return result;
