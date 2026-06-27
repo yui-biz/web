@@ -393,7 +393,7 @@
         <!-- 発送処理モーダル -->
         <div id="ship-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center;">
           <div style="background:#fff;border-radius:8px;padding:24px;width:min(480px,90vw);max-height:90vh;overflow-y:auto;">
-            <h3 style="margin:0 0 8px;">発送処理</h3>
+            <h3 id="ship-modal-title" style="margin:0 0 8px;">発送処理</h3>
             <p id="ship-modal-product" style="color:#555;font-size:13px;margin:0 0 20px;"></p>
             <div style="margin-bottom:16px;">
               <label style="display:block;font-weight:bold;margin-bottom:6px;">運送会社 <span style="color:#e53935;">*</span></label>
@@ -1243,22 +1243,29 @@
           const doneLabel = isDirect ? '✓ WEBEDI計上済' : '✓ 問屋へ報告済';
           const btnLabel  = isDirect ? 'WEBEDI計上済みにする' : '問屋へ報告済みにする';
           const webediCell = isWebediDone
-            ? '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small>'
+            ? '<span style="color:#388e3c;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small><br><button onclick="confirmUndoWebedi(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;">↶ 計上取消</button>'
             : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
           const checkboxCell = isWebediDone
             ? '<td></td>'
             : '<td style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
+          // 追跡番号複数対応: カンマ区切りを改行で表示
+          const carrierHtml = escapeHtml(o.carrier || '').replace(/, ?/g, '<br>');
+          const trackingHtml = escapeHtml(o.trackingNo || '').replace(/, ?/g, '<br>');
           tr.innerHTML =
             checkboxCell +
             '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
             '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
-            '<td>' + escapeHtml(o.carrier || '') + '</td>' +
-            '<td>' + escapeHtml(o.trackingNo || '') + '</td>' +
+            '<td>' + carrierHtml + '</td>' +
+            '<td>' + trackingHtml + '</td>' +
             '<td>' + (o.shippedAt || '') + '</td>' +
             '<td>' + webediCell + '</td>' +
-            '<td><button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button></td>';
+            '<td>' +
+              '<button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button>' +
+              '<br><button onclick="showAddTrackingModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">+ 伝票追加</button>' +
+              '<br><button onclick="confirmUndoShipment(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">↶ 発送取消</button>' +
+            '</td>';
           tbody2.appendChild(tr);
         });
         document.getElementById('maker-shipped-table').style.display = 'table';
@@ -1289,12 +1296,16 @@
     _bulkQueue = [];
     _bulkIdx = 0;
     _shipTargetIdx = idx;
+    document.getElementById('ship-modal-title').textContent = '発送処理';
     document.getElementById('ship-modal-product').textContent =
       o.productName + ' × ' + o.quantity + ' / お届け先: ' + o.recipientName + ' 様';
     document.getElementById('ship-carrier').value = '';
     document.getElementById('ship-tracking').value = '';
     document.getElementById('ship-modal-msg').style.display = 'none';
-    document.getElementById('ship-submit-btn').disabled = false;
+    var btn = document.getElementById('ship-submit-btn');
+    btn.disabled = false;
+    btn.textContent = '発送済みにする';
+    btn.onclick = submitShipment;
     document.getElementById('ship-modal').style.display = 'flex';
   }
 
@@ -1342,6 +1353,78 @@
       btn.textContent = btnLabel;
       alert('通信エラー: ' + err.message);
     });
+  }
+
+  // === 伝票追加(複数追跡番号対応) ===
+  let _addTrackingTargetIdx = null;
+  function showAddTrackingModal(idx) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    _addTrackingTargetIdx = idx;
+    document.getElementById('ship-modal-title').textContent = '伝票追加(複数発送時)';
+    document.getElementById('ship-modal-product').textContent =
+      o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様 / 既存: ' + (o.trackingNo || '(なし)');
+    document.getElementById('ship-carrier').value = '';
+    document.getElementById('ship-tracking').value = '';
+    document.getElementById('ship-submit-btn').textContent = '追加登録';
+    document.getElementById('ship-submit-btn').onclick = submitAddTracking;
+    document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  function submitAddTracking() {
+    const idx = _addTrackingTargetIdx;
+    if (idx == null) return;
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    const carrier = document.getElementById('ship-carrier').value;
+    const trackingNo = document.getElementById('ship-tracking').value.trim();
+    if (!carrier) { alert('運送会社を選択してください'); return; }
+    if (!trackingNo) { alert('追跡番号を入力してください'); return; }
+    const btn = document.getElementById('ship-submit-btn');
+    btn.disabled = true; btn.textContent = '処理中...';
+    gasPost({
+      action: 'addTracking',
+      params: { rowIdx: o.rowIdx, carrier: carrier, trackingNo: trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.disabled = false; btn.textContent = '追加登録';
+      if (result.success) {
+        closeShipModal();
+        loadMakerOrders();
+      } else {
+        alert('エラー: ' + (result.error || '不明'));
+      }
+    }).catch(function(err) {
+      btn.disabled = false; btn.textContent = '追加登録';
+      alert('通信エラー: ' + err.message);
+    });
+  }
+
+  // === 発送取消 ===
+  function confirmUndoShipment(idx) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    if (!confirm('発送処理を取消します。よろしいですか？\n\n' + o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様\n\n運送会社・追跡番号・発送日時・WEBEDI計上状況がクリアされます。')) return;
+    gasPost({
+      action: 'undoShipment',
+      params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (result.success) loadMakerOrders();
+      else alert('エラー: ' + (result.error || '不明'));
+    }).catch(function(err) { alert('通信エラー: ' + err.message); });
+  }
+
+  // === WEBEDI計上取消 ===
+  function confirmUndoWebedi(idx) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    if (!confirm('WEBEDI計上を取消します。よろしいですか？\n\n' + o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様')) return;
+    gasPost({
+      action: 'undoWebedi',
+      params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (result.success) loadMakerOrders();
+      else alert('エラー: ' + (result.error || '不明'));
+    }).catch(function(err) { alert('通信エラー: ' + err.message); });
   }
 
   function showMakerShippedDetail(idx) {
