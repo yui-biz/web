@@ -8,6 +8,7 @@
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
   .container { max-width: 800px; margin: 20px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  body.maker-mode .container { max-width: none; margin: 12px; }
   .header { background: linear-gradient(135deg, #c45200 0%, #e53935 100%); color: #fff; padding: 18px 20px; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; }
   .header .header-title { font-size: 22px; font-weight: bold; letter-spacing: 1px; }
   .header .header-sub { font-size: 13px; opacity: 0.92; margin-top: 4px; letter-spacing: 0.5px; }
@@ -374,7 +375,7 @@
           <div id="maker-shipped-wrap" style="display:none;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#f57c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">✔ 選択した注文をまとめて計上</button>
-              <button id="shipped-csv-btn" onclick="downloadShippedCsv()" style="display:none;padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ 発送済CSVダウンロード</button>
+              <button onclick="downloadShippedCsv()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">↓ 発送済CSVダウンロード</button>
             </div>
             <div id="maker-shipped-empty" style="display:none;text-align:center;padding:40px;color:#999;">発送済みの発注はまだありません</div>
             <div style="overflow-x:auto;">
@@ -504,6 +505,7 @@
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('store-display').style.display = 'none';
     document.getElementById('maker-content').style.display = 'none';
+    document.body.classList.remove('maker-mode');
   }
 
   function showMainContent(storeId, storeName, isAdmin) {
@@ -1052,6 +1054,7 @@
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('store-display').style.display = 'none';
     document.getElementById('maker-content').style.display = 'block';
+    document.body.classList.add('maker-mode');
     _currentMakerTab = 'unshipped';
     loadMakerOrders();
   }
@@ -1172,11 +1175,6 @@
       document.getElementById('maker-cnt-month').textContent = result.summary.thisMonth;
       document.getElementById('maker-cnt-unshipped').textContent = unshipped.length;
       document.getElementById('maker-cnt-unwebedi').textContent = unwebedi.length;
-
-      // エレナアカウントor管理者なら発送済CSVボタン表示
-      window._canSeeShipDetail = !!result.canSeeShipDetail;
-      var csvBtn = document.getElementById('shipped-csv-btn');
-      if (csvBtn) csvBtn.style.display = window._canSeeShipDetail ? 'inline-block' : 'none';
 
       if (result.productList && result.productList.length > 0) {
         document.getElementById('maker-orders-filter').style.display = 'block';
