@@ -8,8 +8,9 @@
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
   .container { max-width: 800px; margin: 20px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .header { background-color: white; padding: 0; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; overflow: hidden; }
-  .header img { display: block; width: 100%; height: auto; }
+  .header { background: linear-gradient(135deg, #c45200 0%, #e53935 100%); color: #fff; padding: 18px 20px; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+  .header .header-title { font-size: 22px; font-weight: bold; letter-spacing: 1px; }
+  .header .header-sub { font-size: 13px; opacity: 0.92; margin-top: 4px; letter-spacing: 0.5px; }
   h2, h3 { margin: 0; }
   .content { padding: 30px; }
   .progress-bar { display: flex; justify-content: space-around; margin-bottom: 20px; }
@@ -51,7 +52,7 @@
   @media print {
     body, .container { margin: 0; padding: 0; box-shadow: none; }
     @page { size: A4; margin: 10mm; }
-    .header img { display: none; }
+    .header { display: none; }
     .form-section { border: 1px solid #ccc; padding: 8px 12px; margin-bottom: 6px; page-break-inside: avoid; }
     .form-section h3 { margin: 0 0 6px 0; padding-bottom: 4px; font-size: 13px; border-bottom: 1px solid #007BFF; }
     .printable-area h2 { font-size: 14px; margin: 0 0 6px 0; }
@@ -179,7 +180,8 @@
 
     <div class="container">
       <div class="header">
-        <img src="https://res.cloudinary.com/yui-gift/image/upload/v1780210994/image_22_mqnxys.png" alt="エレナ 特選 夏ギフト 2026 カタログギフト お申し込みフォーム">
+        <div class="header-title">エレナ 夏ギフト 2026</div>
+        <div class="header-sub">カタログギフト ポータル</div>
       </div>
       <div class="content">
         <div id="store-display" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:12px 16px;margin-bottom:20px;text-align:center;font-weight:bold;display:none;">
