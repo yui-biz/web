@@ -1273,6 +1273,17 @@
       const cardW = document.getElementById('card-unwebedi');
       if (cardU) cardU.classList.toggle('zero', unshipped.length === 0);
       if (cardW) cardW.classList.toggle('zero', unwebedi.length === 0);
+      // 管理者向けに「うちテスト N件」内訳を表示
+      const unshippedTestCount = unshipped.filter(function(o){ return o.isTest; }).length;
+      const unwebediTestCount = unwebedi.filter(function(o){ return o.isTest; }).length;
+      const subU = cardU ? cardU.querySelector('.sublabel') : null;
+      const subW = cardW ? cardW.querySelector('.sublabel') : null;
+      if (subU) subU.innerHTML = unshippedTestCount > 0
+        ? 'うちテスト ' + unshippedTestCount + '件 / クリックで未発送タブへ'
+        : 'クリックで未発送タブへ';
+      if (subW) subW.innerHTML = unwebediTestCount > 0
+        ? 'うちテスト ' + unwebediTestCount + '件 / クリックで発送済タブへ'
+        : 'クリックで発送済タブへ';
 
       if (result.productList && result.productList.length > 0) {
         const of = document.getElementById('maker-orders-filter');
@@ -1927,15 +1938,17 @@
   // === CSVダウンロード（未発送一覧） ===
   function downloadUnshippedCsv() {
     const orders = window._makerOrderCache || {};
-    const rows = [['rowIdx', '申込日時', '商品名', '数量', 'お届け先名', '住所', '配達日', '運送会社', '追跡番号']];
+    const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量', 'お届け先名', '住所', '店舗', '配達日', '運送会社', '追跡番号']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.rowIdx,
         _fmtTime(o.timestamp),
+        o.isTest ? 'テスト' : '',
         o.productName || '',
         o.quantity || '',
         o.recipientName || '',
         (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
+        o.store || '',
         o.deliveryDate || '',
         '',  // 運送会社（空欄 → 記入する）
         ''   // 追跡番号（空欄 → 記入する）
@@ -1960,11 +1973,12 @@
   // === 発送済CSVダウンロード(エレナアカウント/管理者専用) ===
   function downloadShippedCsv() {
     const orders = window._makerShippedCache || {};
-    const rows = [['注文番号', '申込日時', '商品名', '数量', 'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
+    const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量', 'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.orderNo || '',
         _fmtTime(o.timestamp),
+        o.isTest ? 'テスト' : '',
         o.productName || '',
         o.quantity || '',
         o.recipientName || '',
