@@ -1712,46 +1712,40 @@
       return;
     }
 
-    // カテゴリごとに optgroup を生成（カテゴリ初出順を保持）
+    // 商品番号順にソートして単一フラットリストで表示
     select.innerHTML = '<option value="">選択してください</option>';
-    const groups = {};
-    const groupOrder = [];
-    products.forEach(p => {
-      const cat = p.category || 'その他';
-      if (!groups[cat]) { groups[cat] = []; groupOrder.push(cat); }
-      groups[cat].push(p);
+    const sorted = products.slice().sort(function(a, b) {
+      const na = String(a.productNo || '').padStart(8, '0');
+      const nb = String(b.productNo || '').padStart(8, '0');
+      return na.localeCompare(nb);
     });
-    groupOrder.forEach(cat => {
-      const og = document.createElement('optgroup');
-      og.label = cat;
-      groups[cat].forEach(product => {
-        const option = document.createElement('option');
-        option.value = product.name;
-        option.textContent = product.name;
-        option.dataset.imageUrl = product.imageUrl || '';
-        option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
-        option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
-        option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
-        option.dataset.orderDeadline = product.orderDeadline || '';
-        if (product.orderDeadline) {
-          const deadline = new Date(product.orderDeadline);
-          const canOrderUntil = new Date(deadline);
-          canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadTime || 14));
-          canOrderUntil.setHours(23, 59, 59, 999);
-          if (new Date() > canOrderUntil) {
-            option.disabled = true;
-            option.textContent = '【受注締切】' + product.name;
-          }
+    sorted.forEach(product => {
+      const option = document.createElement('option');
+      option.value = product.name;
+      const labelPrefix = product.productNo ? product.productNo + '  ' : '';
+      option.textContent = labelPrefix + product.name;
+      option.dataset.imageUrl = product.imageUrl || '';
+      option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
+      option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
+      option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
+      option.dataset.orderDeadline = product.orderDeadline || '';
+      if (product.orderDeadline) {
+        const deadline = new Date(product.orderDeadline);
+        const canOrderUntil = new Date(deadline);
+        canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadTime || 14));
+        canOrderUntil.setHours(23, 59, 59, 999);
+        if (new Date() > canOrderUntil) {
+          option.disabled = true;
+          option.textContent = '【受注締切】' + labelPrefix + product.name;
         }
-        og.appendChild(option);
-      });
-      select.appendChild(og);
+      }
+      select.appendChild(option);
     });
     select.disabled = false;
 
-    // Tom Select で検索＋optgroup対応のリッチドロップダウン化
+    // Tom Select で検索可能なリッチドロップダウン化(商品番号順)
     new TomSelect(select, {
-      placeholder: '商品名で検索またはカテゴリから選択',
+      placeholder: '商品番号または商品名で検索',
       maxOptions: 100,
       searchField: ['text'],
       onChange: function() { displayProductImage(select); }
