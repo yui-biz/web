@@ -447,7 +447,7 @@
               <table class="orders-table" id="maker-orders-table" style="display:none;">
                 <thead><tr>
                   <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>配達日</th><th>詳細</th><th>発送処理</th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>配達日</th><th>詳細</th><th>発送処理</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -470,7 +470,7 @@
               <table class="orders-table" id="maker-shipped-table" style="display:none;">
                 <thead><tr>
                   <th><input type="checkbox" id="check-all-shipped" onchange="toggleAllShippedChecks(this.checked)" title="全選択"></th>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>計上/報告</th><th>詳細</th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>計上/報告</th><th>詳細</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -1304,9 +1304,10 @@
             '<td>' + escapeHtml(o.productName || '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+            '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
-            '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#e53935;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
+            '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tbody.appendChild(tr);
         });
         document.getElementById('maker-orders-table').style.display = 'table';
@@ -1343,6 +1344,7 @@
             '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+            '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + carrierHtml + '</td>' +
             '<td>' + trackingHtml + '</td>' +
             '<td>' + (o.shippedAt || '') + '</td>' +
