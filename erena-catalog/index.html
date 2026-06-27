@@ -416,7 +416,7 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分を発送処理</button>
               <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
-              <label style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">
+              <label style="display:inline-flex;align-items:center;padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;box-sizing:border-box;line-height:1.2;">
                 CSVアップロードで一括発送
                 <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
               </label>
@@ -462,12 +462,13 @@
           <!-- 発送済みテーブル -->
           <div id="maker-shipped-wrap" style="display:none;">
             <!-- 計上日フィルタ(管理者のみ) -->
-            <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px 12px;margin-bottom:10px;font-size:13px;">
-              <b style="margin-right:8px;">計上/報告日でフィルタ:</b>
-              <label style="margin-right:6px;">開始: <input type="date" id="webedi-from" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:13px;"></label>
-              <label style="margin-right:6px;">終了: <input type="date" id="webedi-to" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:13px;"></label>
-              <button onclick="clearWebediFilter()" style="padding:4px 10px;background:#fff;color:#666;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:12px;margin-left:8px;">クリア</button>
-              <span id="webedi-filter-count" style="margin-left:12px;color:#666;font-size:12px;"></span>
+            <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:12px;align-items:center;gap:6px;flex-wrap:wrap;">
+              <b>計上日:</b>
+              <input type="date" id="webedi-from" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:12px;">
+              <span>～</span>
+              <input type="date" id="webedi-to" onchange="applyShippedFilter()" style="padding:4px;border:1px solid #ccc;border-radius:3px;font-size:12px;">
+              <button onclick="clearWebediFilter()" style="padding:3px 8px;background:#fff;color:#666;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:11px;">クリア</button>
+              <span id="webedi-filter-count" style="color:#666;font-size:11px;"></span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
@@ -1294,10 +1295,10 @@
       window._makerShippedCache = {};
       window._allShipped = shipped; // フィルタ前の全発送済データを保持
 
-      // 管理者なら計上日フィルタUI表示
+      // 管理者なら計上日フィルタUI表示(flex)
       const isAdmin = !!currentIsAdmin;
       const dateFilter = document.getElementById('webedi-date-filter');
-      if (dateFilter) dateFilter.style.display = isAdmin ? 'block' : 'none';
+      if (dateFilter) dateFilter.style.display = isAdmin ? 'flex' : 'none';
 
       // 未発送テーブル描画
       const tbody = document.querySelector('#maker-orders-table tbody');
