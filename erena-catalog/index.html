@@ -1381,7 +1381,7 @@
         '<td>' + webediCell + '</td>' +
         '<td>' +
           '<button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button>' +
-          '<br><button onclick="showAddTrackingModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">伝票追加</button>' +
+          '<br><button onclick="showEditTrackingsModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">伝票編集</button>' +
           '<br><button onclick="confirmUndoShipment(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">発送取消</button>' +
         '</td>';
       tbody2.appendChild(tr);
@@ -1420,11 +1420,45 @@
   let _bulkIdx = 0;
   let _bulkResults = []; // バルクモード時に収集した {rowIdx, carrier, trackingNo}
 
-  // 発送モーダル内の追跡番号入力欄を初期化(1セット)
-  function _resetShipTrackingRows(count) {
+  // 発送モーダル内の追跡番号入力欄を初期化
+  // existingItems を渡すと既存値で埋める([{carrier, trackingNo}, ...])
+  function _resetShipTrackingRows(countOrItems) {
     const list = document.getElementById('ship-tracking-list');
     list.innerHTML = '';
-    for (let i = 0; i < (count || 1); i++) addShipTrackingRow();
+    if (Array.isArray(countOrItems)) {
+      if (countOrItems.length === 0) { addShipTrackingRow(); return; }
+      countOrItems.forEach(function(item) {
+        addShipTrackingRow();
+        const rows = list.querySelectorAll('.ship-tracking-row');
+        const lastRow = rows[rows.length - 1];
+        const carrierSel = lastRow.querySelector('.ship-carrier-input');
+        const trackingInp = lastRow.querySelector('.ship-tracking-input');
+        const customInp = lastRow.querySelector('.ship-carrier-custom');
+        const presetOptions = ['ヤマト運輸', '佐川急便', '日本郵便'];
+        if (presetOptions.indexOf(item.carrier) !== -1) {
+          carrierSel.value = item.carrier;
+        } else if (item.carrier) {
+          carrierSel.value = 'その他';
+          customInp.style.display = 'block';
+          customInp.value = item.carrier;
+        }
+        trackingInp.value = item.trackingNo || '';
+      });
+    } else {
+      for (let i = 0; i < (countOrItems || 1); i++) addShipTrackingRow();
+    }
+  }
+
+  // カンマ区切り文字列を[{carrier, trackingNo}, ...]にパース
+  function _parseExistingTrackings(carrierStr, trackingStr) {
+    const carriers = String(carrierStr || '').split(/, ?/).map(function(s){ return s.trim(); }).filter(Boolean);
+    const trackings = String(trackingStr || '').split(/, ?/).map(function(s){ return s.trim(); }).filter(Boolean);
+    const len = Math.max(carriers.length, trackings.length);
+    const out = [];
+    for (let i = 0; i < len; i++) {
+      out.push({ carrier: carriers[i] || '', trackingNo: trackings[i] || '' });
+    }
+    return out;
   }
 
   function addShipTrackingRow() {
@@ -1564,6 +1598,56 @@
     btn.textContent = '追加登録';
     btn.onclick = submitAddTracking;
     document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  // 伝票編集(既存伝票の編集・削除・追加を統合UI)
+  let _editTrackingsTargetIdx = null;
+  function showEditTrackingsModal(idx) {
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    _editTrackingsTargetIdx = idx;
+    document.getElementById('ship-modal-title').textContent = '伝票編集';
+    document.getElementById('ship-modal-product').textContent =
+      o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様';
+    const existing = _parseExistingTrackings(o.carrier, o.trackingNo);
+    _resetShipTrackingRows(existing);
+    document.getElementById('ship-modal-msg').style.display = 'none';
+    var btn = document.getElementById('ship-submit-btn');
+    btn.disabled = false;
+    btn.textContent = '保存';
+    btn.onclick = submitEditTrackings;
+    document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  function submitEditTrackings() {
+    const idx = _editTrackingsTargetIdx;
+    if (idx == null) return;
+    const o = (window._makerShippedCache || {})[idx];
+    if (!o) return;
+    const inputs = _collectShipInputs();
+    if (inputs.length === 0) {
+      alert('伝票が0件です。全削除する場合は「発送取消」ボタンをご利用ください。');
+      return;
+    }
+    const invalid = inputs.find(function(p) { return !p.carrier || !p.trackingNo; });
+    if (invalid) { alert('全ての伝票で運送会社と追跡番号の両方を入力してください'); return; }
+    const btn = document.getElementById('ship-submit-btn');
+    btn.disabled = true; btn.textContent = '処理中...';
+    gasPost({
+      action: 'replaceTrackings',
+      params: { rowIdx: o.rowIdx, items: inputs, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.disabled = false; btn.textContent = '保存';
+      if (result.success) {
+        closeShipModal();
+        loadMakerOrders();
+      } else {
+        alert('エラー: ' + (result.error || '不明'));
+      }
+    }).catch(function(err) {
+      btn.disabled = false; btn.textContent = '保存';
+      alert('通信エラー: ' + err.message);
+    });
   }
 
   function submitAddTracking() {
@@ -2056,7 +2140,6 @@
       + '</dl></div>'
       + '<div class="detail-section"><h4>発注元（エレナ店舗）</h4><dl>'
       +   '<dt>店舗</dt><dd>' + escapeHtml(o.store || '-') + '</dd>'
-      +   '<dt>受付担当</dt><dd>' + escapeHtml(o.ordererName || '-') + (o.ordererTel ? ' / TEL: ' + escapeHtml(o.ordererTel) : '') + '</dd>'
       + '</dl></div>';
 
     document.getElementById('order-detail-body').innerHTML = html;
