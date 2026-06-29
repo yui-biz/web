@@ -430,6 +430,7 @@
                     <li>「追跡番号」は半角数字・ハイフンで入力</li>
                     <li><b>「rowIdx」列は絶対に編集しない</b>(システム識別子のため)</li>
                     <li>発送しない行は空欄のままでOK(処理対象外になります)</li>
+                    <li><b>1注文で伝票が複数に分かれる場合</b>は、<b>同じ行をコピーして増やし(rowIdxはそのまま)</b>、それぞれに運送会社・追跡番号を入力すれば複数伝票としてまとめて登録されます</li>
                   </ul>
                 </li>
                 <li>保存(CSV形式のまま)</li>
@@ -2034,22 +2035,35 @@
         alert('CSVの列名が正しくありません。ダウンロードしたCSVを使用してください。');
         return;
       }
-      const targets = [];
+      // 同じ rowIdx の行を複数書くと、その注文の複数伝票としてまとめる(手動モーダルと同じカンマ結合形式)
+      const byRow = {};
+      const order = [];
+      let trackingTotal = 0;
       for (let i = 1; i < lines.length; i++) {
         const cells = _parseCsvLine(lines[i]);
-        const rowIdx = cells[colRowIdx];
+        const rowIdx = String(cells[colRowIdx] || '').trim();
         const carrier = (cells[colCarrier] || '').trim();
         const trackingNo = (cells[colTracking] || '').trim();
         if (rowIdx && carrier && trackingNo) {
-          targets.push({ rowIdx: rowIdx, carrier: carrier, trackingNo: trackingNo });
+          if (!byRow[rowIdx]) { byRow[rowIdx] = { carriers: [], trackings: [] }; order.push(rowIdx); }
+          byRow[rowIdx].carriers.push(carrier);
+          byRow[rowIdx].trackings.push(trackingNo);
+          trackingTotal++;
         }
       }
+      const targets = order.map(function(rowIdx) {
+        return { rowIdx: rowIdx, carrier: byRow[rowIdx].carriers.join(', '), trackingNo: byRow[rowIdx].trackings.join(', ') };
+      });
       if (targets.length === 0) {
         alert('運送会社と追跡番号が両方入力されている行が見つかりません。');
         input.value = '';
         return;
       }
-      if (!confirm(targets.length + '件を発送済みに更新します。よろしいですか？')) {
+      const multiCount = targets.filter(function(t) { return t.trackingNo.indexOf(', ') !== -1; }).length;
+      const confirmMsg = targets.length + '件の注文を発送済みに更新します。'
+        + (multiCount > 0 ? '\n(うち' + multiCount + '件は複数伝票・伝票合計' + trackingTotal + '件)' : '')
+        + '\nよろしいですか？';
+      if (!confirm(confirmMsg)) {
         input.value = '';
         return;
       }
