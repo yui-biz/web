@@ -2105,7 +2105,7 @@
   function renderDetailViewReadOnly(o) {
     document.getElementById('order-detail-title').textContent = '発注詳細';
     const dt = new Date(o.timestamp);
-    const testBanner = o.isTest ? '<div class="test-banner">テスト注文 — 店舗スタッフのテスト入力分のためご対応不要です</div>' : '';
+    const testBanner = o.isTest ? '<div class="test-banner">テスト注文 — 動作確認用のサンプルです。発送登録・WEBEDI操作をお試しいただけます（メールは送信されません）</div>' : '';
 
     // 商品画像取得(商品リストキャッシュから)
     const product = (window._cachedProducts || []).find(function(p) { return p.name === o.productName; });
