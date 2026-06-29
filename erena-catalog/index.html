@@ -2339,7 +2339,7 @@
   }
 
   function checkRequiredFields() {
-    const e = ["staffId","productName","quantity","orderer_name","orderer_furigana","orderer_zip1","orderer_zip2","orderer_pref","orderer_city","orderer_address","orderer_tel1","orderer_tel2","orderer_tel3","orderer_email"];
+    const e = ["staffId","productName","quantity","orderer_name","orderer_furigana","orderer_zip1","orderer_zip2","orderer_pref","orderer_city","orderer_address","orderer_tel1","orderer_tel2","orderer_tel3"];
     if (document.getElementById("shipToDifferentAddress").checked) e.push("recipient_name","recipient_furigana","recipient_zip1","recipient_zip2","recipient_pref","recipient_city","recipient_address","recipient_tel1","recipient_tel2","recipient_tel3");
     if ("specify" === document.querySelector('input[name="deliveryPref"]:checked').value) e.push("deliveryDate");
     for (const t of e) {
@@ -2426,7 +2426,7 @@
     e.appendChild(createFormRow("orderer_city", "購入者市区町村", "text", !0));
     e.appendChild(createFormRow("orderer_address", "購入者番地・建物名", "text", !0));
     e.appendChild(createTelRow("orderer", "購入者電話番号"));
-    e.appendChild(createFormRow("orderer_email", "購入者メールアドレス", "email", !0, "test@example.com"));
+    e.appendChild(createFormRow("orderer_email", "購入者メールアドレス", "email", !1, "test@example.com"));
     // のし項目は常時表示（ご注文者セクション末尾）
     e.appendChild(document.createElement("hr")).className = "section-divider";
     e.appendChild(createNoshiRow());
