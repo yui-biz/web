@@ -1108,6 +1108,30 @@
 
   let formDataGlobal = {};
   let originalBodyHtml;
+  let jpHolidaySet = new Set();  // getProductsで取得した日本の祝日(yyyy-MM-dd)
+
+  function ymd(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  /**
+   * 最早お届け日を算出（GAS computeEarliestDelivery_ と同一ロジック）。
+   * リードタイム(営業日換算 or 暦日)と着日指定最小日数の両方を満たす最も早い日。
+   */
+  function computeEarliestDate(orderDate, leadDays, skipHolidays, minDays) {
+    const lead = new Date(orderDate.getTime());
+    let added = 0;
+    while (added < leadDays) {
+      lead.setDate(lead.getDate() + 1);
+      if (skipHolidays) {
+        const dow = lead.getDay();
+        if (dow === 0 || dow === 6 || jpHolidaySet.has(ymd(lead))) continue;  // 土日祝はカウントしない
+      }
+      added++;
+    }
+    const minD = new Date(orderDate.getTime());
+    minD.setDate(minD.getDate() + (minDays || 0));
+    return lead.getTime() >= minD.getTime() ? lead : minD;
+  }
 
   document.addEventListener('DOMContentLoaded', function() {
     authenticate().then(auth => {
@@ -1122,6 +1146,7 @@
       gasPost({ action: 'getProducts' })
         .then(result => {
           if (result.error) return onFailure({ message: result.error });
+          if (Array.isArray(result.holidays)) jpHolidaySet = new Set(result.holidays);
           populateProductDropdown(result.products);
         })
         .catch(err => onFailure(err));
@@ -2207,14 +2232,16 @@
       const labelPrefix = product.productNo ? product.productNo + '  ' : '';
       option.textContent = labelPrefix + product.name;
       option.dataset.imageUrl = product.imageUrl || '';
-      option.dataset.leadTime = product.leadTime != null ? product.leadTime : 14;
+      option.dataset.leadDays = product.leadDays != null ? product.leadDays : 14;
+      option.dataset.skipHolidays = product.skipHolidays !== false ? '1' : '0';
       option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
+      option.dataset.dateSpecMinDays = product.dateSpecMinDays != null ? product.dateSpecMinDays : 0;
       option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
       option.dataset.orderDeadline = product.orderDeadline || '';
       if (product.orderDeadline) {
         const deadline = new Date(product.orderDeadline);
         const canOrderUntil = new Date(deadline);
-        canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadTime || 14));
+        canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadDays || 14));
         canOrderUntil.setHours(23, 59, 59, 999);
         if (new Date() > canOrderUntil) {
           option.disabled = true;
@@ -2255,7 +2282,9 @@
 
   function applyProductConstraints(opt) {
     const hasProduct = opt && opt.value;
-    const leadTime = hasProduct ? (parseInt(opt.dataset.leadTime, 10) || 14) : 14;
+    const leadDays = hasProduct ? (parseInt(opt.dataset.leadDays, 10) || 14) : 14;
+    const skipHolidays = !hasProduct || opt.dataset.skipHolidays !== '0';
+    const minDays = hasProduct ? (parseInt(opt.dataset.dateSpecMinDays, 10) || 0) : 0;
     const dateSpec = !hasProduct || opt.dataset.dateSpecifiable !== '0';
     const noshiAvail = !hasProduct || opt.dataset.noshiAvailable !== '0';
 
@@ -2264,29 +2293,31 @@
     const specifyRadio = document.querySelector('input[name="deliveryPref"][value="specify"]');
     const dateInput = document.getElementById('deliveryDate');
     let dateNote = document.getElementById('date-spec-note');
+    if (!dateNote) {
+      dateNote = document.createElement('span');
+      dateNote.id = 'date-spec-note';
+      dateNote.style.cssText = 'font-size:11px;margin-left:6px;';
+      specifyRadio.parentElement.appendChild(dateNote);
+    }
 
     if (!dateSpec) {
       noneRadio.checked = true;
       dateInput.style.display = 'none';
       specifyRadio.disabled = true;
       specifyRadio.parentElement.style.cssText += ';opacity:0.4;cursor:not-allowed;';
-      if (!dateNote) {
-        dateNote = document.createElement('span');
-        dateNote.id = 'date-spec-note';
-        dateNote.style.cssText = 'font-size:11px;color:#c00;margin-left:6px;';
-        dateNote.textContent = '（この商品は着日指定不可）';
-        specifyRadio.parentElement.appendChild(dateNote);
-      }
+      dateNote.style.color = '#c00';
+      dateNote.textContent = '（この商品は着日指定不可）';
     } else {
       specifyRadio.disabled = false;
       specifyRadio.parentElement.style.opacity = '';
       specifyRadio.parentElement.style.cursor = '';
-      if (dateNote) dateNote.remove();
-      const minDate = new Date();
-      minDate.setDate(minDate.getDate() + leadTime);
-      const minStr = minDate.toISOString().split('T')[0];
+      // メーカーのリードタイム（含まない=営業日換算で土日祝スキップ／含む=暦日）＋着日指定最小日数で最早お届け日を算出
+      const earliest = computeEarliestDate(new Date(), leadDays, skipHolidays, minDays);
+      const minStr = ymd(earliest);
       dateInput.min = minStr;
       if (dateInput.value && dateInput.value < minStr) dateInput.value = '';
+      dateNote.style.color = '#666';
+      dateNote.textContent = '（最短お届け日: ' + minStr + '）';
     }
 
     // --- のし ---
