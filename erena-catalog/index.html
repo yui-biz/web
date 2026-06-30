@@ -1098,12 +1098,27 @@
   // 旧 initStore はもう使わない（authenticate に統合）
   function initStore() { return false; }
 
-  function gasPost(payload) {
+  // 読み込み系(冪等)のみ自動リトライ対象。更新系(submitForm/updateShipment/requestMagicLink等)は
+  // 二重登録防止のためリトライしない（Failed to fetchでもサーバー処理済みの可能性があるため）。
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1 };
+
+  function gasPost(payload, _attempt) {
+    _attempt = _attempt || 0;
     return fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
-    }).then(res => res.json());
+    }).then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();  // HTML(瞬断エラーページ)が来た場合もここでthrow→リトライ対象なら再試行
+    }).catch(err => {
+      const retriable = payload && RETRIABLE_ACTIONS[payload.action];
+      if (retriable && _attempt < 2) {
+        return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
+          .then(() => gasPost(payload, _attempt + 1));  // 600ms,1200ms バックオフで最大2回再試行
+      }
+      throw err;
+    });
   }
 
   let formDataGlobal = {};
