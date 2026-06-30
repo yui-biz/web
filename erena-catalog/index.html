@@ -2253,11 +2253,10 @@
       option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
       option.dataset.orderDeadline = product.orderDeadline || '';
       if (product.orderDeadline) {
+        // 受注締切日(=申込期限)当日いっぱいまで注文可（リードタイムは差し引かない）
         const deadline = new Date(product.orderDeadline);
-        const canOrderUntil = new Date(deadline);
-        canOrderUntil.setDate(canOrderUntil.getDate() - (product.leadDays || 14));
-        canOrderUntil.setHours(23, 59, 59, 999);
-        if (new Date() > canOrderUntil) {
+        deadline.setHours(23, 59, 59, 999);
+        if (new Date() > deadline) {
           option.disabled = true;
           option.textContent = '【受注締切】' + labelPrefix + product.name;
         }
