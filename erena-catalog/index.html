@@ -1981,7 +1981,9 @@
   // === CSVダウンロード（未発送一覧） ===
   function downloadUnshippedCsv() {
     const orders = window._makerOrderCache || {};
-    const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量', 'お届け先名', '住所', '店舗', '配達日', '運送会社', '追跡番号']];
+    const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
+      'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
+      'お届け先名', '住所', '店舗', '配達日', '運送会社', '追跡番号']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.rowIdx,
@@ -1989,6 +1991,14 @@
         o.isTest ? 'テスト' : '',
         o.productName || '',
         o.quantity || '',
+        o.ordererName || '',
+        o.ordererFurigana || '',
+        o.ordererZip || '',
+        o.ordererPref || '',
+        o.ordererCity || '',
+        o.ordererAddress || '',
+        o.ordererTel || '',
+        o.ordererEmail || '',
         o.recipientName || '',
         (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
         o.store || '',
@@ -2016,7 +2026,9 @@
   // === 発送済CSVダウンロード(エレナアカウント/管理者専用) ===
   function downloadShippedCsv() {
     const orders = window._makerShippedCache || {};
-    const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量', 'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
+    const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量',
+      'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
+      'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.orderNo || '',
@@ -2024,6 +2036,14 @@
         o.isTest ? 'テスト' : '',
         o.productName || '',
         o.quantity || '',
+        o.ordererName || '',
+        o.ordererFurigana || '',
+        o.ordererZip || '',
+        o.ordererPref || '',
+        o.ordererCity || '',
+        o.ordererAddress || '',
+        o.ordererTel || '',
+        o.ordererEmail || '',
         o.recipientName || '',
         o.recipientPref || '',
         o.recipientCity || '',
