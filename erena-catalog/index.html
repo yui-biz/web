@@ -1979,6 +1979,12 @@
   }
 
   // === CSVダウンロード（未発送一覧） ===
+  // Excelで番地/郵便番号/電話が日付・数値に自動変換されないよう ="..." で強制テキスト化
+  function _csvText(v) {
+    const s = String(v == null ? '' : v).trim();
+    return s === '' ? '' : '="' + s.replace(/"/g, '""') + '"';
+  }
+
   function downloadUnshippedCsv() {
     const orders = window._makerOrderCache || {};
     const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
@@ -1993,19 +1999,19 @@
         o.quantity || '',
         o.ordererName || '',
         o.ordererFurigana || '',
-        o.ordererZip || '',
+        _csvText(o.ordererZip),
         o.ordererPref || '',
         o.ordererCity || '',
-        o.ordererAddress || '',
-        o.ordererTel || '',
+        _csvText(o.ordererAddress),
+        _csvText(o.ordererTel),
         o.ordererEmail || '',
         o.recipientName || '',
         o.recipientFurigana || '',
-        o.recipientZip || '',
+        _csvText(o.recipientZip),
         o.recipientPref || '',
         o.recipientCity || '',
-        o.recipientAddress || '',
-        o.recipientTel || '',
+        _csvText(o.recipientAddress),
+        _csvText(o.recipientTel),
         o.store || '',
         o.deliveryDate || '',
         o.noshiType || 'なし',
@@ -2045,19 +2051,19 @@
         o.quantity || '',
         o.ordererName || '',
         o.ordererFurigana || '',
-        o.ordererZip || '',
+        _csvText(o.ordererZip),
         o.ordererPref || '',
         o.ordererCity || '',
-        o.ordererAddress || '',
-        o.ordererTel || '',
+        _csvText(o.ordererAddress),
+        _csvText(o.ordererTel),
         o.ordererEmail || '',
         o.recipientName || '',
         o.recipientFurigana || '',
-        o.recipientZip || '',
+        _csvText(o.recipientZip),
         o.recipientPref || '',
         o.recipientCity || '',
-        o.recipientAddress || '',
-        o.recipientTel || '',
+        _csvText(o.recipientAddress),
+        _csvText(o.recipientTel),
         o.deliveryDate || '',
         o.noshiType || 'なし',
         o.noshiName || '',
