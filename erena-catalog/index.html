@@ -2221,6 +2221,12 @@
       +   '</div>'
       + '</div>'
       + shipInfo
+      + '<div class="detail-section"><h4>ご注文者</h4><dl>'
+      +   '<dt>お名前</dt><dd>' + escapeHtml(o.ordererName || '') + (o.ordererFurigana ? ' (' + escapeHtml(o.ordererFurigana) + ')' : '') + '</dd>'
+      +   '<dt>住所</dt><dd>〒' + escapeHtml(o.ordererZip || '') + '<br>' + escapeHtml(o.ordererPref || '') + escapeHtml(o.ordererCity || '') + escapeHtml(o.ordererAddress || '') + '</dd>'
+      +   '<dt>電話</dt><dd>' + escapeHtml(o.ordererTel || '-') + '</dd>'
+      +   (o.ordererEmail ? '<dt>メール</dt><dd>' + escapeHtml(o.ordererEmail) + '</dd>' : '')
+      + '</dl></div>'
       + '<div class="detail-section"><h4>お届け先</h4><dl>'
       +   '<dt>お名前</dt><dd>' + escapeHtml(o.recipientName || '') + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') + '</dd>'
       +   '<dt>住所</dt><dd>〒' + escapeHtml(o.recipientZip || '') + '<br>' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + escapeHtml(o.recipientAddress || '') + '</dd>'
