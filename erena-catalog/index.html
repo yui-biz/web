@@ -1983,7 +1983,7 @@
     const orders = window._makerOrderCache || {};
     const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
       'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
-      'お届け先名', '住所', '店舗', '配達日', '運送会社', '追跡番号']];
+      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '店舗', '配達日', '運送会社', '追跡番号']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.rowIdx,
@@ -2000,7 +2000,12 @@
         o.ordererTel || '',
         o.ordererEmail || '',
         o.recipientName || '',
-        (o.recipientPref || '') + (o.recipientCity || '') + (o.recipientAddress || ''),
+        o.recipientFurigana || '',
+        o.recipientZip || '',
+        o.recipientPref || '',
+        o.recipientCity || '',
+        o.recipientAddress || '',
+        o.recipientTel || '',
         o.store || '',
         o.deliveryDate || '',
         '',  // 運送会社（空欄 → 記入する）
@@ -2028,7 +2033,7 @@
     const orders = window._makerShippedCache || {};
     const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量',
       'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
-      'お届け先名', '都道府県', '市区町村', '番地等', '電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
+      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '希望配達日', 'のし', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
     Object.values(orders).forEach(function(o) {
       rows.push([
         o.orderNo || '',
@@ -2045,6 +2050,8 @@
         o.ordererTel || '',
         o.ordererEmail || '',
         o.recipientName || '',
+        o.recipientFurigana || '',
+        o.recipientZip || '',
         o.recipientPref || '',
         o.recipientCity || '',
         o.recipientAddress || '',
