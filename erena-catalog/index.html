@@ -1023,7 +1023,10 @@
    * @returns Promise<boolean> 認証OK→true、ログイン画面表示→false
    */
   function authenticate() {
-    const params = new URLSearchParams(window.location.search);
+    // 一部メールクライアント(Zendesk等)がリンクの & を &amp; にHTMLエスケープし、
+    // クエリが ?role=maker&amp;m=...&amp;t=... となって t/m が読めなくなる事象への防御。
+    // 正常URLには &amp; が現れないため no-op（後方互換）。
+    const params = new URLSearchParams(window.location.search.replace(/&amp;/gi, '&'));
     const role = params.get('role');
     const token = params.get('t');
 
