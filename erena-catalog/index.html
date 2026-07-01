@@ -1260,11 +1260,15 @@
       +     '<div style="flex:1;min-width:0;">'
       +       '<div><span class="pc-no">' + escapeHtml(p.productNo || '') + '</span><span class="pc-meta">' + escapeHtml(p.category || '') + '</span></div>'
       +       '<div class="pc-name">' + escapeHtml(p.name || '') + '</div>'
-      +       '<div class="pc-meta">' + escapeHtml(p.makerName || '') + '</div>'
+      +       '<div class="pc-meta">' + escapeHtml(p.sourceMaker || p.makerName || '') + '</div>'
       +       '<div class="pc-price">¥' + (p.priceIncl ? Number(p.priceIncl).toLocaleString() : '-') + ' <span style="font-size:11px;color:#888;font-weight:normal;">税込</span></div>'
       +     '</div>'
       +   '</div>'
       +   '<div class="pc-detail">'
+      +     row('帳合先（問屋）', p.distributor || p.makerName)
+      +     row('発送元メーカー', p.sourceMaker)
+      +     row('配送について', p.deliveryNote)
+      +     row('配送業者', p.carrier)
       +     row('JAN', p.jan)
       +     row('内容量', p.content)
       +     row('賞味期限', p.bestBefore)
