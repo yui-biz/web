@@ -2481,23 +2481,25 @@
   }
 
   function printReceipt() {
-    originalBodyHtml = document.body.innerHTML;
-    const e = formDataGlobal.printableNode;
-    if (e) {
-      document.body.innerHTML = "";
-      document.body.appendChild(e);
-      window.print();
-    } else {
-      alert("印刷するデータが見つかりません。");
-    }
+    // 本体DOMを破壊せず新規ウィンドウで印刷（注文詳細の控え印刷と同じ方式）。
+    // document.body.innerHTML の差し替えは TomSelect 等のJSインスタンスを破壊し、
+    // 印刷後に「続けて申し込む」で商品が選べなくなる不具合の原因になるため使わない。
+    const node = formDataGlobal.printableNode;
+    if (!node) { alert("印刷するデータが見つかりません。"); return; }
+    const styleTags = Array.from(document.querySelectorAll('style')).map(function(s){ return s.outerHTML; }).join('\n');
+    const linkTags  = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(function(l){ return l.outerHTML; }).join('\n');
+    const w = window.open('', '_blank', 'width=800,height=900');
+    if (!w) { alert("ポップアップがブロックされました。ブラウザ設定で許可してください。"); return; }
+    w.document.open();
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>お客様控え</title>' +
+      linkTags + styleTags +
+      '<style>body{background:#fff;margin:0;padding:20px;} #confirm-image{max-width:80px;max-height:80px;}</style>' +
+      '</head><body><div class="container"><div class="content">' + node.outerHTML + '</div></div></body></html>'
+    );
+    w.document.close();
+    w.onload = function(){ w.focus(); w.print(); };
   }
-
-  window.addEventListener("afterprint", () => {
-    if (originalBodyHtml) {
-      document.body.innerHTML = originalBodyHtml;
-      originalBodyHtml = null;
-    }
-  });
 
   function showComplete() {
     switchView("complete");
