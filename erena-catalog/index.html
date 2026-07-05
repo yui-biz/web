@@ -418,6 +418,7 @@
           <!-- 未発送/発送済み/登録商品タブ -->
           <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0;flex-wrap:wrap;">
             <button id="tab-unshipped" onclick="switchMakerTab('unshipped')" style="padding:8px 20px;border:none;border-bottom:3px solid #1565c0;background:none;font-weight:bold;color:#1565c0;cursor:pointer;font-size:14px;">未発送</button>
+            <button id="tab-cancel" onclick="switchMakerTab('cancel')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">キャンセル連絡あり<span id="tab-cancel-count" style="display:none;margin-left:6px;background:#e65100;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:bold;">0</span></button>
             <button id="tab-shipped" onclick="switchMakerTab('shipped')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">発送済み</button>
             <button id="tab-products" onclick="switchMakerTab('products')" style="padding:8px 20px;border:none;border-bottom:3px solid transparent;background:none;color:#666;cursor:pointer;font-size:14px;">登録商品</button>
           </div>
@@ -458,6 +459,23 @@
                 <thead><tr>
                   <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
                   <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>配達日</th><th>詳細</th><th>発送処理</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- キャンセル連絡あり（発送不可） -->
+          <div id="maker-cancel-wrap" style="display:none;">
+            <div style="background:#fff3e0;border:2px solid #e65100;color:#bf360c;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
+              <b style="font-size:14px;">⚠ 店舗からキャンセルのご連絡が入っている注文です。発送しないでください。</b><br>
+              事務局（info@yui.gift / 03-6441-0931）から「取消確定」または「保留解除」のご連絡があるまでお待ちください。<br>
+              <b>これらの注文は「未発送」タブ・CSVダウンロード・一括発送の対象外です。</b>
+            </div>
+            <div id="maker-cancel-empty" style="display:none;text-align:center;padding:40px;color:#999;">キャンセル連絡ありの発注はありません</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="maker-cancel-table" style="display:none;">
+                <thead><tr>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>配達日</th><th>状況</th><th>詳細</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -1320,9 +1338,9 @@
 
   function switchMakerTab(tab) {
     _currentMakerTab = tab;
-    const tabs = ['unshipped', 'shipped', 'products'];
-    const wraps = { unshipped: 'maker-unshipped-wrap', shipped: 'maker-shipped-wrap', products: 'maker-products-wrap' };
-    const colors = { unshipped: '#1565c0', shipped: '#1565c0', products: '#1565c0' };
+    const tabs = ['unshipped', 'cancel', 'shipped', 'products'];
+    const wraps = { unshipped: 'maker-unshipped-wrap', cancel: 'maker-cancel-wrap', shipped: 'maker-shipped-wrap', products: 'maker-products-wrap' };
+    const colors = { unshipped: '#1565c0', cancel: '#e65100', shipped: '#1565c0', products: '#1565c0' };
     tabs.forEach(function(t) {
       const btn = document.getElementById('tab-' + t);
       const wrap = document.getElementById(wraps[t]);
@@ -1426,6 +1444,7 @@
     const filterProduct = (document.getElementById('maker-product-filter') || {}).value || '';
     document.getElementById('maker-orders-loading').style.display = 'block';
     document.getElementById('maker-unshipped-wrap').style.display = 'none';
+    document.getElementById('maker-cancel-wrap').style.display = 'none';
     document.getElementById('maker-shipped-wrap').style.display = 'none';
 
     gasPost({
@@ -1436,7 +1455,12 @@
       if (result.error) { alert('読み込みエラー: ' + result.error); return; }
 
       const orders = result.orders || [];
-      const unshipped = orders.filter(function(o) { return o.shipStatus !== '発送済'; });
+      const notShipped = orders.filter(function(o) { return o.shipStatus !== '発送済'; });
+      // 店舗からキャンセル連絡がある注文(取消申請中/取消済)は「未発送」から切り離し、専用タブに隔離する。
+      // これによりCSVダウンロード・一括発送・未発送カウントの対象から外れ、誤発送を防ぐ。
+      const isHold = function(o) { return o.cancelStatus === '取消申請中' || o.cancelStatus === '取消済'; };
+      const holdOrders = notShipped.filter(isHold);
+      const unshipped = notShipped.filter(function(o) { return !isHold(o); });
       const shipped   = orders.filter(function(o) { return o.shipStatus === '発送済'; });
 
       const unwebedi = shipped.filter(function(o) { return o.webediStatus !== '計上済'; });
@@ -1499,32 +1523,55 @@
           const tr = document.createElement('tr');
           if (o.isTest) tr.classList.add('test-row');
           tr.dataset.cacheIdx = i;
-          // 店舗からキャンセル連絡がある注文は発送不可（誤発送防止）
-          const cs = o.cancelStatus || '';
-          const blocked = (cs === '取消申請中' || cs === '取消済');
-          if (blocked) tr.classList.add('cancel-hold-row');
-          const flag = cs === '取消申請中'
-            ? '<br><span class="cancel-badge requested">⚠ キャンセル連絡あり・発送不可</span>'
-            : (cs === '取消済' ? '<br><span class="cancel-badge cancelled">取消済</span>' : '');
-          const checkboxCell = blocked
-            ? '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '" disabled title="キャンセル連絡があるため選択できません"></td>'
-            : '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>';
-          const shipCell = blocked
-            ? '<td><span style="display:inline-block;padding:4px 10px;background:#eee;color:#c62828;border:1px solid #e0b4b4;border-radius:4px;font-size:12px;white-space:nowrap;">発送不可</span></td>'
-            : '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tr.innerHTML =
-            checkboxCell +
+            '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
             '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
-            '<td>' + escapeHtml(o.productName || '') + flag + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
             '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
-            shipCell;
+            '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tbody.appendChild(tr);
         });
         document.getElementById('maker-orders-table').style.display = 'table';
+      }
+
+      // 「キャンセル連絡あり」テーブル描画（発送不可・読み取り専用）
+      window._makerCancelCache = {};
+      const cancelTbody = document.querySelector('#maker-cancel-table tbody');
+      cancelTbody.innerHTML = '';
+      const cancelCountBadge = document.getElementById('tab-cancel-count');
+      if (cancelCountBadge) {
+        cancelCountBadge.textContent = holdOrders.length;
+        cancelCountBadge.style.display = holdOrders.length > 0 ? 'inline-block' : 'none';
+      }
+      if (holdOrders.length === 0) {
+        document.getElementById('maker-cancel-empty').style.display = 'block';
+        document.getElementById('maker-cancel-table').style.display = 'none';
+      } else {
+        document.getElementById('maker-cancel-empty').style.display = 'none';
+        holdOrders.forEach(function(o, i) {
+          window._makerCancelCache[i] = o;
+          const tr = document.createElement('tr');
+          tr.classList.add('cancel-hold-row');
+          if (o.isTest) tr.classList.add('test-row');
+          const statusLabel = o.cancelStatus === '取消済'
+            ? '<span class="cancel-badge cancelled">取消済・発送不要</span>'
+            : '<span class="cancel-badge requested">⚠ 発送保留・確認中</span>';
+          tr.innerHTML =
+            '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') + '</td>' +
+            '<td>' + (o.quantity || '') + '</td>' +
+            '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
+            '<td>' + escapeHtml(o.store || '') + '</td>' +
+            '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
+            '<td>' + statusLabel + '</td>' +
+            '<td><button class="detail-btn" onclick="showMakerCancelDetail(' + i + ')">詳細</button></td>';
+          cancelTbody.appendChild(tr);
+        });
+        document.getElementById('maker-cancel-table').style.display = 'table';
       }
 
       // 発送済みテーブル描画(初回はフィルタなし)
@@ -1929,6 +1976,16 @@
 
   function showMakerOrderDetail(idx) {
     const o = (window._makerOrderCache || {})[idx];
+    if (!o) return;
+    window._currentDetailOrder = JSON.parse(JSON.stringify(o));
+    renderDetailViewReadOnly(o);
+    document.getElementById('order-detail-modal').classList.add('active');
+    setDetailMessage('', null);
+  }
+
+  // 「キャンセル連絡あり」タブの詳細（発送保留バナー付き・読み取り専用）
+  function showMakerCancelDetail(idx) {
+    const o = (window._makerCancelCache || {})[idx];
     if (!o) return;
     window._currentDetailOrder = JSON.parse(JSON.stringify(o));
     renderDetailViewReadOnly(o);
