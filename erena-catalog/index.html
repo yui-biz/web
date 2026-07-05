@@ -124,6 +124,17 @@
       .test-badge { display: inline-block; background: #ff9800; color: white; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
       .test-row td { background: #fff8e1 !important; }
       .test-banner { background: #fff8e1; border: 2px solid #ff9800; color: #c45200; font-weight: bold; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; }
+      /* キャンセル関連 */
+      .cancel-banner { padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; font-weight: bold; line-height: 1.6; }
+      .cancel-banner small { font-weight: normal; font-size: 12px; }
+      .cancel-banner.requested { background: #fff3e0; border: 2px solid #e65100; color: #bf360c; }
+      .cancel-banner.cancelled { background: #f5f5f5; border: 2px solid #9e9e9e; color: #555; }
+      .cancel-banner.rejected { background: #eef2f7; border: 2px solid #8d6e63; color: #5d4037; }
+      .cancel-badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 3px; vertical-align: middle; white-space: nowrap; }
+      .cancel-badge.requested { background: #e65100; color: #fff; }
+      .cancel-badge.cancelled { background: #757575; color: #fff; }
+      .cancel-badge.rejected { background: #8d6e63; color: #fff; }
+      .cancel-hold-row td { background: #fff3e0 !important; }
       /* 商品カード(登録商品タブ) */
       .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
       .product-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
@@ -705,7 +716,7 @@
         tr.innerHTML =
           '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + timeStr + '</td>' +
           '<td>' + escapeHtml(o.ordererName || '') + '</td>' +
-          '<td>' + escapeHtml(o.productName || '') + '</td>' +
+          '<td>' + escapeHtml(o.productName || '') + cancelBadge(o) + '</td>' +
           '<td>' + (o.quantity || '') + '</td>' +
           '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
           (currentIsAdmin ? '<td>' + escapeHtml(o.store || '') + '</td>' : '') +
@@ -723,6 +734,15 @@
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // 一覧用の小さいキャンセル状況バッジ
+  function cancelBadge(o) {
+    const s = o.cancelStatus || '';
+    if (s === '取消申請中') return ' <span class="cancel-badge requested">取消申請中</span>';
+    if (s === '取消済') return ' <span class="cancel-badge cancelled">取消済</span>';
+    if (s === '取消却下') return ' <span class="cancel-badge rejected">却下</span>';
+    return '';
+  }
+
   function showOrderDetail(idx) {
     const o = (window._orderCache || {})[idx];
     if (!o) return;
@@ -732,11 +752,31 @@
     setDetailMessage('', null);
   }
 
+  function cancelStatusBanner(o) {
+    const s = o.cancelStatus || '';
+    if (s === '取消申請中') {
+      return '<div class="cancel-banner requested">🕗 取消申請中（管理者の承認待ち）' +
+        (o.cancelRequestedAt ? '<br><small>申請日時: ' + escapeHtml(o.cancelRequestedAt) + '</small>' : '') +
+        (o.cancelReason ? '<br><small>理由: ' + escapeHtml(o.cancelReason) + '</small>' : '') +
+        '<br><small>メーカーは発送保留中です。取消の確定/取り下げは事務局（管理者）が対応します。</small></div>';
+    }
+    if (s === '取消済') {
+      return '<div class="cancel-banner cancelled">✔ 取消済（この注文は取り消されました）' +
+        (o.cancelProcessedAt ? '<br><small>取消日時: ' + escapeHtml(o.cancelProcessedAt) + '</small>' : '') +
+        (o.cancelReason ? '<br><small>理由: ' + escapeHtml(o.cancelReason) + '</small>' : '') + '</div>';
+    }
+    if (s === '取消却下') {
+      return '<div class="cancel-banner rejected">取消申請は却下されました（通常通り処理されます）' +
+        (o.cancelReason ? '<br><small>' + escapeHtml(o.cancelReason) + '</small>' : '') + '</div>';
+    }
+    return '';
+  }
+
   function renderDetailView(o) {
     document.getElementById('order-detail-title').textContent = '注文詳細';
     const dt = new Date(o.timestamp);
     const testBanner = o.isTest ? '<div class="test-banner">テスト注文 — メーカーへの発注通知/未発送通知メールは送信されません</div>' : '';
-    const html = testBanner +
+    const html = testBanner + cancelStatusBanner(o) +
       '<dl>' +
       '<dt>申込日時</dt><dd>' + dt.toLocaleString('ja-JP') + '</dd>' +
       '<dt>店舗</dt><dd>' + escapeHtml(o.store || '') + '</dd>' +
@@ -753,10 +793,97 @@
         '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
       '</dl>';
     document.getElementById('order-detail-body').innerHTML = html;
-    document.getElementById('order-detail-buttons').innerHTML =
-      '<button class="modal-btn" onclick="printOrderDetail()" style="background:#6c757d;">控えを印刷</button>' +
-      '<button class="modal-btn" onclick="enterEditMode()">編集</button>' +
-      '<button class="modal-close" onclick="closeOrderDetail()" style="margin-left:8px;">閉じる</button>';
+
+    const isShipped = o.shipStatus === '発送済';
+    const cs = o.cancelStatus || '';
+    let btns = '<button class="modal-btn" onclick="printOrderDetail()" style="background:#6c757d;">控えを印刷</button>';
+
+    if (cs === '取消申請中') {
+      // 申請中は編集不可。管理者は承認/却下できる。
+      if (currentIsAdmin) {
+        btns += '<button class="modal-btn" onclick="approveCancellation()" style="background:#c62828;">取消を承認（確定）</button>' +
+                '<button class="modal-btn" onclick="rejectCancellation()" style="background:#8d6e63;">却下（差し戻し）</button>';
+      }
+    } else if (cs === '取消済') {
+      // 取消済は操作不可（印刷と閉じるのみ）
+    } else {
+      // 通常 or 取消却下: 編集可。発送前なら取消申請可。
+      btns += '<button class="modal-btn" onclick="enterEditMode()">編集</button>';
+      if (!isShipped) {
+        btns += '<button class="modal-btn" onclick="requestCancellation()" style="background:#c62828;">取消申請</button>';
+      }
+    }
+    btns += '<button class="modal-close" onclick="closeOrderDetail()" style="margin-left:8px;">閉じる</button>';
+    document.getElementById('order-detail-buttons').innerHTML = btns;
+
+    if (isShipped && cs !== '取消申請中' && cs !== '取消済') {
+      setDetailMessage('発送済みの注文の取消は事務局（info@yui.gift / 03-6441-0931）にご連絡ください', null);
+    }
+  }
+
+  // 店舗: 注文の取消申請（理由を入力→確認→送信）
+  function requestCancellation() {
+    const o = window._currentDetailOrder;
+    if (!o) return;
+    const reason = prompt('取消申請の理由をご記入ください（任意）。\n\n※申請するとメーカーへ発送保留の連絡が入り、事務局（管理者）の承認後に取消が確定します。', '');
+    if (reason === null) return; // キャンセル
+    setDetailMessage('取消申請を送信中...', null);
+    gasPost({
+      action: 'requestCancellation',
+      params: { rowIdx: o.rowIdx, storeId: currentStoreId, isAdmin: currentIsAdmin, reason: reason }
+    }).then(function(r) {
+      if (r && r.success) {
+        setDetailMessage(r.message || '取消申請を受け付けました', 'success');
+        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1200);
+      } else {
+        setDetailMessage('エラー: ' + ((r && r.error) || '取消申請に失敗しました'), 'error');
+      }
+    }).catch(function(err) {
+      setDetailMessage('通信エラー: ' + err.message, 'error');
+    });
+  }
+
+  // 管理者: 取消申請を承認（=取消確定）
+  function approveCancellation() {
+    const o = window._currentDetailOrder;
+    if (!o) return;
+    if (!confirm('この注文の取消を承認（確定）します。\nメーカーへ確定キャンセルの連絡が入り、発注画面から除外されます。よろしいですか？')) return;
+    setDetailMessage('承認処理中...', null);
+    gasPost({
+      action: 'approveCancellation',
+      params: { rowIdx: o.rowIdx, isAdmin: currentIsAdmin }
+    }).then(function(r) {
+      if (r && r.success) {
+        setDetailMessage(r.message || '取消を承認しました', 'success');
+        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1200);
+      } else {
+        setDetailMessage('エラー: ' + ((r && r.error) || '承認に失敗しました'), 'error');
+      }
+    }).catch(function(err) {
+      setDetailMessage('通信エラー: ' + err.message, 'error');
+    });
+  }
+
+  // 管理者: 取消申請を却下（=通常運用へ差し戻し）
+  function rejectCancellation() {
+    const o = window._currentDetailOrder;
+    if (!o) return;
+    const note = prompt('取消申請を却下し、通常運用へ差し戻します。\nメーカーの発送保留は解除されます。\n\n却下メモ（任意・記録に残ります）:', '');
+    if (note === null) return;
+    setDetailMessage('却下処理中...', null);
+    gasPost({
+      action: 'rejectCancellation',
+      params: { rowIdx: o.rowIdx, isAdmin: currentIsAdmin, note: note }
+    }).then(function(r) {
+      if (r && r.success) {
+        setDetailMessage(r.message || '取消申請を却下しました', 'success');
+        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1200);
+      } else {
+        setDetailMessage('エラー: ' + ((r && r.error) || '却下に失敗しました'), 'error');
+      }
+    }).catch(function(err) {
+      setDetailMessage('通信エラー: ' + err.message, 'error');
+    });
   }
 
   function printOrderDetail() {
@@ -1372,16 +1499,29 @@
           const tr = document.createElement('tr');
           if (o.isTest) tr.classList.add('test-row');
           tr.dataset.cacheIdx = i;
+          // 店舗からキャンセル連絡がある注文は発送不可（誤発送防止）
+          const cs = o.cancelStatus || '';
+          const blocked = (cs === '取消申請中' || cs === '取消済');
+          if (blocked) tr.classList.add('cancel-hold-row');
+          const flag = cs === '取消申請中'
+            ? '<br><span class="cancel-badge requested">⚠ キャンセル連絡あり・発送不可</span>'
+            : (cs === '取消済' ? '<br><span class="cancel-badge cancelled">取消済</span>' : '');
+          const checkboxCell = blocked
+            ? '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '" disabled title="キャンセル連絡があるため選択できません"></td>'
+            : '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>';
+          const shipCell = blocked
+            ? '<td><span style="display:inline-block;padding:4px 10px;background:#eee;color:#c62828;border:1px solid #e0b4b4;border-radius:4px;font-size:12px;white-space:nowrap;">発送不可</span></td>'
+            : '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tr.innerHTML =
-            '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
+            checkboxCell +
             '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
-            '<td>' + escapeHtml(o.productName || '') + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') + flag + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
             '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
-            '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
+            shipCell;
           tbody.appendChild(tr);
         });
         document.getElementById('maker-orders-table').style.display = 'table';
@@ -1798,7 +1938,8 @@
 
   // === チェックボックス全選択 ===
   function toggleAllUnshippedChecks(checked) {
-    document.querySelectorAll('.unshipped-check').forEach(function(cb) { cb.checked = checked; });
+    // disabled(キャンセル連絡あり)の行は選択対象外
+    document.querySelectorAll('.unshipped-check').forEach(function(cb) { if (!cb.disabled) cb.checked = checked; });
   }
   function toggleAllShippedChecks(checked) {
     document.querySelectorAll('.shipped-check').forEach(function(cb) { cb.checked = checked; });
@@ -1809,6 +1950,7 @@
     _bulkQueue = [];
     _bulkResults = [];
     document.querySelectorAll('.unshipped-check:checked').forEach(function(cb) {
+      if (cb.disabled) return; // キャンセル連絡あり=発送不可
       const idx = parseInt(cb.dataset.idx, 10);
       if (!isNaN(idx)) _bulkQueue.push(idx);
     });
@@ -2232,7 +2374,14 @@
         + '</dl></div>'
       : '';
 
-    const html = testBanner
+    const makerCancelBanner = o.cancelStatus === '取消申請中'
+      ? '<div class="cancel-banner requested">⚠ 店舗からキャンセル連絡あり・発送保留中<br><small>事務局からの確定/解除のご連絡があるまで発送しないでください。</small>'
+        + (o.cancelReason ? '<br><small>店舗からの申請理由: ' + escapeHtml(o.cancelReason) + '</small>' : '') + '</div>'
+      : (o.cancelStatus === '取消済'
+        ? '<div class="cancel-banner cancelled">✔ この注文は取消済です（発送不要）</div>'
+        : '');
+
+    const html = testBanner + makerCancelBanner
       + '<div class="detail-hero">'
       +   '<div class="detail-hero-img">' + imgHtml + '</div>'
       +   '<div class="detail-hero-body">'
