@@ -135,6 +135,12 @@
       .cancel-badge.cancelled { background: #757575; color: #fff; }
       .cancel-badge.rejected { background: #8d6e63; color: #fff; }
       .cancel-hold-row td { background: #fff3e0 !important; }
+      /* アップデート情報バナー */
+      .update-notice { position: relative; background: #e8f4fd; border: 1px solid #1565c0; border-left: 4px solid #1565c0; border-radius: 6px; padding: 12px 40px 12px 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.7; }
+      .update-notice-title { font-weight: bold; color: #0d47a1; margin-bottom: 4px; }
+      .update-notice-body { color: #333; }
+      .update-notice-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 18px; color: #888; cursor: pointer; line-height: 1; padding: 2px 6px; }
+      .update-notice-close:hover { color: #333; }
       /* 商品カード(登録商品タブ) */
       .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
       .product-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
@@ -255,6 +261,16 @@
 
         <!-- ホーム画面 -->
         <div id="home-view">
+          <div id="update-notice-store" class="update-notice">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260705')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/5）</div>
+            <div class="update-notice-body">
+              <b>ご注文の「取消申請」ができるようになりました。</b><br>
+              ・「申し込み確認」→ 対象注文の<b>「詳細」→「取消申請」</b>から申請できます（発送前のみ）。<br>
+              ・申請後、事務局（管理者）が承認すると取消が確定します。取消するとメーカーへの発注が止まります。<br>
+              ・<b>発送済みの注文</b>は店舗から取消できません。事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+            </div>
+          </div>
           <h3 style="text-align:center;margin-bottom:8px;">メニュー</h3>
           <p style="text-align:center;color:#666;font-size:14px;">操作を選択してください</p>
           <div class="home-buttons">
@@ -350,6 +366,16 @@
           <div id="maker-display" style="background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
             <span><span style="color:#666;">ログインアカウント:</span> <b id="maker-name"></b><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
+          </div>
+          <div id="update-notice-maker" class="update-notice">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_20260705')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/5）</div>
+            <div class="update-notice-body">
+              <b>店舗からの注文キャンセルに対応しました。</b><br>
+              ・店舗から取消連絡があった注文は<b>「キャンセル連絡あり」タブ</b>に表示され、<b>発送できません</b>（未発送タブ・CSVダウンロード・一括発送の対象外）。<br>
+              ・該当注文は<b>発送せず</b>、事務局からの「取消確定」または「保留解除」のご連絡をお待ちください。<br>
+              ・すでに発送準備・出荷済みの場合は事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+            </div>
           </div>
           <!-- 初めて使う方へガイド(折りたたみ式) -->
           <details id="maker-guide" style="margin-bottom:16px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:8px 14px;">
@@ -644,6 +670,23 @@
     document.getElementById('home-view').style.display = 'block';
     document.getElementById('orders-view').style.display = 'none';
     document.getElementById('form-view').style.display = 'none';
+    applyUpdateNoticeState();
+  }
+
+  // アップデート情報バナー: 閉じるとlocalStorageに記録して次回以降非表示
+  function closeUpdateNotice(elId, key) {
+    const el = document.getElementById(elId);
+    if (el) el.style.display = 'none';
+    try { localStorage.setItem(key, '1'); } catch (e) {}
+  }
+  function applyUpdateNoticeState() {
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('erena_upd_20260705') === '1'; } catch (e) {}
+    if (!dismissed) return;
+    ['update-notice-store', 'update-notice-maker'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
   }
 
   function showFormView() {
@@ -873,13 +916,19 @@
     }).then(function(r) {
       if (r && r.success) {
         setDetailMessage(r.message || '取消を承認しました', 'success');
-        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1200);
+        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(); }, 1200);
       } else {
         setDetailMessage('エラー: ' + ((r && r.error) || '承認に失敗しました'), 'error');
       }
     }).catch(function(err) {
       setDetailMessage('通信エラー: ' + err.message, 'error');
     });
+  }
+
+  // キャンセル操作後、現在のポータル(店舗/メーカー)に応じて一覧を再読み込み
+  function _reloadAfterCancelAction() {
+    if (document.body.classList.contains('maker-mode')) { loadMakerOrders(); }
+    else { loadOrders(); }
   }
 
   // 管理者: 取消申請を却下（=通常運用へ差し戻し）
@@ -895,7 +944,7 @@
     }).then(function(r) {
       if (r && r.success) {
         setDetailMessage(r.message || '取消申請を却下しました', 'success');
-        setTimeout(function() { closeOrderDetail(); loadOrders(); }, 1200);
+        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(); }, 1200);
       } else {
         setDetailMessage('エラー: ' + ((r && r.error) || '却下に失敗しました'), 'error');
       }
@@ -1333,6 +1382,7 @@
     document.getElementById('maker-content').style.display = 'block';
     document.body.classList.add('maker-mode');
     _currentMakerTab = 'unshipped';
+    applyUpdateNoticeState();
     loadMakerOrders();
   }
 
@@ -1568,7 +1618,11 @@
             '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
             '<td>' + statusLabel + '</td>' +
-            '<td><button class="detail-btn" onclick="showMakerCancelDetail(' + i + ')">詳細</button></td>';
+            '<td><button class="detail-btn" onclick="showMakerCancelDetail(' + i + ')">詳細</button>' +
+              (currentIsAdmin && o.cancelStatus === '取消申請中'
+                ? '<br><button onclick="showMakerCancelDetail(' + i + ')" style="margin-top:4px;padding:2px 8px;background:#c62828;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">承認/却下</button>'
+                : '') +
+            '</td>';
           cancelTbody.appendChild(tr);
         });
         document.getElementById('maker-cancel-table').style.display = 'table';
@@ -2468,8 +2522,15 @@
       + '</dl></div>';
 
     document.getElementById('order-detail-body').innerHTML = html;
+    // 管理者アカウントでメーカー画面を見ている場合、取消申請中の注文はここで承認/却下できる
+    let makerBtns = '';
+    if (currentIsAdmin && o.cancelStatus === '取消申請中') {
+      makerBtns =
+        '<button class="modal-btn" onclick="approveCancellation()" style="background:#c62828;">取消を承認（確定）</button>' +
+        '<button class="modal-btn" onclick="rejectCancellation()" style="background:#8d6e63;">却下（差し戻し）</button>';
+    }
     document.getElementById('order-detail-buttons').innerHTML =
-      '<button class="modal-close" onclick="closeOrderDetail()">閉じる</button>';
+      makerBtns + '<button class="modal-close" onclick="closeOrderDetail()" style="margin-left:8px;">閉じる</button>';
   }
 
   function onFailure(error) {
