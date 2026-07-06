@@ -2744,6 +2744,11 @@
       </div>
     `;
     document.getElementById("confirm-display").innerHTML = c;
+    // 送信ボタンを毎回リセット。前回の送信成功後（showComplete）にボタンが
+    // disabled+「送信中...」のまま残り、「続けて申し込む」で2件目の確認画面に来た際に
+    // 押せず「ずっと送信中で2件目が送れない」不具合になるのを防ぐ。
+    const _submitBtn = document.querySelector("#form-confirm .btn-primary");
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.textContent = "この内容で送信する"; }
     switchView("confirm");
   }
 
