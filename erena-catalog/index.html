@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260706a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260706b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -914,11 +914,13 @@
   function approveCancellation() {
     const o = window._currentDetailOrder;
     if (!o) return;
-    if (!confirm('この注文の取消を承認（確定）します。\nメーカーへ確定キャンセルの連絡が入り、発注画面から除外されます。よろしいですか？')) return;
+    // メーカーへ「取消確定」メールを送るかを選ぶ（OK=送る / キャンセル=送らない）
+    const notifyMaker = confirm('メーカーに「取消確定」メールを送りますか？\n\n［OK］送る（通常）\n［キャンセル］送らない（メールなしで取消だけ確定）');
+    if (!confirm('この注文の取消を確定します。発注画面から除外されます。\nメーカーへのメール: ' + (notifyMaker ? '送る' : '送らない') + '\n\nよろしいですか？')) return;
     setDetailMessage('承認処理中...', null);
     gasPost({
       action: 'approveCancellation',
-      params: { rowIdx: o.rowIdx, isAdmin: currentIsAdmin }
+      params: { rowIdx: o.rowIdx, isAdmin: currentIsAdmin, notifyMaker: notifyMaker }
     }).then(function(r) {
       if (r && r.success) {
         setDetailMessage(r.message || '取消を承認しました', 'success');
@@ -1353,7 +1355,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260706a';
+  const APP_BUILD = '20260706b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
