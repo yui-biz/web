@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260707b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260707c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -270,13 +270,14 @@
         <!-- ホーム画面 -->
         <div id="home-view">
           <div id="update-notice-store" class="update-notice">
-            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260705')" title="閉じる">×</button>
-            <div class="update-notice-title">🆕 アップデート情報（2026/7/5）</div>
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260707')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/7）</div>
             <div class="update-notice-body">
-              <b>ご注文の「取消申請」ができるようになりました。</b><br>
-              ・「申し込み確認」→ 対象注文の<b>「詳細」→「取消申請」</b>から申請できます（発送前のみ）。<br>
-              ・申請後、事務局（管理者）が承認すると取消が確定します。取消するとメーカーへの発注が止まります。<br>
-              ・<b>発送済みの注文</b>は店舗から取消できません。事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+              <b>発送完了メールが店舗にも届くようになりました。</b><br>
+              ・メーカーが発送処理をすると、お申し込みいただいた店舗にも「発送完了のお知らせ」（お届け先・運送会社・追跡番号）が届きます。店頭でお客様に配送状況をご案内いただけます。<br>
+              <b>「申し込み確認」画面で発送状況・運送会社・追跡番号が確認できるようになりました。</b><br>
+              ・一覧に「発送状況」「運送会社」「追跡番号」の列を追加しました。発送済みの注文はここでも追跡番号をご確認いただけます。<br>
+              <b>発送済みの注文は編集できなくなりました。</b>訂正が必要な場合は事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
             </div>
           </div>
           <h3 style="text-align:center;margin-bottom:8px;">メニュー</h3>
@@ -893,18 +894,21 @@
       }
     } else if (cs === '取消済') {
       // 取消済は操作不可（印刷と閉じるのみ）
-    } else {
-      // 通常 or 取消却下: 編集可。発送前なら取消申請可。
-      btns += '<button class="modal-btn" onclick="enterEditMode()">編集</button>';
-      if (!isShipped) {
-        btns += '<button class="modal-btn" onclick="requestCancellation()" style="background:#c62828;">取消申請</button>';
+    } else if (isShipped) {
+      // 発送済み: 店舗は編集・取消不可（発送後の内容変更を防ぐ）。管理者（事務局）のみ編集可能。
+      if (currentIsAdmin) {
+        btns += '<button class="modal-btn" onclick="enterEditMode()">編集</button>';
       }
+    } else {
+      // 発送前（通常 or 取消却下）: 編集・取消申請が可能。
+      btns += '<button class="modal-btn" onclick="enterEditMode()">編集</button>';
+      btns += '<button class="modal-btn" onclick="requestCancellation()" style="background:#c62828;">取消申請</button>';
     }
     btns += '<button class="modal-close" onclick="closeOrderDetail()" style="margin-left:8px;">閉じる</button>';
     document.getElementById('order-detail-buttons').innerHTML = btns;
 
-    if (isShipped && cs !== '取消申請中' && cs !== '取消済') {
-      setDetailMessage('発送済みの注文の取消は事務局（info@yui.gift / 03-6441-0931）にご連絡ください', null);
+    if (isShipped && !currentIsAdmin && cs !== '取消申請中' && cs !== '取消済') {
+      setDetailMessage('発送済みの注文の変更・取消は事務局（info@yui.gift / 03-6441-0931）にご連絡ください', null);
     }
   }
 
@@ -1375,7 +1379,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260707b';
+  const APP_BUILD = '20260707c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
