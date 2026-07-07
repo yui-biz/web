@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260707c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260707d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -144,6 +144,15 @@
       .update-notice-body { color: #333; }
       .update-notice-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 18px; color: #888; cursor: pointer; line-height: 1; padding: 2px 6px; }
       .update-notice-close:hover { color: #333; }
+      /* アップデート情報の「これまでの更新履歴」折りたたみ */
+      .update-history { margin-top: 10px; border-top: 1px dashed #90c2e8; padding-top: 8px; }
+      .update-history summary { cursor: pointer; font-weight: bold; color: #1565c0; font-size: 12px; list-style: none; user-select: none; }
+      .update-history summary::-webkit-details-marker { display: none; }
+      .update-history summary::before { content: '▸ '; }
+      .update-history[open] summary::before { content: '▾ '; }
+      .update-history-item { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d5e8f7; }
+      .update-history-item:first-of-type { border-top: none; }
+      .update-history-date { font-weight: bold; color: #0d47a1; margin-bottom: 2px; font-size: 12px; }
       /* 商品カード(登録商品タブ) */
       .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
       .product-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
@@ -269,6 +278,8 @@
 
         <!-- ホーム画面 -->
         <div id="home-view">
+          <!-- アップデート情報（チェンジログ型）: 最新を上に表示し、旧項目は <details class="update-history"> の中へ移す。
+               新しい更新を出すときは ①最新ブロックを差し替え ②直前の最新を update-history-item として履歴の先頭に移動 ③closeボタンの key を新しい日付に更新（閉じた人にも再表示される）。 -->
           <div id="update-notice-store" class="update-notice">
             <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260707')" title="閉じる">×</button>
             <div class="update-notice-title">🆕 アップデート情報（2026/7/7）</div>
@@ -279,6 +290,16 @@
               ・一覧に「発送状況」「運送会社」「追跡番号」の列を追加しました。発送済みの注文はここでも追跡番号をご確認いただけます。<br>
               <b>発送済みの注文は編集できなくなりました。</b>訂正が必要な場合は事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
             </div>
+            <details class="update-history">
+              <summary>これまでの更新履歴</summary>
+              <div class="update-history-item">
+                <div class="update-history-date">2026/7/5</div>
+                <b>ご注文の「取消申請」ができるようになりました。</b><br>
+                ・「申し込み確認」→ 対象注文の<b>「詳細」→「取消申請」</b>から申請できます（発送前のみ）。<br>
+                ・申請後、事務局（管理者）が承認すると取消が確定します。取消するとメーカーへの発注が止まります。<br>
+                ・<b>発送済みの注文</b>は店舗から取消できません。事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+              </div>
+            </details>
           </div>
           <h3 style="text-align:center;margin-bottom:8px;">メニュー</h3>
           <p style="text-align:center;color:#666;font-size:14px;">操作を選択してください</p>
@@ -1379,7 +1400,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260707c';
+  const APP_BUILD = '20260707d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
