@@ -145,7 +145,11 @@ var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 (function() {
   var params = new URLSearchParams(location.search);
   var customerId = params.get('id') || '';
-  var cacheKey = 'guide_' + (customerId || '_default');
+
+  // IDが無い場合はご案内ページを表示しない（ヒアリングフォームと同じ制限）
+  if (!customerId) { showNotFound(); return; }
+
+  var cacheKey = 'guide_' + customerId;
 
   // キャッシュがあれば即時表示し、バックグラウンドで更新
   try {
@@ -170,7 +174,7 @@ function fetchFromGas(customerId, cacheKey, showResult) {
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.error) { if (showResult) showError(data.error); return; }
+      if (data.error) { if (showResult) { data.error === 'not_found' ? showNotFound() : showError(data.error); } return; }
       try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
       if (showResult) render(data);
     })
@@ -180,6 +184,15 @@ function fetchFromGas(customerId, cacheKey, showResult) {
 function showError(msg) {
   document.getElementById('app').innerHTML =
     '<p style="padding:60px;text-align:center;font-family:sans-serif;color:#999;">ページの読み込みに失敗しました</p>';
+}
+
+function showNotFound() {
+  document.getElementById('app').innerHTML =
+    '<div style="min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;background:var(--bg);">'
+    + '<img src="https://yui-biz.github.io/web/assets/yui_logo.svg?v=2" alt="yui" style="height:72px;width:auto;margin-bottom:2.5rem;opacity:.9;">'
+    + '<h2 style="font-family:var(--serif);color:#DC2626;font-size:1.1rem;font-weight:300;letter-spacing:.08em;margin-bottom:1rem;">ページが見つかりません</h2>'
+    + '<p style="font-family:var(--sans);color:var(--text-light);font-size:.85rem;">URLをご確認ください。</p>'
+    + '</div>';
 }
 
 function render(data) {
