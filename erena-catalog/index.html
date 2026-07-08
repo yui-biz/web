@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260707e"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260708a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1351,7 +1351,9 @@
 
   // 読み込み系(冪等)のみ自動リトライ対象。更新系(submitForm/updateShipment/requestMagicLink等)は
   // 二重登録防止のためリトライしない（Failed to fetchでもサーバー処理済みの可能性があるため）。
-  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1 };
+  // submitForm も冪等キー導入により再試行安全になったため対象に追加。通信瞬断時に自動リトライし、
+  // サーバー側が同キーを重複と判定するため「送信失敗表示→店舗が手動再送」の重複を根本的に防ぐ。
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1 };
 
   function gasPost(payload, _attempt) {
     _attempt = _attempt || 0;
@@ -1401,7 +1403,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260707e';
+  const APP_BUILD = '20260708a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2800,7 +2802,13 @@
     const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
     const n = document.getElementById("product-image").src;
     const r = { staffId: getValue("staffId"), productName: getValue("productName"), quantity: getValue("quantity"), productImage: (n.startsWith("http") || n.startsWith("data:image")) ? n : "", deliveryDate: "specify" === document.querySelector('input[name="deliveryPref"]:checked').value ? getValue("deliveryDate") : "", noshiType: getValue("noshiType"), noshiName: getValue("noshiName"), store: currentStoreName, storeId: currentStoreId };
-    formDataGlobal = { orderer: e, recipient: o, order: r };
+    // 二重注文防止の冪等キー。確認画面に進むたびに新規発番し、「この内容で送信する」の再送
+    // （送信失敗表示後の手動再送・通信瞬断の自動リトライ）では同キーを使い回す→サーバーが重複を弾く。
+    // 「続けて申し込む」や編集し直しで再度この画面に来れば新キー＝別注文として扱われる。
+    const _submitKey = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : (Date.now() + '-' + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2));
+    formDataGlobal = { orderer: e, recipient: o, order: r, submitKey: _submitKey };
     let c = `
       <div class="form-section">
         <h3>購入者情報・ご注文品情報</h3>
