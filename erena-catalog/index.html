@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260710b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260710c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -411,8 +411,9 @@
               ・保存した注文は未発送タブに<b>「準備済み」</b>と表示され、右上の「伝票」から<b>準備済みのみ／未入力のみ</b>で絞り込めます。<br>
               ・出荷するときに「発送処理」を開くと<b>入力済みの状態</b>から「発送済みにする」を押せます。<br>
               ・CSVダウンロードの内容・列は<b>これまでと変わりません</b>（保存した伝票はCSVには出力されません）。<br>
-              <b>「選択分を発送処理」（チェックして一括発送）の不具合を修正しました。</b><br>
-              ・ボタンを押しても画面が出ない状態になっていました。ご不便をおかけしました。
+              <b>「選択分を発送処理」（チェックして一括発送）を使いやすくしました。</b><br>
+              ・ボタンを押しても画面が出ない不具合を修正しました。ご不便をおかけしました。<br>
+              ・選んだ注文が<b>1つの画面に縦に並びます</b>。1件ずつ「次へ」で送る形をやめました。保存済みの伝票があれば反映された状態で表示されます。
             </div>
             <details class="update-history">
               <summary>これまでの更新履歴</summary>
@@ -616,6 +617,21 @@
               <button onclick="closeShipModal()" style="padding:8px 16px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer;">キャンセル</button>
               <button id="ship-draft-btn" onclick="saveShipDraftFromModal()" style="display:none;padding:8px 16px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-weight:bold;">保存だけする</button>
               <button id="ship-submit-btn" onclick="submitShipment()" style="padding:8px 20px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">発送済みにする</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 一括発送モーダル: 選択した注文を縦に並べて1画面で入力する -->
+        <div id="bulk-ship-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:8px;padding:24px;width:min(760px,94vw);max-height:90vh;display:flex;flex-direction:column;">
+            <h3 style="margin:0 0 8px;">発送処理(選択分)</h3>
+            <p id="bulk-ship-summary" style="color:#555;font-size:13px;margin:0 0 12px;"></p>
+            <p style="color:#555;font-size:12px;margin:0 0 14px;line-height:1.5;background:#f5f5f5;padding:8px 10px;border-radius:4px;border-left:3px solid #1565c0;">選択した注文がすべて表示されています。運送会社・追跡番号を入力して、最後に<b>「まとめて発送処理」</b>を押してください。<b>伝票が2つ以上に分かれる注文</b>は、その注文の「追跡番号をもう1件追加」で複数登録できます。</p>
+            <div id="bulk-ship-list" style="overflow-y:auto;flex:1;min-height:0;padding-right:4px;"></div>
+            <div id="bulk-ship-msg" style="display:none;margin-top:12px;padding:8px;border-radius:4px;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid #eee;">
+              <button onclick="closeBulkShipModal()" style="padding:8px 16px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer;">キャンセル</button>
+              <button id="bulk-ship-submit-btn" onclick="submitBulkShipment()" style="padding:8px 20px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">まとめて発送処理</button>
             </div>
           </div>
         </div>
@@ -1434,7 +1450,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260710b';
+  const APP_BUILD = '20260710c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -1838,19 +1854,17 @@
 
   // === 発送処理モーダル ===
   let _shipTargetIdx = null;
-  let _bulkQueue = [];
-  let _bulkIdx = 0;
-  let _bulkResults = []; // バルクモード時に収集した {rowIdx, carrier, trackingNo}
 
   // 発送モーダル内の追跡番号入力欄を初期化
   // existingItems を渡すと既存値で埋める([{carrier, trackingNo}, ...])
-  function _resetShipTrackingRows(countOrItems) {
-    const list = document.getElementById('ship-tracking-list');
+  // listEl 省略時は単発モーダルの入力欄。一括モーダルは注文ごとの入力欄を渡す
+  function _resetShipTrackingRows(countOrItems, listEl) {
+    const list = listEl || document.getElementById('ship-tracking-list');
     list.innerHTML = '';
     if (Array.isArray(countOrItems)) {
-      if (countOrItems.length === 0) { addShipTrackingRow(); return; }
+      if (countOrItems.length === 0) { addShipTrackingRow(list); return; }
       countOrItems.forEach(function(item) {
-        addShipTrackingRow();
+        addShipTrackingRow(list);
         const rows = list.querySelectorAll('.ship-tracking-row');
         const lastRow = rows[rows.length - 1];
         const carrierSel = lastRow.querySelector('.ship-carrier-input');
@@ -1867,7 +1881,7 @@
         trackingInp.value = item.trackingNo || '';
       });
     } else {
-      for (let i = 0; i < (countOrItems || 1); i++) addShipTrackingRow();
+      for (let i = 0; i < (countOrItems || 1); i++) addShipTrackingRow(list);
     }
   }
 
@@ -1883,8 +1897,8 @@
     return out;
   }
 
-  function addShipTrackingRow() {
-    const list = document.getElementById('ship-tracking-list');
+  function addShipTrackingRow(listEl) {
+    const list = (listEl instanceof HTMLElement) ? listEl : document.getElementById('ship-tracking-list');
     const idx = list.children.length;
     const row = document.createElement('div');
     row.className = 'ship-tracking-row';
@@ -1924,8 +1938,8 @@
 
   // モーダルから入力値配列を取得([{carrier, trackingNo}, ...])
   // 「その他」選択時は手動入力欄の値をcarrierとして採用
-  function _collectShipInputs() {
-    const list = document.getElementById('ship-tracking-list');
+  function _collectShipInputs(listEl) {
+    const list = listEl || document.getElementById('ship-tracking-list');
     const rows = list.querySelectorAll('.ship-tracking-row');
     const result = [];
     rows.forEach(function(r) {
@@ -1952,8 +1966,6 @@
   function showShipModal(idx) {
     const o = (window._makerOrderCache || {})[idx];
     if (!o) return;
-    _bulkQueue = [];
-    _bulkIdx = 0;
     _shipTargetIdx = idx;
     document.getElementById('ship-modal-title').textContent = '発送処理';
     document.getElementById('ship-modal-product').textContent =
@@ -2241,44 +2253,111 @@
   }
 
   // === 一括発送処理（チェック分を順番にモーダル表示 → 最後にまとめてAPI送信） ===
+  // 選択した注文を1枚のモーダルに縦に並べる(以前は1件ずつページ送りしていた)
   function bulkShipSelected() {
-    _bulkQueue = [];
-    _bulkResults = [];
+    const idxs = [];
     document.querySelectorAll('.unshipped-check:checked').forEach(function(cb) {
       if (cb.disabled) return; // キャンセル連絡あり=発送不可
+      const tr = cb.closest('tr');
+      if (tr && tr.style.display === 'none') return; // 絞り込みで隠れている行は対象外
       const idx = parseInt(cb.dataset.idx, 10);
-      if (!isNaN(idx)) _bulkQueue.push(idx);
+      if (!isNaN(idx)) idxs.push(idx);
     });
-    if (_bulkQueue.length === 0) { alert('発送処理する注文を選択してください。'); return; }
-    _bulkIdx = 0;
-    _showNextBulkModal();
+    if (idxs.length === 0) { alert('発送処理する注文を選択してください。'); return; }
+
+    const list = document.getElementById('bulk-ship-list');
+    list.innerHTML = '';
+    let draftCount = 0;
+    idxs.forEach(function(idx, n) {
+      const o = (window._makerOrderCache || {})[idx];
+      if (!o) return;
+      const draft = _parseExistingTrackings(o.draftCarrier, o.draftTrackingNo);
+      if (draft.length > 0) draftCount++;
+      const card = document.createElement('div');
+      card.className = 'bulk-ship-card';
+      card.dataset.cacheIdx = idx;
+      card.style.cssText = 'border:1px solid #ddd;border-radius:6px;padding:14px 16px;margin-bottom:12px;background:#fafafa;';
+      card.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;">' +
+          '<div style="font-weight:bold;color:#1a1a1a;">' + escapeHtml(o.productName || '') + ' × ' + (o.quantity || '') + '</div>' +
+          '<div style="font-size:12px;color:#999;white-space:nowrap;">' + (n + 1) + ' / ' + idxs.length + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#666;margin-bottom:10px;">' +
+          'お届け先: ' + escapeHtml(o.recipientName || '') + ' 様 / ' + escapeHtml(o.store || '') + ' / 配達日: ' + (o.deliveryDate || '指定なし') +
+          (draft.length > 0 ? ' / <span style="color:#2e7d32;font-weight:bold;">準備済みの伝票を反映しました</span>' : '') +
+        '</div>' +
+        '<div class="bulk-tracking-list"></div>' +
+        '<button type="button" onclick="addShipTrackingRow(this.previousElementSibling)" style="padding:5px 10px;background:#fff;color:#1565c0;border:1px dashed #1565c0;border-radius:4px;cursor:pointer;font-size:12px;">+ 追跡番号をもう1件追加</button>';
+      list.appendChild(card);
+      _resetShipTrackingRows(draft.length > 0 ? draft : 1, card.querySelector('.bulk-tracking-list'));
+    });
+
+    document.getElementById('bulk-ship-summary').textContent =
+      idxs.length + '件の注文を発送処理します。' + (draftCount > 0 ? '（うち ' + draftCount + '件は保存済みの伝票を反映しています）' : '');
+    document.getElementById('bulk-ship-msg').style.display = 'none';
+    const btn = document.getElementById('bulk-ship-submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'まとめて発送処理';
+    document.getElementById('bulk-ship-modal').style.display = 'flex';
   }
 
-  function _showNextBulkModal() {
-    if (_bulkIdx >= _bulkQueue.length) {
-      // 全件入力完了 → まとめてAPI送信
-      _submitShipmentBatch();
-      return;
+  function closeBulkShipModal() {
+    document.getElementById('bulk-ship-modal').style.display = 'none';
+  }
+
+  function _showBulkMsg(msg, type) {
+    const el = document.getElementById('bulk-ship-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.background = type === 'error' ? '#fdecea' : '#e8f5e9';
+    el.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+  }
+
+  // 全カードを検証してから updateShipmentBatch に1回で送る
+  function submitBulkShipment() {
+    const cards = document.querySelectorAll('#bulk-ship-list .bulk-ship-card');
+    const items = [];
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const o = (window._makerOrderCache || {})[parseInt(card.dataset.cacheIdx, 10)];
+      if (!o) continue;
+      const inputs = _collectShipInputs(card.querySelector('.bulk-tracking-list'));
+      const label = (o.productName || '') + ' / ' + (o.recipientName || '') + ' 様';
+      if (inputs.length === 0 || inputs.some(function(p) { return !p.carrier || !p.trackingNo; })) {
+        _showBulkMsg('「' + label + '」の運送会社と追跡番号を入力してください', 'error');
+        card.scrollIntoView({ block: 'center' });
+        card.style.borderColor = '#c62828';
+        return;
+      }
+      card.style.borderColor = '#ddd';
+      items.push({
+        rowIdx: o.rowIdx,
+        carrier: inputs.map(function(p) { return p.carrier; }).join(', '),
+        trackingNo: inputs.map(function(p) { return p.trackingNo; }).join(', ')
+      });
     }
-    const idx = _bulkQueue[_bulkIdx];
-    const o = (window._makerOrderCache || {})[idx];
-    if (!o) { _bulkIdx++; _showNextBulkModal(); return; }
-    _shipTargetIdx = idx;
-    document.getElementById('ship-modal-title').textContent = '発送処理(選択分)';
-    document.getElementById('ship-modal-product').textContent =
-      '(' + (_bulkIdx + 1) + '/' + _bulkQueue.length + ') ' +
-      o.productName + ' × ' + o.quantity;
-    // 複数伝票対応で入力欄が動的生成になったため、単発モーダルと同じリセット経路に揃える。
-    // 旧 ship-carrier / ship-tracking は存在しないIDで、触るとTypeErrorでモーダルが開かなかった。
-    const draft = _parseExistingTrackings(o.draftCarrier, o.draftTrackingNo);
-    _resetShipTrackingRows(draft.length > 0 ? draft : 1);
-    _setDraftUiVisible(false); // 一括処理中は「保存だけする」を出さない(1件だけ下書きにする導線は混乱のもと)
-    document.getElementById('ship-modal-msg').style.display = 'none';
-    var btn = document.getElementById('ship-submit-btn');
-    btn.disabled = false;
-    btn.textContent = (_bulkIdx + 1 < _bulkQueue.length) ? '次へ' : 'この内容で発送処理';
-    btn.onclick = submitShipment; // 伝票追加/編集モーダルを使った後もsubmitShipmentに戻す
-    document.getElementById('ship-modal').style.display = 'flex';
+    if (items.length === 0) { _showBulkMsg('発送処理する注文がありません', 'error'); return; }
+
+    const btn = document.getElementById('bulk-ship-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '処理中... (' + items.length + '件)';
+    gasPost({
+      action: 'updateShipmentBatch',
+      params: { items: items, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.disabled = false;
+      btn.textContent = 'まとめて発送処理';
+      if (!result.success) { _showBulkMsg('エラー: ' + (result.error || '不明なエラー'), 'error'); return; }
+      closeBulkShipModal();
+      let msg = result.succeeded + '件の発送処理が完了しました。確認メールをお送りしました。';
+      if (result.failed > 0) msg += '\n（' + result.failed + '件は処理できませんでした）';
+      alert(msg);
+      loadMakerOrders();
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = 'まとめて発送処理';
+      _showBulkMsg('通信エラー: ' + err.message, 'error');
+    });
   }
 
   // submitShipment: バルクモードは結果を収集、単件モードは即送信
@@ -2292,105 +2371,51 @@
     const invalid = inputs.find(function(p) { return !p.carrier || !p.trackingNo; });
     if (invalid) { _showShipMsg('運送会社と追跡番号の両方を入力してください', 'error'); return; }
 
-    if (_bulkQueue.length > 0) {
-      // バルクモード: 全入力をカンマ区切りでまとめて収集→次へ
-      const combinedCarrier = inputs.map(function(p){ return p.carrier; }).join(', ');
-      const combinedTracking = inputs.map(function(p){ return p.trackingNo; }).join(', ');
-      _bulkResults.push({ rowIdx: o.rowIdx, carrier: combinedCarrier, trackingNo: combinedTracking });
-      document.getElementById('ship-modal').style.display = 'none';
-      _shipTargetIdx = null;
-      _bulkIdx++;
-      _showNextBulkModal();
-    } else {
-      // 単件モード: 1件目で発送処理、2件目以降はaddTracking
-      const btn = document.getElementById('ship-submit-btn');
-      btn.disabled = true;
-      btn.textContent = '処理中...';
-      const first = inputs[0];
-      const rest = inputs.slice(1);
-      gasPost({
-        action: 'updateShipment',
-        params: { rowIdx: o.rowIdx, carrier: first.carrier, trackingNo: first.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
-      }).then(function(result) {
-        if (!result.success) {
-          btn.disabled = false;
-          btn.textContent = '発送済みにする';
-          _showShipMsg(result.error || 'エラーが発生しました', 'error');
-          return;
-        }
-        // 2件目以降をaddTrackingで追記
-        var i = 0;
-        function addNext() {
-          if (i >= rest.length) {
-            btn.textContent = '発送済みにする';
-            document.getElementById('ship-modal').style.display = 'none';
-            _shipTargetIdx = null;
-            loadMakerOrders();
-            return;
-          }
-          var p = rest[i++];
-          gasPost({
-            action: 'addTracking',
-            params: { rowIdx: o.rowIdx, carrier: p.carrier, trackingNo: p.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
-          }).then(function(r) {
-            if (!r.success) { alert('追加伝票エラー: ' + r.error); }
-            addNext();
-          }).catch(function(e) { alert('通信エラー: ' + e.message); addNext(); });
-        }
-        addNext();
-      }).catch(function(err) {
+    // 1セット目で発送処理、2セット目以降はaddTrackingで追記
+    const btn = document.getElementById('ship-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '処理中...';
+    const first = inputs[0];
+    const rest = inputs.slice(1);
+    gasPost({
+      action: 'updateShipment',
+      params: { rowIdx: o.rowIdx, carrier: first.carrier, trackingNo: first.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      if (!result.success) {
         btn.disabled = false;
         btn.textContent = '発送済みにする';
-        _showShipMsg('通信エラー: ' + err.message, 'error');
-      });
-    }
+        _showShipMsg(result.error || 'エラーが発生しました', 'error');
+        return;
+      }
+      var i = 0;
+      function addNext() {
+        if (i >= rest.length) {
+          btn.textContent = '発送済みにする';
+          document.getElementById('ship-modal').style.display = 'none';
+          _shipTargetIdx = null;
+          loadMakerOrders();
+          return;
+        }
+        var p = rest[i++];
+        gasPost({
+          action: 'addTracking',
+          params: { rowIdx: o.rowIdx, carrier: p.carrier, trackingNo: p.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
+        }).then(function(r) {
+          if (!r.success) { alert('追加伝票エラー: ' + r.error); }
+          addNext();
+        }).catch(function(e) { alert('通信エラー: ' + e.message); addNext(); });
+      }
+      addNext();
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = '発送済みにする';
+      _showShipMsg('通信エラー: ' + err.message, 'error');
+    });
   };
 
-  function _submitShipmentBatch() {
-    if (_bulkResults.length === 0) { loadMakerOrders(); return; }
-    const btn = document.getElementById('ship-submit-btn');
-    // モーダルは閉じた状態で処理中表示
-    const wrap = document.getElementById('maker-unshipped-wrap');
-    const notice = document.createElement('div');
-    notice.id = 'bulk-processing-notice';
-    notice.textContent = '発送処理中... (' + _bulkResults.length + '件)';
-    notice.style.cssText = 'padding:12px;background:#fff3e0;border-radius:4px;margin-bottom:8px;font-weight:bold;';
-    wrap.prepend(notice);
-
-    gasPost({
-      action: 'updateShipmentBatch',
-      params: { items: _bulkResults, email: currentMakerEmail, isAdmin: currentIsAdmin }
-    }).then(function(result) {
-      const n = document.getElementById('bulk-processing-notice');
-      if (n) n.remove();
-      if (result.success) {
-        let msg = result.succeeded + '件の発送処理が完了しました。確認メールをお送りしました。';
-        if (result.failed > 0) msg += '\n（' + result.failed + '件は処理できませんでした）';
-        alert(msg);
-      } else {
-        alert('エラー: ' + (result.error || '不明なエラー'));
-      }
-      _bulkQueue = [];
-      _bulkResults = [];
-      _bulkIdx = 0;
-      loadMakerOrders();
-    }).catch(function(err) {
-      const n = document.getElementById('bulk-processing-notice');
-      if (n) n.remove();
-      alert('通信エラー: ' + err.message);
-      _bulkQueue = [];
-      _bulkResults = [];
-      _bulkIdx = 0;
-    });
-  }
-
-  // closeShipModal もバルクキューをリセット
   closeShipModal = function() {
     document.getElementById('ship-modal').style.display = 'none';
     _shipTargetIdx = null;
-    _bulkQueue = [];
-    _bulkResults = [];
-    _bulkIdx = 0;
   };
 
   // === WEBEDI一括計上 ===
