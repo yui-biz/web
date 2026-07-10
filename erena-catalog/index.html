@@ -280,7 +280,7 @@
         <div id="home-view">
           <!-- アップデート情報（チェンジログ型）: 最新を上に表示し、旧項目は <details class="update-history"> の中へ移す。
                新しい更新を出すときは ①最新ブロックを差し替え ②直前の最新を update-history-item として履歴の先頭に移動 ③closeボタンの key を新しい日付に更新（閉じた人にも再表示される）。 -->
-          <div id="update-notice-store" class="update-notice">
+          <div id="update-notice-store" class="update-notice" data-upd-key="erena_upd_20260707">
             <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260707')" title="閉じる">×</button>
             <div class="update-notice-title">🆕 アップデート情報（2026/7/7）</div>
             <div class="update-notice-body">
@@ -402,15 +402,28 @@
             <span><span style="color:#666;">ログインアカウント:</span> <b id="maker-name"></b><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
-          <div id="update-notice-maker" class="update-notice">
-            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_20260705')" title="閉じる">×</button>
-            <div class="update-notice-title">🆕 アップデート情報（2026/7/5）</div>
+          <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_20260710">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_20260710')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/10）</div>
             <div class="update-notice-body">
-              <b>店舗からの注文キャンセルに対応しました。</b><br>
-              ・店舗から取消連絡があった注文は<b>「キャンセル連絡あり」タブ</b>に表示され、<b>発送できません</b>（未発送タブ・CSVダウンロード・一括発送の対象外）。<br>
-              ・該当注文は<b>発送せず</b>、事務局からの「取消確定」または「保留解除」のご連絡をお待ちください。<br>
-              ・すでに発送準備・出荷済みの場合は事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+              <b>運送会社・追跡番号を「発送せずに保存」できるようになりました。</b><br>
+              ・「発送処理」画面に<b>「保存だけする」</b>ボタンを追加しました。伝票を先に作った段階で控えておけます。<b>発送済みにはならず</b>、店舗・お客様への発送完了メールも送られません。<br>
+              ・保存した注文は未発送タブに<b>「準備済み」</b>と表示され、右上の「伝票」から<b>準備済みのみ／未入力のみ</b>で絞り込めます。<br>
+              ・出荷するときに「発送処理」を開くと<b>入力済みの状態</b>から「発送済みにする」を押せます。<br>
+              ・CSVダウンロードの内容・列は<b>これまでと変わりません</b>（保存した伝票はCSVには出力されません）。<br>
+              <b>「選択分を発送処理」（チェックして一括発送）の不具合を修正しました。</b><br>
+              ・ボタンを押しても画面が出ない状態になっていました。ご不便をおかけしました。
             </div>
+            <details class="update-history">
+              <summary>これまでの更新履歴</summary>
+              <div class="update-history-item">
+                <div class="update-history-date">2026/7/5</div>
+                <b>店舗からの注文キャンセルに対応しました。</b><br>
+                ・店舗から取消連絡があった注文は<b>「キャンセル連絡あり」タブ</b>に表示され、<b>発送できません</b>（未発送タブ・CSVダウンロード・一括発送の対象外）。<br>
+                ・該当注文は<b>発送せず</b>、事務局からの「取消確定」または「保留解除」のご連絡をお待ちください。<br>
+                ・すでに発送準備・出荷済みの場合は事務局（info@yui.gift / 03-6441-0931）へご連絡ください。
+              </div>
+            </details>
           </div>
           <!-- 初めて使う方へガイド(折りたたみ式) -->
           <details id="maker-guide" style="margin-bottom:16px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:8px 14px;">
@@ -419,6 +432,7 @@
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">基本の流れ</h4>
               <ol style="margin:0 0 12px;padding-left:22px;">
                 <li><b>「未発送」タブ</b>で新規受注を確認</li>
+                <li>伝票だけ先に作った場合は「発送処理」→<b>「保存だけする」</b>で控えておけます(発送済みにはなりません)</li>
                 <li>発送準備ができたら<b>「発送処理」ボタン</b>(または一括発送)→ 運送会社・追跡番号を入力</li>
                 <li>発送後は<b>「発送済み」タブ</b>に移動</li>
                 <li>商品が着荷したら<b>「WEBEDI計上/問屋報告」</b>(直納商品or問屋経由で文言違い)</li>
@@ -492,6 +506,14 @@
               <button type="button" onclick="document.getElementById('ship-csv-upload').click()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVアップロードで一括発送</button>
               <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
               <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:transparent;color:#666;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:12px;">CSV一括発送の手順</button>
+              <span style="flex:1;"></span>
+              <label style="font-size:12px;color:#555;">伝票:
+                <select id="unshipped-draft-filter" onchange="applyUnshippedDraftFilter()" style="padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:13px;margin-left:4px;">
+                  <option value="">すべて</option>
+                  <option value="draft">準備済みのみ</option>
+                  <option value="empty">未入力のみ</option>
+                </select>
+              </label>
             </div>
             <div id="csv-help-box" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
@@ -519,7 +541,7 @@
               <table class="orders-table" id="maker-orders-table" style="display:none;">
                 <thead><tr>
                   <th><input type="checkbox" id="check-all-unshipped" onchange="toggleAllUnshippedChecks(this.checked)" title="全選択"></th>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>配達日</th><th>詳細</th><th>発送処理</th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>配達日</th><th>伝票</th><th>詳細</th><th>発送処理</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -589,8 +611,10 @@
               <button type="button" onclick="addShipTrackingRow()" style="padding:6px 12px;background:#fff;color:#1565c0;border:1px dashed #1565c0;border-radius:4px;cursor:pointer;font-size:12px;">+ 追跡番号をもう1件追加</button>
             </div>
             <div id="ship-modal-msg" style="display:none;margin-bottom:12px;padding:8px;border-radius:4px;font-size:13px;"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <p id="ship-draft-hint" style="display:none;color:#555;font-size:12px;margin:0 0 12px;line-height:1.5;background:#fff8e1;padding:8px 10px;border-radius:4px;border-left:3px solid #f9a825;">まだ出荷しない場合は<b>「保存だけする」</b>で運送会社・追跡番号を控えておけます。<b>発送済みにはならず</b>、店舗・お客様への発送完了メールも送られません。出荷するときにこの画面を開くと、入力済みの状態から「発送済みにする」を押せます。</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
               <button onclick="closeShipModal()" style="padding:8px 16px;background:#e0e0e0;border:none;border-radius:4px;cursor:pointer;">キャンセル</button>
+              <button id="ship-draft-btn" onclick="saveShipDraftFromModal()" style="display:none;padding:8px 16px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-weight:bold;">保存だけする</button>
               <button id="ship-submit-btn" onclick="submitShipment()" style="padding:8px 20px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">発送済みにする</button>
             </div>
           </div>
@@ -715,13 +739,17 @@
     if (el) el.style.display = 'none';
     try { localStorage.setItem(key, '1'); } catch (e) {}
   }
+  // 各バナーは自分の data-upd-key だけを見る。単一キー固定だと、古いお知らせを閉じた人に
+  // 新しいお知らせが二度と表示されなくなるため。
   function applyUpdateNoticeState() {
-    let dismissed = false;
-    try { dismissed = localStorage.getItem('erena_upd_20260705') === '1'; } catch (e) {}
-    if (!dismissed) return;
     ['update-notice-store', 'update-notice-maker'].forEach(function(id) {
       const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
+      if (!el) return;
+      const key = el.dataset.updKey;
+      if (!key) return;
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(key) === '1'; } catch (e) {}
+      if (dismissed) el.style.display = 'none';
     });
   }
 
@@ -1355,7 +1383,8 @@
   // サーバー側が同キーを重複と判定するため「送信失敗表示→店舗が手動再送」の重複を根本的に防ぐ。
   // verifyToken/verifyTokenMaker は再利用可トークンの検証で完全冪等のため再試行安全。ログインURLを
   // 開いた瞬間のGAS瞬断で「通信エラー: Failed to fetch」になりログインできない事故を自動リトライで防ぐ。
-  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1 };
+  // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1 };
 
   function gasPost(payload, _attempt) {
     _attempt = _attempt || 0;
@@ -1405,7 +1434,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260708c';
+  const APP_BUILD = '20260710a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -1655,6 +1684,13 @@
           const tr = document.createElement('tr');
           if (o.isTest) tr.classList.add('test-row');
           tr.dataset.cacheIdx = i;
+          // 下書き(未発送のまま保存された伝票)の有無。絞り込みで参照する
+          const hasDraft = !!(o.draftCarrier || o.draftTrackingNo);
+          tr.dataset.hasDraft = hasDraft ? '1' : '0';
+          const draftCell = hasDraft
+            ? '<span style="display:inline-block;background:#e8f5e9;color:#2e7d32;border:1px solid #2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:bold;white-space:nowrap;">準備済み</span>' +
+              '<br><small style="color:#666;">' + escapeHtml(o.draftCarrier || '') + '<br>' + escapeHtml(o.draftTrackingNo || '') + '</small>'
+            : '<span style="color:#bbb;font-size:12px;">未入力</span>';
           tr.innerHTML =
             '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
             '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
@@ -1663,11 +1699,13 @@
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
             '<td>' + escapeHtml(o.store || '') + '</td>' +
             '<td>' + (o.deliveryDate || '指定なし') + '</td>' +
+            '<td>' + draftCell + '</td>' +
             '<td><button class="detail-btn" onclick="showMakerOrderDetail(' + i + ')">詳細</button></td>' +
             '<td><button onclick="showShipModal(' + i + ')" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">発送処理</button></td>';
           tbody.appendChild(tr);
         });
         document.getElementById('maker-orders-table').style.display = 'table';
+        applyUnshippedDraftFilter(); // 再描画後も絞り込み状態を維持する
       }
 
       // 「キャンセル連絡あり」テーブル描画（発送不可・読み取り専用）
@@ -1902,6 +1940,15 @@
     return result;
   }
 
+  // 「保存だけする」ボタン＋説明の表示切替。未発送の発送処理モーダルでのみ出す
+  // (伝票追加・伝票編集は発送済みの注文が対象なので下書きの出番はない)
+  function _setDraftUiVisible(show) {
+    const btn = document.getElementById('ship-draft-btn');
+    const hint = document.getElementById('ship-draft-hint');
+    if (btn) { btn.style.display = show ? 'inline-block' : 'none'; btn.disabled = false; btn.textContent = '保存だけする'; }
+    if (hint) hint.style.display = show ? 'block' : 'none';
+  }
+
   function showShipModal(idx) {
     const o = (window._makerOrderCache || {})[idx];
     if (!o) return;
@@ -1911,13 +1958,43 @@
     document.getElementById('ship-modal-title').textContent = '発送処理';
     document.getElementById('ship-modal-product').textContent =
       o.productName + ' × ' + o.quantity + ' / お届け先: ' + o.recipientName + ' 様';
-    _resetShipTrackingRows(1);
+    // 下書き(未発送のまま保存された運送会社・追跡番号)があればプリフィル
+    const draft = _parseExistingTrackings(o.draftCarrier, o.draftTrackingNo);
+    _resetShipTrackingRows(draft.length > 0 ? draft : 1);
+    _setDraftUiVisible(true);
     document.getElementById('ship-modal-msg').style.display = 'none';
     var btn = document.getElementById('ship-submit-btn');
     btn.disabled = false;
     btn.textContent = '発送済みにする';
     btn.onclick = submitShipment;
     document.getElementById('ship-modal').style.display = 'flex';
+  }
+
+  // 発送せずに運送会社・追跡番号だけ保存する
+  function saveShipDraftFromModal() {
+    if (_shipTargetIdx === null) return;
+    const o = (window._makerOrderCache || {})[_shipTargetIdx];
+    if (!o) return;
+    const inputs = _collectShipInputs();
+    if (inputs.length === 0) { _showShipMsg('運送会社または追跡番号を入力してください', 'error'); return; }
+    const btn = document.getElementById('ship-draft-btn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    gasPost({
+      action: 'saveShipDraft',
+      params: { rowIdx: o.rowIdx, items: inputs, email: currentMakerEmail, isAdmin: currentIsAdmin }
+    }).then(function(result) {
+      btn.disabled = false;
+      btn.textContent = '保存だけする';
+      if (!result.success) { _showShipMsg(result.error || 'エラーが発生しました', 'error'); return; }
+      document.getElementById('ship-modal').style.display = 'none';
+      _shipTargetIdx = null;
+      loadMakerOrders();
+    }).catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = '保存だけする';
+      _showShipMsg('通信エラー: ' + err.message, 'error');
+    });
   }
 
   let submitShipment;
@@ -1976,6 +2053,7 @@
     document.getElementById('ship-modal-product').textContent =
       o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様 / 既存: ' + (o.trackingNo || '(なし)');
     _resetShipTrackingRows(1);
+    _setDraftUiVisible(false);
     document.getElementById('ship-modal-msg').style.display = 'none';
     var btn = document.getElementById('ship-submit-btn');
     btn.disabled = false;
@@ -1995,6 +2073,7 @@
       o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様';
     const existing = _parseExistingTrackings(o.carrier, o.trackingNo);
     _resetShipTrackingRows(existing);
+    _setDraftUiVisible(false);
     document.getElementById('ship-modal-msg').style.display = 'none';
     var btn = document.getElementById('ship-submit-btn');
     btn.disabled = false;
@@ -2129,10 +2208,33 @@
     setDetailMessage('', null);
   }
 
+  // === 未発送タブ: 伝票の準備済み/未入力で絞り込む ===
+  // 非表示にした行のチェックは必ず外す。見えていない注文が一括発送に混ざるのを防ぐため。
+  function applyUnshippedDraftFilter() {
+    const sel = document.getElementById('unshipped-draft-filter');
+    if (!sel) return;
+    const mode = sel.value;
+    document.querySelectorAll('#maker-orders-table tbody tr').forEach(function(tr) {
+      const hasDraft = tr.dataset.hasDraft === '1';
+      const show = (mode === '') || (mode === 'draft' && hasDraft) || (mode === 'empty' && !hasDraft);
+      tr.style.display = show ? '' : 'none';
+      if (!show) {
+        const cb = tr.querySelector('.unshipped-check');
+        if (cb) cb.checked = false;
+      }
+    });
+    const all = document.getElementById('check-all-unshipped');
+    if (all) all.checked = false;
+  }
+
   // === チェックボックス全選択 ===
   function toggleAllUnshippedChecks(checked) {
-    // disabled(キャンセル連絡あり)の行は選択対象外
-    document.querySelectorAll('.unshipped-check').forEach(function(cb) { if (!cb.disabled) cb.checked = checked; });
+    // disabled(キャンセル連絡あり)・絞り込みで非表示の行は選択対象外
+    document.querySelectorAll('.unshipped-check').forEach(function(cb) {
+      const tr = cb.closest('tr');
+      if (tr && tr.style.display === 'none') return;
+      if (!cb.disabled) cb.checked = checked;
+    });
   }
   function toggleAllShippedChecks(checked) {
     document.querySelectorAll('.shipped-check').forEach(function(cb) { cb.checked = checked; });
@@ -2162,13 +2264,20 @@
     const o = (window._makerOrderCache || {})[idx];
     if (!o) { _bulkIdx++; _showNextBulkModal(); return; }
     _shipTargetIdx = idx;
+    document.getElementById('ship-modal-title').textContent = '発送処理(選択分)';
     document.getElementById('ship-modal-product').textContent =
       '(' + (_bulkIdx + 1) + '/' + _bulkQueue.length + ') ' +
       o.productName + ' × ' + o.quantity;
-    document.getElementById('ship-carrier').value = '';
-    document.getElementById('ship-tracking').value = '';
+    // 複数伝票対応で入力欄が動的生成になったため、単発モーダルと同じリセット経路に揃える。
+    // 旧 ship-carrier / ship-tracking は存在しないIDで、触るとTypeErrorでモーダルが開かなかった。
+    const draft = _parseExistingTrackings(o.draftCarrier, o.draftTrackingNo);
+    _resetShipTrackingRows(draft.length > 0 ? draft : 1);
+    _setDraftUiVisible(false); // 一括処理中は「保存だけする」を出さない(1件だけ下書きにする導線は混乱のもと)
     document.getElementById('ship-modal-msg').style.display = 'none';
-    document.getElementById('ship-submit-btn').disabled = false;
+    var btn = document.getElementById('ship-submit-btn');
+    btn.disabled = false;
+    btn.textContent = (_bulkIdx + 1 < _bulkQueue.length) ? '次へ' : 'この内容で発送処理';
+    btn.onclick = submitShipment; // 伝票追加/編集モーダルを使った後もsubmitShipmentに戻す
     document.getElementById('ship-modal').style.display = 'flex';
   }
 
