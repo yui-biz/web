@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260710c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260710d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -506,15 +506,14 @@
               <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
               <button type="button" onclick="document.getElementById('ship-csv-upload').click()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVアップロードで一括発送</button>
               <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
-              <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:transparent;color:#666;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:12px;">CSV一括発送の手順</button>
-              <span style="flex:1;"></span>
-              <label style="font-size:12px;color:#555;">伝票:
+              <label style="font-size:12px;color:#555;white-space:nowrap;">伝票:
                 <select id="unshipped-draft-filter" onchange="applyUnshippedDraftFilter()" style="padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:13px;margin-left:4px;">
                   <option value="">すべて</option>
                   <option value="draft">準備済みのみ</option>
                   <option value="empty">未入力のみ</option>
                 </select>
               </label>
+              <button onclick="toggleCsvHelp()" style="padding:6px 10px;background:transparent;color:#666;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:12px;">CSV一括発送の手順</button>
             </div>
             <div id="csv-help-box" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
@@ -1450,7 +1449,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260710c';
+  const APP_BUILD = '20260710d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
