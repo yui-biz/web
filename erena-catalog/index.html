@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260710d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260713a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1125,7 +1125,7 @@
     const PREFS = ["","北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
     const prefOpts = function(sel) { return PREFS.map(function(p) { return '<option value="' + p + '"' + (p === sel ? ' selected' : '') + '>' + (p || '選択してください') + '</option>'; }).join(''); };
 
-    const NOSHI = ["", "御祝", "内祝", "御礼", "御中元", "御歳暮", "その他"];
+    const NOSHI = ["", "無地", "御祝", "内祝", "御礼", "御中元", "御歳暮", "その他"];
     const noshiOpts = NOSHI.map(function(n) { return '<option value="' + n + '"' + (n === (o.noshiType || '') ? ' selected' : '') + '>' + (n || 'なし') + '</option>'; }).join('');
 
     const html =
@@ -1449,7 +1449,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260710d';
+  const APP_BUILD = '20260713a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -3202,7 +3202,7 @@
   function createNoshiRow() {
     const e = document.createElement("div");
     e.id = 'noshi-section';
-    const t = ["なし","御祝","内祝","御礼","御中元","御歳暮","その他"];
+    const t = ["なし","無地","御祝","内祝","御礼","御中元","御歳暮","その他"];
     const o = createSelect("noshiType", "のしの種類", t, !1);
     const n = createFormRow("noshiName", "のし名入れ", "text", !1, "山田 太郎");
     e.append(o, n);
