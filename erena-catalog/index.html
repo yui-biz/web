@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260713c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260723a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -82,7 +82,7 @@
       .ts-dropdown .optgroup-header { background: #f5f5f5; color: #007BFF; font-weight: bold; padding: 6px 10px; }
       .login-screen { padding: 30px 20px; }
       .login-screen > h3 { text-align: center; margin-bottom: 24px; color: #333; }
-      .login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin: 0 auto; }
+      .login-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1280px; margin: 0 auto; }
       .login-card { border: 1px solid #ddd; border-radius: 8px; padding: 24px; background: #fafafa; border-top: 4px solid #007BFF; }
       .login-card h4 { margin: 0 0 8px 0; color: #007BFF; font-size: 18px; border-bottom: 2px solid #007BFF; padding-bottom: 8px; }
       .login-card p.role-desc { color: #666; font-size: 13px; margin: 0 0 16px 0; }
@@ -93,11 +93,24 @@
       .login-card.maker h4 { color: #28a745; border-bottom-color: #28a745; }
       .login-card.maker button { background: #28a745; }
       .login-card.maker button:hover:not(:disabled) { background: #218838; }
+      .login-grid.two-col { grid-template-columns: 1fr 1fr; max-width: 900px; } /* 帳合先枠が非表示のときは従来の2列に戻す */
+      .login-card.vendor { border-top-color: #6d4c9f; }
+      .login-card.vendor h4 { color: #6d4c9f; border-bottom-color: #6d4c9f; }
+      .login-card.vendor button { background: #6d4c9f; }
+      .login-card.vendor button:hover:not(:disabled) { background: #5a3f85; }
       .login-msg { margin-top: 12px; padding: 10px; border-radius: 4px; font-size: 13px; }
       .login-msg.success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
       .login-msg.error { background: #fdecea; border: 1px solid #f5c2c0; color: #c0392b; }
       .login-help { margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 4px; font-size: 13px; color: #666; line-height: 1.6; max-width: 900px; margin-left: auto; margin-right: auto; }
+      @media (max-width: 1080px) { .login-grid { grid-template-columns: 1fr 1fr; } }
       @media (max-width: 600px) { .login-grid { grid-template-columns: 1fr; } }
+      /* 帳合先ビュー */
+      body.vendor-mode .container { max-width: none; margin: 12px; }
+      .vendor-section-title { font-size: 15px; font-weight: bold; color: #4a3570; margin: 22px 0 8px; padding-left: 8px; border-left: 4px solid #6d4c9f; }
+      .vendor-filter { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; background: #f7f5fb; border: 1px solid #ded5ef; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }
+      .vendor-filter label { font-size: 12px; color: #555; display: flex; flex-direction: column; gap: 4px; }
+      .vendor-filter select, .vendor-filter input[type="date"] { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+      .vendor-note { background: #f3f0f9; border: 1px solid #ded5ef; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #4a3570; line-height: 1.7; margin-bottom: 14px; }
       .logout-btn { background: transparent; border: 1px solid #888; color: #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
       .logout-btn:hover { background: #f0f0f0; }
       .admin-badge { display: inline-block; background: #d32f2f; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px; vertical-align: middle; }
@@ -257,6 +270,23 @@
               <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
               <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインURLを送信</button>
               <div id="login-msg-maker" class="login-msg" style="display:none;"></div>
+            </div>
+            <!-- 帳合先(問屋)枠: 帳合先マスタへのメール登録が済むまでは既定で非表示。
+                 表示条件は _applyVendorCardVisibility() 参照（?vendor=1 / ログインリンク経由 / VENDOR_LOGIN_ALWAYS）。
+                 運用開始時は JS の VENDOR_LOGIN_ALWAYS を true にするだけで常時表示になる。 -->
+            <div class="login-card vendor" id="login-card-vendor" style="display:none;">
+              <h4>帳合先（問屋）ご担当者の方</h4>
+              <p class="role-desc">帳合先企業のご担当者向け<br>ご担当メーカー様の受注・発送件数を確認できます</p>
+              <div style="background:#f3f0f9;border:1px solid #ded5ef;border-radius:4px;padding:8px 12px;margin:8px 0 12px;font-size:12px;line-height:1.5;color:#4a3570;text-align:left;">
+                <b>この画面で確認できること</b><br>
+                ・ご担当メーカー様の商品ごとの<b>受注件数・発送済件数・数量</b><br>
+                ・どのエレナ店舗からのご注文か<br>
+                ※お客様の氏名・ご住所・お電話番号などの<b>個人情報は表示されません</b>。<br>
+                ※閲覧のみで、発送処理などの操作はできません。
+              </div>
+              <input type="email" id="loginEmailVendor" placeholder="例: 〇〇@問屋.co.jp" autocomplete="email">
+              <button type="button" id="loginBtnVendor" onclick="requestLoginVendor()">ログインURLを送信</button>
+              <div id="login-msg-vendor" class="login-msg" style="display:none;"></div>
             </div>
           </div>
           <div class="login-help">
@@ -642,6 +672,91 @@
           </div>
         </div>
       </div>
+
+        <!-- ===== 帳合先(問屋)ビュー: 閲覧専用・個人情報なし ===== -->
+        <div id="vendor-content" style="display:none;">
+          <div id="vendor-display" style="background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+            <span><span style="color:#666;">ログインアカウント:</span> <b id="vendor-name"></b><span id="vendor-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
+            <button class="logout-btn" onclick="logout()">ログアウト</button>
+          </div>
+
+          <div class="vendor-note">
+            <b>この画面について</b><br>
+            ・貴社帳合のメーカー様が受けたご注文と、その発送状況（発送済／未発送）をご確認いただけます。<br>
+            ・お客様の<b>氏名・ご住所・お電話番号・メールアドレス等の個人情報、および運送会社・追跡番号は表示されません</b>。<br>
+            ・<b>閲覧専用</b>です。発送処理・WEBEDI計上などの操作はメーカー様の画面で行われます。<br>
+            ・内容についてのお問い合わせは エレナ ギフト事務局（info@yui.gift / 03-6441-0931）までご連絡ください。
+          </div>
+
+          <div class="vendor-filter">
+            <label>期間の基準
+              <select id="vendor-date-basis" onchange="loadVendorOrders()">
+                <option value="order">申込日</option>
+                <option value="ship">発送日</option>
+              </select>
+            </label>
+            <label>開始日<input type="date" id="vendor-from" onchange="loadVendorOrders()"></label>
+            <label>終了日<input type="date" id="vendor-to" onchange="loadVendorOrders()"></label>
+            <label>メーカー
+              <select id="vendor-maker-filter" onchange="loadVendorOrders()"><option value="">すべて</option></select>
+            </label>
+            <label>商品
+              <select id="vendor-product-filter" onchange="loadVendorOrders()"><option value="">すべて</option></select>
+            </label>
+            <label>店舗
+              <select id="vendor-store-filter" onchange="loadVendorOrders()"><option value="">すべて</option></select>
+            </label>
+            <button onclick="clearVendorFilter()" style="padding:7px 14px;background:#fff;color:#6d4c9f;border:1px solid #6d4c9f;border-radius:4px;cursor:pointer;font-size:13px;">条件をクリア</button>
+            <button onclick="downloadVendorCsv()" style="padding:7px 14px;background:#6d4c9f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">CSVダウンロード</button>
+          </div>
+
+          <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
+            <div class="summary-card"><div class="label">対象 受注</div><div class="value" id="vendor-cnt-orders">-</div><div class="sublabel">絞り込み後の件数</div></div>
+            <div class="summary-card"><div class="label">発送済</div><div class="value" id="vendor-cnt-shipped">-</div><div class="sublabel">メーカー様が発送処理済</div></div>
+            <div class="summary-card"><div class="label">未発送</div><div class="value" id="vendor-cnt-unshipped">-</div><div class="sublabel">発送処理待ち</div></div>
+            <div class="summary-card"><div class="label">発送済 数量</div><div class="value" id="vendor-cnt-shipqty">-</div><div class="sublabel">発送済注文の数量計</div></div>
+            <div class="summary-card"><div class="label">WEBEDI計上待ち</div><div class="value" id="vendor-cnt-unwebedi">-</div><div class="sublabel">発送済で計上/報告が未完了</div></div>
+          </div>
+
+          <div id="vendor-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
+          <div id="vendor-error" style="display:none;background:#fdecea;border:1px solid #f5c2c0;color:#c0392b;border-radius:4px;padding:12px 16px;font-size:13px;"></div>
+          <div id="vendor-empty" style="display:none;text-align:center;padding:40px;color:#999;">該当するご注文はありません</div>
+
+          <div id="vendor-body" style="display:none;">
+            <div class="vendor-section-title">メーカー・商品別</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="vendor-product-table">
+                <thead><tr>
+                  <th>メーカー</th><th>商品番号</th><th>商品名</th>
+                  <th style="text-align:right;">受注</th><th style="text-align:right;">発送済</th><th style="text-align:right;">未発送</th>
+                  <th style="text-align:right;">数量計</th><th style="text-align:right;">発送済数量</th><th style="text-align:right;">WEBEDI待ち</th>
+                </tr></thead>
+                <tbody id="vendor-product-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="vendor-section-title">エレナ店舗別</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="vendor-store-table">
+                <thead><tr>
+                  <th>店舗</th><th style="text-align:right;">受注</th><th style="text-align:right;">発送済</th><th style="text-align:right;">未発送</th><th style="text-align:right;">数量計</th>
+                </tr></thead>
+                <tbody id="vendor-store-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="vendor-section-title">ご注文明細（<span id="vendor-row-count">0</span>件）</div>
+            <div style="overflow-x:auto;">
+              <table class="orders-table" id="vendor-detail-table">
+                <thead><tr>
+                  <th>注文番号</th><th>申込日時</th><th>申込店舗</th><th>メーカー</th><th>商品番号</th><th>商品名</th>
+                  <th style="text-align:right;">数量</th><th>希望配達日</th><th>発送状況</th><th>発送日</th><th>WEBEDI</th>
+                </tr></thead>
+                <tbody id="vendor-detail-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
     </div>
 
         <!-- 注文詳細モーダル（store/maker 両方から使用・main-content外に配置） -->
@@ -682,9 +797,11 @@
   let currentStoreName = '';
   let currentStoreId = '';
   let currentIsAdmin = false;
-  let currentRole = 'store';  // 'store' or 'maker'
+  let currentRole = 'store';  // 'store' / 'maker' / 'vendor'(帳合先)
   let currentMakerEmail = '';
   let currentMakerName = '';
+  let currentVendorEmail = '';
+  let currentVendorName = '';
 
   // === 認証関連 ===
   const AUTH_KEY = 'erena_auth';
@@ -719,6 +836,14 @@
     }));
   }
 
+  function saveAuthVendor(email, vendorName, isAdmin) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify({
+      role: 'vendor',
+      email, vendorName, isAdmin: !!isAdmin,
+      expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
+    }));
+  }
+
   function logout() {
     localStorage.removeItem(AUTH_KEY);
     location.href = location.pathname;
@@ -730,7 +855,28 @@
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('store-display').style.display = 'none';
     document.getElementById('maker-content').style.display = 'none';
+    document.getElementById('vendor-content').style.display = 'none';
     document.body.classList.remove('maker-mode');
+    document.body.classList.remove('vendor-mode');
+    _applyVendorCardVisibility();
+  }
+
+  // 帳合先(問屋)ログイン枠の表示可否。
+  // 帳合先マスタにメールを登録し運用を開始したら VENDOR_LOGIN_ALWAYS を true にする（それだけで常時表示）。
+  // それまでは ?vendor=1 で開いた人と、帳合先ログインリンク(?role=vendor)から来た人にだけ見せる。
+  const VENDOR_LOGIN_ALWAYS = false;
+  const VENDOR_SEEN_KEY = 'erena_vendor_login';
+  function _applyVendorCardVisibility() {
+    const card = document.getElementById('login-card-vendor');
+    if (!card) return;
+    const q = new URLSearchParams(window.location.search.replace(/&amp;/gi, '&'));
+    let seen = false;
+    try { seen = localStorage.getItem(VENDOR_SEEN_KEY) === '1'; } catch (e) {}
+    const show = VENDOR_LOGIN_ALWAYS || seen || q.get('vendor') === '1' || q.get('role') === 'vendor';
+    if (show && !seen) { try { localStorage.setItem(VENDOR_SEEN_KEY, '1'); } catch (e) {} }
+    card.style.display = show ? 'block' : 'none';
+    const grid = card.parentElement;
+    if (grid) grid.classList.toggle('two-col', !show); // 非表示のときは3列レイアウトの余白を作らない
   }
 
   function showMainContent(storeId, storeName, isAdmin) {
@@ -1271,6 +1417,37 @@
     el.style.display = msg ? 'block' : 'none';
   }
 
+  function setLoginMessageVendor(msg, type) {
+    const el = document.getElementById('login-msg-vendor');
+    el.textContent = msg;
+    el.className = 'login-msg ' + (type || '');
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function requestLoginVendor() {
+    const email = document.getElementById('loginEmailVendor').value.trim();
+    if (!email || !email.includes('@')) {
+      setLoginMessageVendor('有効なメールアドレスを入力してください', 'error');
+      return;
+    }
+    const btn = document.getElementById('loginBtnVendor');
+    btn.disabled = true; btn.textContent = '送信中...';
+    setLoginMessageVendor('', null);
+
+    gasPost({ action: 'requestMagicLinkVendor', email: email })
+      .then(result => {
+        if (result.success) {
+          setLoginMessageVendor(result.message, 'success');
+        } else {
+          setLoginMessageVendor(result.message || 'ログインリンク送信に失敗しました', 'error');
+        }
+      })
+      .catch(err => setLoginMessageVendor('通信エラー: ' + err.message, 'error'))
+      .finally(() => {
+        btn.disabled = false; btn.textContent = 'ログインURLを送信';
+      });
+  }
+
   function requestLoginMaker() {
     const email = document.getElementById('loginEmailMaker').value.trim();
     if (!email || !email.includes('@')) {
@@ -1352,6 +1529,27 @@
       }
     }
 
+    // 帳合先(問屋)認証フロー: ?role=vendor&v=&t=
+    if (role === 'vendor' && token) {
+      const vEmail = params.get('v');
+      if (vEmail) {
+        showVerifying();
+        return gasPost({ action: 'verifyTokenVendor', email: vEmail, token: token })
+          .then(result => {
+            if (result.valid) {
+              saveAuthVendor(result.email, result.vendorName, result.isAdmin);
+              history.replaceState(null, '', location.pathname);
+              return { role: 'vendor', email: result.email, vendorName: result.vendorName, isAdmin: result.isAdmin };
+            } else {
+              showLoginScreen();
+              setLoginMessageVendor(_reasonText(result.reason), 'error');
+              return null;
+            }
+          })
+          .catch(err => { showLoginScreen(); setLoginMessageVendor('通信エラー: ' + err.message, 'error'); return null; });
+      }
+    }
+
     // 店舗認証フロー: ?s=&t=
     const sid = params.get('s');
     if (sid && token) {
@@ -1376,6 +1574,9 @@
     if (stored) {
       if (stored.role === 'maker') {
         return Promise.resolve({ role: 'maker', email: stored.email, makerName: stored.makerName, isAdmin: stored.isAdmin });
+      }
+      if (stored.role === 'vendor') {
+        return Promise.resolve({ role: 'vendor', email: stored.email, vendorName: stored.vendorName, isAdmin: stored.isAdmin });
       }
       if (stored.role === 'store' || stored.storeId) {
         if (!sid || stored.storeId === sid) {
@@ -1409,7 +1610,7 @@
   // verifyToken/verifyTokenMaker は再利用可トークンの検証で完全冪等のため再試行安全。ログインURLを
   // 開いた瞬間のGAS瞬断で「通信エラー: Failed to fetch」になりログインできない事故を自動リトライで防ぐ。
   // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
-  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1 };
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1 };
 
   function gasPost(payload, _attempt) {
     _attempt = _attempt || 0;
@@ -1459,7 +1660,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260713c';
+  const APP_BUILD = '20260723a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -1482,6 +1683,10 @@
       if (!auth) return;  // ログイン画面表示中
       if (auth.role === 'maker') {
         showMakerContent(auth.email, auth.makerName, auth.isAdmin);
+        return;
+      }
+      if (auth.role === 'vendor') {
+        showVendorContent(auth.email, auth.vendorName, auth.isAdmin);
         return;
       }
       // 店舗ログイン
@@ -3263,6 +3468,183 @@
     });
     r.append(c, l);
     return r;
+  }
+
+  // ===== 帳合先(問屋)ビュー =====
+  // 閲覧専用。サーバー(getVendorOrders)が個人情報・運送会社・追跡番号を返さないので、
+  // ここで隠す処理は不要（＝画面側の実装ミスで個人情報が漏れる余地を作らない）。
+  let _vendorCache = { rows: [], totals: {} };
+
+  function showVendorContent(email, vendorName, isAdmin) {
+    currentRole = 'vendor';
+    currentVendorEmail = email;
+    currentVendorName = vendorName;
+    currentIsAdmin = !!isAdmin;
+    document.getElementById('vendor-name').textContent = vendorName || '(担当者)';
+    document.getElementById('vendor-admin-badge').style.display = currentIsAdmin ? 'inline-block' : 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('auth-verifying').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('store-display').style.display = 'none';
+    document.getElementById('maker-content').style.display = 'none';
+    document.getElementById('vendor-content').style.display = 'block';
+    document.body.classList.add('vendor-mode');
+    loadVendorOrders();
+  }
+
+  function clearVendorFilter() {
+    ['vendor-from', 'vendor-to'].forEach(function(id) { document.getElementById(id).value = ''; });
+    ['vendor-maker-filter', 'vendor-product-filter', 'vendor-store-filter'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('vendor-date-basis').value = 'order';
+    loadVendorOrders();
+  }
+
+  function loadVendorOrders() {
+    const loading = document.getElementById('vendor-loading');
+    const body = document.getElementById('vendor-body');
+    const empty = document.getElementById('vendor-empty');
+    const errBox = document.getElementById('vendor-error');
+    loading.style.display = 'block';
+    body.style.display = 'none';
+    empty.style.display = 'none';
+    errBox.style.display = 'none';
+
+    gasPost({
+      action: 'getVendorOrders',
+      params: {
+        email: currentVendorEmail,
+        dateBasis: document.getElementById('vendor-date-basis').value,
+        from: document.getElementById('vendor-from').value,
+        to: document.getElementById('vendor-to').value,
+        maker: document.getElementById('vendor-maker-filter').value,
+        productNo: document.getElementById('vendor-product-filter').value,
+        store: document.getElementById('vendor-store-filter').value
+      }
+    }).then(res => {
+      loading.style.display = 'none';
+      if (res.error) {
+        errBox.textContent = res.error === 'unauthorized'
+          ? 'このアカウントには閲覧権限がありません。エレナ ギフト事務局へお問い合わせください。'
+          : 'データの取得に失敗しました: ' + res.error;
+        errBox.style.display = 'block';
+        return;
+      }
+      renderVendor(res);
+    }).catch(err => {
+      loading.style.display = 'none';
+      errBox.textContent = '通信エラー: ' + err.message;
+      errBox.style.display = 'block';
+    });
+  }
+
+  function _vendorSetOptions(selectId, values, keepValue) {
+    const sel = document.getElementById(selectId);
+    const cur = keepValue == null ? sel.value : keepValue;
+    sel.innerHTML = '<option value="">すべて</option>';
+    values.forEach(function(v) {
+      const opt = document.createElement('option');
+      opt.value = v.value; opt.textContent = v.label;
+      sel.appendChild(opt);
+    });
+    sel.value = cur;
+    if (sel.value !== cur) sel.value = ''; // 選択肢から消えた場合はすべてに戻す
+  }
+
+  function renderVendor(res) {
+    _vendorCache = res;
+    const t = res.totals || {};
+    document.getElementById('vendor-cnt-orders').textContent = t.orders || 0;
+    document.getElementById('vendor-cnt-shipped').textContent = t.shipped || 0;
+    document.getElementById('vendor-cnt-unshipped').textContent = t.unshipped || 0;
+    document.getElementById('vendor-cnt-shipqty').textContent = t.shippedQuantity || 0;
+    document.getElementById('vendor-cnt-unwebedi').textContent = t.unwebedi || 0;
+
+    // フィルタの選択肢（担当範囲の全商品・実績のあるメーカー/店舗から作る）
+    _vendorSetOptions('vendor-maker-filter', (res.makerList || []).map(function(m) { return { value: m, label: m }; }));
+    _vendorSetOptions('vendor-product-filter', (res.productList || []).map(function(p) {
+      return { value: p.productNo, label: p.productNo + ' ' + p.productName };
+    }));
+    _vendorSetOptions('vendor-store-filter', (res.storeList || []).map(function(s) { return { value: s, label: s }; }));
+
+    const rows = res.rows || [];
+    document.getElementById('vendor-row-count').textContent = rows.length;
+
+    if (rows.length === 0) {
+      document.getElementById('vendor-body').style.display = 'none';
+      document.getElementById('vendor-empty').style.display = 'block';
+      return;
+    }
+    document.getElementById('vendor-empty').style.display = 'none';
+    document.getElementById('vendor-body').style.display = 'block';
+
+    const num = function(v) { return '<td style="text-align:right;">' + (v || 0) + '</td>'; };
+
+    document.getElementById('vendor-product-tbody').innerHTML = (res.byProduct || []).map(function(p) {
+      return '<tr>'
+        + '<td>' + escapeHtml(p.makerName || '-') + '</td>'
+        + '<td>' + escapeHtml(p.productNo || '') + '</td>'
+        + '<td>' + escapeHtml(p.productName || '') + '</td>'
+        + num(p.orders) + num(p.shipped) + num(p.unshipped)
+        + num(p.quantity) + num(p.shippedQuantity)
+        + '<td style="text-align:right;' + (p.unwebedi ? 'color:#e65100;font-weight:bold;' : '') + '">' + (p.unwebedi || 0) + '</td>'
+        + '</tr>';
+    }).join('');
+
+    document.getElementById('vendor-store-tbody').innerHTML = (res.byStore || []).map(function(s) {
+      return '<tr>'
+        + '<td>' + escapeHtml(s.store || '') + '</td>'
+        + num(s.orders) + num(s.shipped) + num(s.unshipped) + num(s.quantity)
+        + '</tr>';
+    }).join('');
+
+    document.getElementById('vendor-detail-tbody').innerHTML = rows.map(function(r) {
+      const shipped = r.shipStatus === '発送済';
+      const statusHtml = shipped
+        ? '<span style="color:#2e7d32;font-weight:bold;">発送済</span>'
+        : '<span style="color:#c62828;">未発送</span>';
+      const cancelBadge = r.cancelStatus
+        ? ' <span style="background:#e65100;color:#fff;border-radius:8px;padding:1px 6px;font-size:11px;">' + escapeHtml(r.cancelStatus) + '</span>'
+        : '';
+      const webedi = r.webediStatus === '計上済' || r.webediStatus === '報告済'
+        ? escapeHtml(r.webediStatus)
+        : (shipped ? '<span style="color:#e65100;">' + escapeHtml(r.webediStatus) + '</span>' : '-');
+      return '<tr>'
+        + '<td>' + escapeHtml(r.orderNo || '') + cancelBadge + '</td>'
+        + '<td>' + escapeHtml(r.orderedAt || '') + '</td>'
+        + '<td>' + escapeHtml(r.store || '') + '</td>'
+        + '<td>' + escapeHtml(r.makerName || '') + '</td>'
+        + '<td>' + escapeHtml(r.productNo || '') + '</td>'
+        + '<td>' + escapeHtml(r.productName || '') + '</td>'
+        + '<td style="text-align:right;">' + (r.quantity || 0) + '</td>'
+        + '<td>' + escapeHtml(r.deliveryDate || '-') + '</td>'
+        + '<td>' + statusHtml + '</td>'
+        + '<td>' + escapeHtml(r.shippedAt || '-') + '</td>'
+        + '<td>' + webedi + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function downloadVendorCsv() {
+    const rows = (_vendorCache && _vendorCache.rows) || [];
+    if (rows.length === 0) { alert('ダウンロードする明細がありません'); return; }
+    const head = ['注文番号', '申込日時', '申込店舗', 'メーカー', '商品番号', '商品名', '数量', '希望配達日', '発送状況', '発送日', 'WEBEDI計上/問屋報告', '計上/報告日', '帳合区分'];
+    const body = rows.map(function(r) {
+      return [r.orderNo, r.orderedAt, r.store, r.makerName, r.productNo, r.productName, r.quantity,
+        r.deliveryDate, r.shipStatus, r.shippedAt, r.webediStatus, r.webediAt, r.productRoute];
+    });
+    const csv = [head].concat(body).map(function(cols) {
+      return cols.map(function(v) {
+        const s = String(v == null ? '' : v);
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '帳合先_発送状況_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 </script>
   </body>
