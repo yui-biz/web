@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260723d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260723e"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -114,6 +114,12 @@
       .vendor-filter { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; background: #f7f5fb; border: 1px solid #ded5ef; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }
       .vendor-filter label { font-size: 12px; color: #555; display: flex; flex-direction: column; gap: 4px; }
       .vendor-filter select, .vendor-filter input[type="date"] { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+      /* フル幅表示だと集計表の商品名と数値列が離れて読みづらいので、集計2表だけ幅を抑える(明細は11列あるのでフル幅のまま) */
+      #vendor-product-table { max-width: 1180px; }
+      #vendor-store-table { max-width: 760px; }
+      .vendor-filter select { min-width: 130px; }
+      .vendor-filter input[type="date"] { min-width: 150px; }
+      body.vendor-mode .content { padding: 18px 20px; }
       .vendor-note { background: #f3f0f9; border: 1px solid #ded5ef; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #4a3570; line-height: 1.7; margin-bottom: 14px; }
       .logout-btn { background: transparent; border: 1px solid #888; color: #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
       .logout-btn:hover { background: #f0f0f0; }
@@ -1667,7 +1673,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260723d';
+  const APP_BUILD = '20260723e';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
