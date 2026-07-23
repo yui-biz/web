@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260723c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260723d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -720,7 +720,7 @@
             <div class="summary-card"><div class="label">発送済</div><div class="value" id="vendor-cnt-shipped">-</div><div class="sublabel">メーカー様が発送処理済</div></div>
             <div class="summary-card"><div class="label">未発送</div><div class="value" id="vendor-cnt-unshipped">-</div><div class="sublabel">発送処理待ち</div></div>
             <div class="summary-card"><div class="label">発送済 数量</div><div class="value" id="vendor-cnt-shipqty">-</div><div class="sublabel">発送済注文の数量計</div></div>
-            <div class="summary-card"><div class="label">WEBEDI計上待ち</div><div class="value" id="vendor-cnt-unwebedi">-</div><div class="sublabel">発送済で計上/報告が未完了</div></div>
+            <div class="summary-card"><div class="label">計上/報告 待ち</div><div class="value" id="vendor-cnt-unwebedi">-</div><div class="sublabel">直納=WEBEDI計上 / 問屋経由=問屋へ報告</div></div>
           </div>
 
           <div id="vendor-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
@@ -734,7 +734,7 @@
                 <thead><tr>
                   <th>メーカー</th><th>商品番号</th><th>商品名</th>
                   <th style="text-align:right;">受注</th><th style="text-align:right;">発送済</th><th style="text-align:right;">未発送</th>
-                  <th style="text-align:right;">数量計</th><th style="text-align:right;">発送済数量</th><th style="text-align:right;">WEBEDI待ち</th>
+                  <th style="text-align:right;">数量計</th><th style="text-align:right;">発送済数量</th><th style="text-align:right;">計上/報告待ち</th>
                 </tr></thead>
                 <tbody id="vendor-product-tbody"></tbody>
               </table>
@@ -755,7 +755,7 @@
               <table class="orders-table" id="vendor-detail-table">
                 <thead><tr>
                   <th>注文番号</th><th>申込日時</th><th>申込店舗</th><th>メーカー</th><th>商品番号</th><th>商品名</th>
-                  <th style="text-align:right;">数量</th><th>希望配達日</th><th>発送状況</th><th>発送日</th><th>WEBEDI</th>
+                  <th style="text-align:right;">数量</th><th>希望配達日</th><th>発送状況</th><th>発送日</th><th>計上/報告</th>
                 </tr></thead>
                 <tbody id="vendor-detail-tbody"></tbody>
               </table>
@@ -1667,7 +1667,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260723c';
+  const APP_BUILD = '20260723d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
