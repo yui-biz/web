@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260723a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260723b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -282,7 +282,8 @@
                 ・ご担当メーカー様の商品ごとの<b>受注件数・発送済件数・数量</b><br>
                 ・どのエレナ店舗からのご注文か<br>
                 ※お客様の氏名・ご住所・お電話番号などの<b>個人情報は表示されません</b>。<br>
-                ※閲覧のみで、発送処理などの操作はできません。
+                ※閲覧のみで、発送処理などの操作はできません。<br>
+                ※<b>自社商品のみをお取り扱いの場合はこちらは不要です</b>。左の「メーカー担当者の方」からご確認いただけます。
               </div>
               <input type="email" id="loginEmailVendor" placeholder="例: 〇〇@問屋.co.jp" autocomplete="email">
               <button type="button" id="loginBtnVendor" onclick="requestLoginVendor()">ログインURLを送信</button>
@@ -1660,7 +1661,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260723a';
+  const APP_BUILD = '20260723b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
