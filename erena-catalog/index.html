@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260724a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260724b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1687,7 +1687,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260724a';
+  const APP_BUILD = '20260724b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2178,15 +2178,39 @@
     }
   }
 
+  // 追跡番号の正規化。全角数字・全角ハイフン・長音符・空白を半角の形に寄せる。
+  // サーバー側(trackingNormalize.js)と同じ規則。ここで直すのは入力者に結果を見せるため。
+  function normalizeTrackingInput(v) {
+    let s = String(v == null ? '' : v);
+    if (s.normalize) s = s.normalize('NFKC');   // ７→7 / U+FF0D→-
+    s = s.replace(/[‐‑‒–—―−ー]/g, '-');          // NFKCで残るダッシュ類
+    s = s.replace(/[\s　]/g, '');                 // 全角スペース含む空白
+    return s;
+  }
+
+  // 明らかに追跡番号でないものを弾く。数字8桁未満はNG(ヤマト/佐川12桁・日本郵便11-13桁)。
+  // EMS等の英字入り(EE123456789JP)は通すので、英字自体は禁止しない。
+  function trackingProblem(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (!s) return '追跡番号を入力してください';
+    if (s.replace(/[^0-9]/g, '').length < 8) {
+      return '追跡番号「' + s + '」は正しくないようです。運送会社の伝票番号（数字10桁程度）をご確認ください。';
+    }
+    return '';
+  }
+
   // モーダルから入力値配列を取得([{carrier, trackingNo}, ...])
   // 「その他」選択時は手動入力欄の値をcarrierとして採用
+  // 追跡番号は取得のついでに正規化し、入力欄にも書き戻す(直ったことが見えるように)
   function _collectShipInputs(listEl) {
     const list = listEl || document.getElementById('ship-tracking-list');
     const rows = list.querySelectorAll('.ship-tracking-row');
     const result = [];
     rows.forEach(function(r) {
       let carrier = r.querySelector('.ship-carrier-input').value;
-      const trackingNo = r.querySelector('.ship-tracking-input').value.trim();
+      const inp = r.querySelector('.ship-tracking-input');
+      const trackingNo = normalizeTrackingInput(inp.value);
+      if (trackingNo !== inp.value) inp.value = trackingNo;
       if (carrier === 'その他') {
         const custom = r.querySelector('.ship-carrier-custom').value.trim();
         carrier = custom || ''; // 手動入力なしならcarrier空扱い(バリデーションで弾く)
@@ -2348,6 +2372,8 @@
     }
     const invalid = inputs.find(function(p) { return !p.carrier || !p.trackingNo; });
     if (invalid) { alert('全ての伝票で運送会社と追跡番号の両方を入力してください'); return; }
+    const badEdit = inputs.map(function(p) { return trackingProblem(p.trackingNo); }).find(Boolean);
+    if (badEdit) { alert(badEdit); return; }
     const btn = document.getElementById('ship-submit-btn');
     btn.disabled = true; btn.textContent = '処理中...';
     gasPost({
@@ -2607,6 +2633,13 @@
         card.style.borderColor = '#c62828';
         return;
       }
+      const badInput = inputs.map(function(p) { return trackingProblem(p.trackingNo); }).find(Boolean);
+      if (badInput) {
+        _showBulkMsg('「' + label + '」' + badInput, 'error');
+        card.scrollIntoView({ block: 'center' });
+        card.style.borderColor = '#c62828';
+        return;
+      }
       card.style.borderColor = '#ddd';
       items.push({
         rowIdx: o.rowIdx,
@@ -2648,6 +2681,8 @@
     if (inputs.length === 0) { _showShipMsg('運送会社と追跡番号を入力してください', 'error'); return; }
     const invalid = inputs.find(function(p) { return !p.carrier || !p.trackingNo; });
     if (invalid) { _showShipMsg('運送会社と追跡番号の両方を入力してください', 'error'); return; }
+    const badTracking = inputs.map(function(p) { return trackingProblem(p.trackingNo); }).find(Boolean);
+    if (badTracking) { _showShipMsg(badTracking, 'error'); return; }
 
     // 1セット目で発送処理、2セット目以降はaddTrackingで追記
     const btn = document.getElementById('ship-submit-btn');
