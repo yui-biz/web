@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260724b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260724c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -457,7 +457,10 @@
               ・これまでは選択した直後に発送済みへ更新していましたが、<b>読み込んだ運送会社・追跡番号を注文ごとに表示する確認画面</b>を挟むようにしました。<br>
               ・確認画面では<b>まだ発送処理されていません</b>。内容をご確認のうえ<b>「まとめて発送処理」</b>を押してください。その場で修正・伝票の追加もできます。<br>
               ・取り込めなかった行があるときは、<b>理由つきで画面上部に表示</b>されます（追跡番号だけ空欄、すでに発送済み など）。これまでは何も表示せず飛ばしていました。<br>
-              ・CSVの列・内容はこれまでと変わりません。
+              <b>CSVを発送システムに取り込まれている方へ：CSVから記号（<code>="…"</code>）を取り除きました。</b><br>
+              ・郵便番号・番地・電話に付いていた記号がなくなり、そのまま取り込めるようになりました。列や内容は変わりません。<br>
+              ・Excelでそのまま開くと番地が日付のように表示されることがありますが、値は正しく、発送には影響しません（気になる場合はExcelの「データ」→「テキストまたはCSVから」で開いてください）。<br>
+              <b>追跡番号を全角で入力しても、自動で半角に直すようにしました。</b>運送会社のサイトで照会できない番号を防ぎます。
             </div>
             <details class="update-history">
               <summary>これまでの更新履歴</summary>
@@ -573,11 +576,15 @@
             <div id="csv-help-box" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
               <ol style="margin:0;padding-left:20px;">
-                <li><b>「CSVダウンロード」</b>をクリック → 未発送注文一覧のCSVが保存されます</li>
+                <li><b>「CSVダウンロード」</b>をクリック → 未発送注文一覧のCSVが保存されます
+                  <ul style="margin:4px 0;padding-left:20px;color:#555;">
+                    <li>Excelでそのまま開くと<b>番地が日付のように表示される</b>ことがありますが、値は正しく、取り込みや発送には影響しません。気になる場合はExcelの<b>「データ」→「テキストまたはCSVから」</b>で開いてください</li>
+                  </ul>
+                </li>
                 <li>Excel等で開いて、<b>「運送会社」列</b>と<b>「追跡番号」列</b>に値を入力します
                   <ul style="margin:4px 0;padding-left:20px;color:#555;">
                     <li>「運送会社」は <code>ヤマト運輸 / 佐川急便 / 日本郵便 / その他</code> のいずれか</li>
-                    <li>「追跡番号」は半角数字・ハイフンで入力</li>
+                    <li>「追跡番号」は運送会社の伝票番号（数字とハイフン）を入力（全角で入れても自動で半角に直ります）</li>
                     <li><b>「rowIdx」列は絶対に編集しない</b>(システム識別子のため)</li>
                     <li>発送しない行は空欄のままでOK(処理対象外になります)</li>
                     <li><b>1注文で伝票が複数に分かれる場合</b>は、<b>同じ行をコピーして増やし(rowIdxはそのまま)</b>、それぞれに運送会社・追跡番号を入力すれば複数伝票としてまとめて登録されます</li>
@@ -1687,7 +1694,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260724b';
+  const APP_BUILD = '20260724c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2768,10 +2775,15 @@
   }
 
   // === CSVダウンロード（未発送一覧） ===
-  // Excelで番地/郵便番号/電話が日付・数値に自動変換されないよう ="..." で強制テキスト化
+  // 郵便番号/番地/電話はそのままの値で出力する。
+  // 以前は Excel で番地(10-28→10月28日)が日付化しないよう ="..." で囲っていたが、
+  // その記号が、CSVを発送システムに取り込むメーカーの側では余計な文字になり取り込めなかった。
+  // 実データ(発送済426件)を見たところ Excelで開いて手入力→再保存している例はほぼ無かったため、
+  // 全メーカーが素直に取り込める素の値に統一した(2026-07-24)。
+  // Excelでそのまま開くと番地が日付に見えることがあるが、値は正しく取り込みにも影響しない。
+  // この関数は呼び出し箇所を変えずに挙動だけ差し替えるため、名前と引数は残している。
   function _csvText(v) {
-    const s = String(v == null ? '' : v).trim();
-    return s === '' ? '' : '="' + s.replace(/"/g, '""') + '"';
+    return String(v == null ? '' : v).trim();
   }
 
   function downloadUnshippedCsv() {
