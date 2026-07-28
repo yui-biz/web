@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260728a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260728b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -261,11 +261,8 @@
             <div class="login-card">
               <h4>店舗担当者の方</h4>
               <p class="role-desc">エレナ各店舗の担当者向け<br>お申し込み入力・確認ができます</p>
-              <div style="background:#fffbe6;border:1px solid #ffd54f;border-radius:4px;padding:8px 12px;margin:8px 0 12px;font-size:12px;line-height:1.5;color:#7a5500;text-align:left;">
-                <b>テスト期間のお知らせ</b><br>
-                <b>2026/6/30まで</b>はテスト期間です。本番運用前の動作確認のため、自由にお申し込みフォームをお試しください。<br>
-                ※テスト期間中の注文はメーカーへの発注メール・未発送通知は送信されません。
-              </div>
+              <!-- テスト期間(〜2026/6/30)のお知らせは本番運用開始に伴い削除(2026-07-28)。
+                   次シーズンにテスト期間を設ける場合は日付を書き換えて復活させる。 -->
               <input type="email" id="loginEmail" placeholder="例: 〇〇@ellena.co.jp" autocomplete="email">
               <button type="button" id="loginBtn" onclick="requestLogin()">ログインURLを送信</button>
               <div id="login-msg" class="login-msg" style="display:none;"></div>
@@ -273,12 +270,8 @@
             <div class="login-card maker">
               <h4>メーカー担当者の方</h4>
               <p class="role-desc">商品を発送するメーカー担当者向け<br>自社商品の発注情報を確認できます</p>
-              <div style="background:#fffbe6;border:1px solid #ffd54f;border-radius:4px;padding:8px 12px;margin:8px 0 12px;font-size:12px;line-height:1.5;color:#7a5500;text-align:left;">
-                <b>テスト期間のお知らせ</b><br>
-                <b>2026/6/30まで</b>は店舗側がテスト注文を入力する期間です。<br>
-                ※テスト期間中の注文には<b>「TEST」バッジ</b>が表示され、メーカーへの発注通知メール・未発送通知メールは送信されません。<b>ご対応不要</b>です。<br>
-                本番運用は<b>2026/7/1以降</b>の注文から開始されます。
-              </div>
+              <!-- テスト期間(〜2026/6/30)のお知らせは本番運用開始に伴い削除(2026-07-28)。
+                   6/30以前の注文に付く「TEST」バッジ自体は残っている。 -->
               <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
               <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインURLを送信</button>
               <div id="login-msg-maker" class="login-msg" style="display:none;"></div>
@@ -1699,7 +1692,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260728a';
+  const APP_BUILD = '20260728b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
