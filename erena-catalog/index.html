@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260728c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260728d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -316,17 +316,26 @@
         <div id="home-view">
           <!-- アップデート情報（チェンジログ型）: 最新を上に表示し、旧項目は <details class="update-history"> の中へ移す。
                新しい更新を出すときは ①最新ブロックを差し替え ②直前の最新を update-history-item として履歴の先頭に移動 ③closeボタンの key を新しい日付に更新（閉じた人にも再表示される）。 -->
-          <div id="update-notice-store" class="update-notice" data-upd-key="erena_upd_20260713">
-            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_20260713')" title="閉じる">×</button>
-            <div class="update-notice-title">🆕 アップデート情報（2026/7/13）</div>
+          <!-- ⚠️ 閉じた記録のキーは店舗/メーカーで別にする（同じキーだと片方を閉じたときもう片方も消える） -->
+          <div id="update-notice-store" class="update-notice" data-upd-key="erena_upd_store_20260728">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-store','erena_upd_store_20260728')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/28）</div>
             <div class="update-notice-body">
-              <b>のしの種類に「無地」を追加しました。</b><br>
-              ・表書きのない無地のしをご希望の場合に選択いただけます。<br>
-              <b>「その他」を選ぶと、のしの表書きを自由に入力できるようになりました。</b><br>
-              ・プリセットにない表書き（例：祝御成人 など）を直接ご入力のうえお申し込みいただけます。
+              <b>電話番号を「任意」にしました。お客様から伺えていない場合は、空欄のままお申し込みいただけます。</b><br>
+              ・購入者・お届け先とも、電話番号の欄が<b>「任意」</b>になりました。店頭でのお渡し後にお客様へご確認いただけないケースがあるためです。<br>
+              ・入力される場合は<b>3つの欄すべて</b>にご入力ください（一部だけ入力された状態では送信できません）。<br>
+              ・空欄でお申し込みいただいた場合、控えや注文詳細には「<b>(未入力)</b>」と表示されます。<br>
+              ・<b>わかる場合はご入力ください。</b>配送中のお問い合わせや、不在時の運送会社からのご連絡に使われる項目です。
             </div>
             <details class="update-history">
               <summary>これまでの更新履歴</summary>
+              <div class="update-history-item">
+                <div class="update-history-date">2026/7/13</div>
+                <b>のしの種類に「無地」を追加しました。</b><br>
+                ・表書きのない無地のしをご希望の場合に選択いただけます。<br>
+                <b>「その他」を選ぶと、のしの表書きを自由に入力できるようになりました。</b><br>
+                ・プリセットにない表書き（例：祝御成人 など）を直接ご入力のうえお申し込みいただけます。
+              </div>
               <div class="update-history-item">
                 <div class="update-history-date">2026/7/7</div>
                 <b>発送完了メールが店舗にも届くようになりました。</b><br>
@@ -445,10 +454,20 @@
             <span><span style="color:#666;">ログインアカウント:</span> <b id="maker-name"></b><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
-          <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_20260724">
-            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_20260724')" title="閉じる">×</button>
-            <div class="update-notice-title">🆕 アップデート情報（2026/7/24）</div>
+          <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_maker_20260728">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_maker_20260728')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/7/28）</div>
             <div class="update-notice-body">
+              <b>電話番号が空欄のご注文が届くことがあります。伝票の電話欄は空欄のままご発送ください。</b><br>
+              ・店頭でお客様から電話番号を伺えず、お渡し後にご確認もできないケースがあるため、<b>電話番号を任意入力</b>に変更しました。<br>
+              ・注文詳細・CSVでは、電話番号のない注文は「<b>(未入力)</b>」または空欄で表示されます（CSVは空欄です）。<br>
+              ・<b>事務局へのご確認は不要です。</b>お手数ですが伝票の電話欄は空欄のまま、そのままご発送ください。<br>
+              ・運送会社の受付や配達で電話番号がないために支障が出た場合は、事務局（info@yui.gift / 03-6441-0931）へご連絡ください。個別に対応いたします。
+            </div>
+            <details class="update-history">
+              <summary>これまでの更新履歴</summary>
+              <div class="update-history-item">
+              <div class="update-history-date">2026/7/24</div>
               <b>CSVアップロードのあとに、確認画面が出るようになりました。</b><br>
               ・これまでは選択した直後に発送済みへ更新していましたが、<b>読み込んだ運送会社・追跡番号を注文ごとに表示する確認画面</b>を挟むようにしました。<br>
               ・確認画面では<b>まだ発送処理されていません</b>。内容をご確認のうえ<b>「まとめて発送処理」</b>を押してください。その場で修正・伝票の追加もできます。<br>
@@ -457,9 +476,7 @@
               ・郵便番号・番地・電話に付いていた記号がなくなり、そのまま取り込めるようになりました。列や内容は変わりません。<br>
               ・Excelでそのまま開くと番地が日付のように表示されることがありますが、値は正しく、発送には影響しません（気になる場合はExcelの「データ」→「テキストまたはCSVから」で開いてください）。<br>
               <b>追跡番号を全角で入力しても、自動で半角に直すようにしました。</b>運送会社のサイトで照会できない番号を防ぎます。
-            </div>
-            <details class="update-history">
-              <summary>これまでの更新履歴</summary>
+              </div>
               <div class="update-history-item">
                 <div class="update-history-date">2026/7/10</div>
                 <b>運送会社・追跡番号を「発送せずに保存」できるようになりました。</b><br>
@@ -1692,7 +1709,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260728c';
+  const APP_BUILD = '20260728d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
