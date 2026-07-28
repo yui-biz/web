@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260728b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260728c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1124,11 +1124,11 @@
       '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>' +
       '<dt>ご注文者</dt><dd>' + escapeHtml(o.ordererName) + (o.ordererFurigana ? ' (' + escapeHtml(o.ordererFurigana) + ')' : '') +
         '<br>〒' + escapeHtml(o.ordererZip) + ' ' + escapeHtml(o.ordererPref) + escapeHtml(o.ordererCity) + escapeHtml(o.ordererAddress) +
-        '<br>TEL: ' + escapeHtml(o.ordererTel) +
+        '<br>TEL: ' + escapeHtml(o.ordererTel || '(未入力)') +
         (o.ordererEmail ? '<br>Mail: ' + escapeHtml(o.ordererEmail) : '') + '</dd>' +
       '<dt>お届け先</dt><dd>' + escapeHtml(o.recipientName) + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') +
         '<br>〒' + escapeHtml(o.recipientZip) + ' ' + escapeHtml(o.recipientPref) + escapeHtml(o.recipientCity) + escapeHtml(o.recipientAddress) +
-        '<br>TEL: ' + escapeHtml(o.recipientTel) + '</dd>' +
+        '<br>TEL: ' + escapeHtml(o.recipientTel || '(未入力)') + '</dd>' +
       '</dl>';
     document.getElementById('order-detail-body').innerHTML = html;
 
@@ -1247,7 +1247,7 @@
     const personHtml = function(p) {
       return '<p><span>お名前:</span> <span>' + escapeHtml(p.name) + ' (' + escapeHtml(p.furigana) + ')</span></p>' +
         '<p><span>ご住所:</span> <span>〒' + escapeHtml(p.zipcode) + ' ' + escapeHtml(p.pref) + escapeHtml(p.city) + escapeHtml(p.address) + '</span></p>' +
-        '<p><span>電話番号:</span> <span>' + escapeHtml(p.tel) + '</span></p>' +
+        '<p><span>電話番号:</span> <span>' + escapeHtml(p.tel || '(未入力)') + '</span></p>' +
         (p.email ? '<p><span>メールアドレス:</span> <span>' + escapeHtml(p.email) + '</span></p>' : '');
     };
 
@@ -1692,7 +1692,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260728b';
+  const APP_BUILD = '20260728c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -3046,13 +3046,13 @@
       + '<div class="detail-section"><h4>ご注文者</h4><dl>'
       +   '<dt>お名前</dt><dd>' + escapeHtml(o.ordererName || '') + (o.ordererFurigana ? ' (' + escapeHtml(o.ordererFurigana) + ')' : '') + '</dd>'
       +   '<dt>住所</dt><dd>〒' + escapeHtml(o.ordererZip || '') + '<br>' + escapeHtml(o.ordererPref || '') + escapeHtml(o.ordererCity || '') + escapeHtml(o.ordererAddress || '') + '</dd>'
-      +   '<dt>電話</dt><dd>' + escapeHtml(o.ordererTel || '-') + '</dd>'
+      +   '<dt>電話</dt><dd>' + escapeHtml(o.ordererTel || '(未入力)') + '</dd>'
       +   (o.ordererEmail ? '<dt>メール</dt><dd>' + escapeHtml(o.ordererEmail) + '</dd>' : '')
       + '</dl></div>'
       + '<div class="detail-section"><h4>お届け先</h4><dl>'
       +   '<dt>お名前</dt><dd>' + escapeHtml(o.recipientName || '') + (o.recipientFurigana ? ' (' + escapeHtml(o.recipientFurigana) + ')' : '') + '</dd>'
       +   '<dt>住所</dt><dd>〒' + escapeHtml(o.recipientZip || '') + '<br>' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + escapeHtml(o.recipientAddress || '') + '</dd>'
-      +   '<dt>電話</dt><dd>' + escapeHtml(o.recipientTel || '-') + '</dd>'
+      +   '<dt>電話</dt><dd>' + escapeHtml(o.recipientTel || '(未入力)') + '</dd>'
       +   '<dt>希望配達日</dt><dd>' + (o.deliveryDate || '指定なし') + '</dd>'
       +   '<dt>のし</dt><dd>' + (o.noshiType || 'なし') + (o.noshiName ? ' / ' + escapeHtml(o.noshiName) : '') + '</dd>'
       + '</dl></div>'
@@ -3243,9 +3243,10 @@
     return div;
   }
 
+  // 電話番号（購入者・お届け先）は 2026-07-28 に任意化したため、この必須リストには入れない。
   function checkRequiredFields() {
-    const e = ["staffId","productName","quantity","orderer_name","orderer_furigana","orderer_zip1","orderer_zip2","orderer_pref","orderer_city","orderer_address","orderer_tel1","orderer_tel2","orderer_tel3"];
-    if (document.getElementById("shipToDifferentAddress").checked) e.push("recipient_name","recipient_furigana","recipient_zip1","recipient_zip2","recipient_pref","recipient_city","recipient_address","recipient_tel1","recipient_tel2","recipient_tel3");
+    const e = ["staffId","productName","quantity","orderer_name","orderer_furigana","orderer_zip1","orderer_zip2","orderer_pref","orderer_city","orderer_address"];
+    if (document.getElementById("shipToDifferentAddress").checked) e.push("recipient_name","recipient_furigana","recipient_zip1","recipient_zip2","recipient_pref","recipient_city","recipient_address");
     if ("specify" === document.querySelector('input[name="deliveryPref"]:checked').value) e.push("deliveryDate");
     for (const t of e) {
       const el = document.getElementById(t);
@@ -3257,7 +3258,37 @@
         return false;
       }
     }
+    return checkTelComplete();
+  }
+
+  // 電話番号は「3欄すべて入力」か「3欄すべて空欄」のどちらかに揃えてもらう。
+  // 一部だけ入力された値（例 0956--1234）は照会も折り返しもできず、
+  // 空欄として扱うと入力された数字が黙って消えるため、送信前に止める。
+  function checkTelComplete() {
+    const groups = [["orderer", "購入者電話番号"]];
+    if (document.getElementById("shipToDifferentAddress").checked) groups.push(["recipient", "お届け先電話番号"]);
+    for (const g of groups) {
+      const vals = [1, 2, 3].map(n => getValue(g[0] + "_tel" + n).trim());
+      const filled = vals.filter(v => v !== "").length;
+      if (filled > 0 && filled < 3) {
+        alert(`「${g[1]}」は3つの欄すべてを入力するか、すべて空欄にしてください。\n（お客様から伺えていない場合は3欄すべて空欄で送信できます）`);
+        const idx = vals.findIndex(v => v === "");
+        const el = document.getElementById(g[0] + "_tel" + (idx + 1));
+        if (el) el.focus();
+        return false;
+      }
+    }
     return true;
+  }
+
+  // 電話番号を「012-345-6789」に組み立てる。3欄すべて空なら空文字を返す。
+  // ⚠️ テンプレートで直に繋ぐと空欄時に "--" という値が保存されてしまうため必ずこれを通す。
+  function joinTel(prefix) {
+    const a = getValue(prefix + "_tel1").trim();
+    const b = getValue(prefix + "_tel2").trim();
+    const c = getValue(prefix + "_tel3").trim();
+    if (!a && !b && !c) return "";
+    return `${a}-${b}-${c}`;
   }
 
   function showConfirmation() {
@@ -3268,9 +3299,9 @@
       const el = document.getElementById("noshiTypeOther"); if (el) el.focus();
       return;
     }
-    const e = { name: getValue("orderer_name"), furigana: getValue("orderer_furigana"), zipcode: `${getValue("orderer_zip1")}-${getValue("orderer_zip2")}`, pref: getValue("orderer_pref"), city: getValue("orderer_city"), address: getValue("orderer_address"), tel: `${getValue("orderer_tel1")}-${getValue("orderer_tel2")}-${getValue("orderer_tel3")}`, email: getValue("orderer_email") };
+    const e = { name: getValue("orderer_name"), furigana: getValue("orderer_furigana"), zipcode: `${getValue("orderer_zip1")}-${getValue("orderer_zip2")}`, pref: getValue("orderer_pref"), city: getValue("orderer_city"), address: getValue("orderer_address"), tel: joinTel("orderer"), email: getValue("orderer_email") };
     const t = document.getElementById("shipToDifferentAddress").checked;
-    const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: `${getValue("recipient_tel1")}-${getValue("recipient_tel2")}-${getValue("recipient_tel3")}` } : e;
+    const o = t ? { name: getValue("recipient_name"), furigana: getValue("recipient_furigana"), zipcode: `${getValue("recipient_zip1")}-${getValue("recipient_zip2")}`, pref: getValue("recipient_pref"), city: getValue("recipient_city"), address: getValue("recipient_address"), tel: joinTel("recipient") } : e;
     const n = document.getElementById("product-image").src;
     // のし「その他」は表書きの自由記入内容を noshiType 本体に畳み込む（送信列を増やさない＝列ずれ防止）。
     const _noshiSel = getValue("noshiType");
@@ -3352,7 +3383,7 @@
     e.appendChild(createPrefRow("orderer_pref", "購入者都道府県"));
     e.appendChild(createFormRow("orderer_city", "購入者市区町村", "text", !0));
     e.appendChild(createFormRow("orderer_address", "購入者番地・建物名", "text", !0));
-    e.appendChild(createTelRow("orderer", "購入者電話番号"));
+    e.appendChild(createTelRow("orderer", "購入者電話番号", !1));
     e.appendChild(createFormRow("orderer_email", "購入者メールアドレス", "email", !1, "test@example.com"));
     // のし項目は常時表示（ご注文者セクション末尾）
     e.appendChild(document.createElement("hr")).className = "section-divider";
@@ -3365,7 +3396,7 @@
     t.appendChild(createPrefRow("recipient_pref", "お届け先都道府県"));
     t.appendChild(createFormRow("recipient_city", "お届け先市区町村", "text", !0));
     t.appendChild(createFormRow("recipient_address", "お届け先番地・建物名", "text", !0));
-    t.appendChild(createTelRow("recipient", "お届け先電話番号"));
+    t.appendChild(createTelRow("recipient", "お届け先電話番号", !1));
   }
 
   function toggleRecipientForm() {
@@ -3382,7 +3413,7 @@
     return `
       <p><span>お名前:</span> <span>${e.name} (${e.furigana})</span></p>
       <p><span>ご住所:</span> <span>〒${e.zipcode} ${e.pref}${e.city}${e.address}</span></p>
-      <p><span>電話番号:</span> <span>${e.tel}</span></p>
+      <p><span>電話番号:</span> <span>${e.tel || "(未入力)"}</span></p>
       ${e.email ? `<p><span>メールアドレス:</span> <span>${e.email}</span></p>` : ""}
     `;
   }
@@ -3503,19 +3534,23 @@
     return o;
   }
 
-  function createTelRow(e, t) {
+  // 電話番号の行。第3引数 req=true で必須に戻せる。
+  // 2026-07-28: 店頭でお客様から伺えず、お渡し済みのため後から確認もできないケースが
+  // 発生したため、購入者・お届け先とも「任意」にした（空欄を受け付ける）。
+  // ⚠️ 必須に戻すときは createTelRow の呼び出し側と checkRequiredFields の両方を直す。
+  function createTelRow(e, t, req) {
     const o = document.createElement("div");
     o.className = "form-row";
     const n = document.createElement("label");
     n.textContent = t;
-    n.innerHTML += ' <span class="required-tag">必須</span>';
+    n.innerHTML += req ? ' <span class="required-tag">必須</span>' : ' <span class="optional-tag">任意</span>';
     const r = document.createElement("div");
     r.className = "multi-input tel";
-    const c = document.createElement("input"); c.type = "tel"; c.id = e + "_tel1"; c.required = !0;
+    const c = document.createElement("input"); c.type = "tel"; c.id = e + "_tel1"; c.required = !!req;
     const l = document.createElement("span"); l.className = "input-separator"; l.textContent = "-";
-    const d = document.createElement("input"); d.type = "tel"; d.id = e + "_tel2"; d.required = !0;
+    const d = document.createElement("input"); d.type = "tel"; d.id = e + "_tel2"; d.required = !!req;
     const a = document.createElement("span"); a.className = "input-separator"; a.textContent = "-";
-    const i = document.createElement("input"); i.type = "tel"; i.id = e + "_tel3"; i.required = !0;
+    const i = document.createElement("input"); i.type = "tel"; i.id = e + "_tel3"; i.required = !!req;
     r.append(c, l, d, a, i);
     o.append(n, r);
     return o;
