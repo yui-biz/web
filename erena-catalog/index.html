@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260728d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260729a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -520,7 +520,7 @@
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">数量が複数で伝票が分かれる場合</h4>
               <ul style="margin:0 0 12px;padding-left:22px;">
                 <li><b>発送処理モーダル内</b>の「追跡番号をもう1件追加」で<b>複数の伝票を一度に登録</b>できます</li>
-                <li>後日追加で発送する場合は、発送済タブの<b>「伝票追加」ボタン</b>から追記可能</li>
+                <li>後日追加で発送する場合は、発送済タブの<b>「伝票編集」ボタン</b>を開き、<b>「＋ 追跡番号をもう1件追加」</b>で追記できます</li>
               </ul>
 
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">間違えた時の取消</h4>
@@ -1709,7 +1709,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260728d';
+  const APP_BUILD = '20260729a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2344,6 +2344,11 @@
   }
 
   // === 伝票追加(複数追跡番号対応) ===
+  // ⚠️ 2026-07-29 時点で、この showAddTrackingModal / submitAddTracking を呼ぶ箇所は無い（デッドコード）。
+  //    機能は「伝票編集」(showEditTrackingsModal → replaceTrackings)に統合済みで、発送済み一覧のボタンも
+  //    「伝票編集」だけになっている。ヘルプが「伝票追加ボタン」を案内したままメーカー様に渡っており、
+  //    存在しないボタンを探させていたため、ヘルプ側を実態に合わせて修正した。
+  //    サーバー側の addTracking は残してあるので、復活させる場合はボタンを足すだけでよい。
   let _addTrackingTargetIdx = null;
   function showAddTrackingModal(idx) {
     const o = (window._makerShippedCache || {})[idx];
