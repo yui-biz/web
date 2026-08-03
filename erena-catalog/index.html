@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260803a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260803b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -851,6 +851,9 @@
   // === 認証関連 ===
   const AUTH_KEY = 'erena_auth';
   const AUTH_SESSION_HOURS = 3;
+  // 🔒 ログイン時のトークンを保持し、以降のリクエストに毎回添える（gasPost が自動で付ける）。
+  // これが無いと、サーバーは「storeId / email を名乗る誰か」を本人と区別できない。
+  let currentAuthToken = '';
 
   function getStoredAuth() {
     try {
@@ -861,36 +864,52 @@
         localStorage.removeItem(AUTH_KEY);
         return null;
       }
+      currentAuthToken = auth.token || '';
       return auth;
     } catch (e) { return null; }
   }
 
-  function saveAuth(storeId, storeName, isAdmin) {
+  function saveAuth(storeId, storeName, isAdmin, token) {
+    currentAuthToken = token || '';
     localStorage.setItem(AUTH_KEY, JSON.stringify({
       role: 'store',
-      storeId, storeName, isAdmin: !!isAdmin,
+      storeId, storeName, isAdmin: !!isAdmin, token: currentAuthToken,
       expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
     }));
   }
 
-  function saveAuthMaker(email, makerName, isAdmin) {
+  function saveAuthMaker(email, makerName, isAdmin, token) {
+    currentAuthToken = token || '';
     localStorage.setItem(AUTH_KEY, JSON.stringify({
       role: 'maker',
-      email, makerName, isAdmin: !!isAdmin,
+      email, makerName, isAdmin: !!isAdmin, token: currentAuthToken,
       expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
     }));
   }
 
-  function saveAuthVendor(email, vendorName, isAdmin) {
+  function saveAuthVendor(email, vendorName, isAdmin, token) {
+    currentAuthToken = token || '';
     localStorage.setItem(AUTH_KEY, JSON.stringify({
       role: 'vendor',
-      email, vendorName, isAdmin: !!isAdmin,
+      email, vendorName, isAdmin: !!isAdmin, token: currentAuthToken,
       expiry: Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000
     }));
   }
 
   function logout() {
+    currentAuthToken = '';
     localStorage.removeItem(AUTH_KEY);
+    location.href = location.pathname;
+  }
+
+  // セッション切れ／本人確認NG時。何度も出さないよう1回だけ案内してログイン画面へ戻す
+  let _sessionExpiredShown = false;
+  function handleSessionExpired() {
+    if (_sessionExpiredShown) return;
+    _sessionExpiredShown = true;
+    currentAuthToken = '';
+    localStorage.removeItem(AUTH_KEY);
+    alert('ログインの有効期限が切れました。\nお手数ですが、メールのログインリンクからもう一度ログインしてください。');
     location.href = location.pathname;
   }
 
@@ -1216,7 +1235,7 @@
     }).then(function(r) {
       if (r && r.success) {
         setDetailMessage(r.message || '取消を承認しました', 'success');
-        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(); }, 1200);
+        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(r); }, 1200);
       } else {
         setDetailMessage('エラー: ' + ((r && r.error) || '承認に失敗しました'), 'error');
       }
@@ -1226,8 +1245,8 @@
   }
 
   // キャンセル操作後、現在のポータル(店舗/メーカー)に応じて一覧を再読み込み
-  function _reloadAfterCancelAction() {
-    if (document.body.classList.contains('maker-mode')) { loadMakerOrders(); }
+  function _reloadAfterCancelAction(r) {
+    if (document.body.classList.contains('maker-mode')) { patchMakerOrders(r && r.updatedOrders); }
     else { loadOrders(); }
   }
 
@@ -1245,7 +1264,7 @@
     }).then(function(r) {
       if (r && r.success) {
         setDetailMessage(r.message || '取消申請を却下しました', 'success');
-        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(); }, 1200);
+        setTimeout(function() { closeOrderDetail(); _reloadAfterCancelAction(r); }, 1200);
       } else {
         setDetailMessage('エラー: ' + ((r && r.error) || '却下に失敗しました'), 'error');
       }
@@ -1567,7 +1586,7 @@
         return gasPost({ action: 'verifyTokenMaker', email: mEmail, token: token })
           .then(result => {
             if (result.valid) {
-              saveAuthMaker(result.email, result.makerName, result.isAdmin);
+              saveAuthMaker(result.email, result.makerName, result.isAdmin, token);
               history.replaceState(null, '', location.pathname);
               return { role: 'maker', email: result.email, makerName: result.makerName, isAdmin: result.isAdmin };
             } else {
@@ -1588,7 +1607,7 @@
         return gasPost({ action: 'verifyTokenVendor', email: vEmail, token: token })
           .then(result => {
             if (result.valid) {
-              saveAuthVendor(result.email, result.vendorName, result.isAdmin);
+              saveAuthVendor(result.email, result.vendorName, result.isAdmin, token);
               history.replaceState(null, '', location.pathname);
               return { role: 'vendor', email: result.email, vendorName: result.vendorName, isAdmin: result.isAdmin };
             } else {
@@ -1608,7 +1627,7 @@
       return gasPost({ action: 'verifyToken', storeId: sid, token: token })
         .then(result => {
           if (result.valid) {
-            saveAuth(result.storeId, result.storeName, result.isAdmin);
+            saveAuth(result.storeId, result.storeName, result.isAdmin, token);
             history.replaceState(null, '', location.pathname + '?s=' + encodeURIComponent(result.storeId));
             return { role: 'store', storeId: result.storeId, storeName: result.storeName, isAdmin: result.isAdmin };
           } else {
@@ -1665,6 +1684,11 @@
 
   function gasPost(payload, _attempt) {
     _attempt = _attempt || 0;
+    // 🔒 ログイン済みならセッショントークンを毎回添える。サーバー側はこれで本人確認する
+    // （storeId / email を名乗るだけでは通らない）。付け忘れを防ぐためここで一括して付ける。
+    if (payload && payload.params && currentAuthToken && !payload.params.token) {
+      payload.params.token = currentAuthToken;
+    }
     return fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -1672,6 +1696,12 @@
     }).then(res => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();  // HTML(瞬断エラーページ)が来た場合もここでthrow→リトライ対象なら再試行
+    }).then(json => {
+      // 🔒 セッション切れ・本人確認NGは、各画面のエラー表示に流さず再ログインへ誘導する
+      if (json && (json.error === 'session_expired' || json.error === 'unauthorized') && currentAuthToken) {
+        handleSessionExpired();
+      }
+      return json;
     }).catch(err => {
       const retriable = payload && RETRIABLE_ACTIONS[payload.action];
       if (retriable && _attempt < 2) {
@@ -1711,7 +1741,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260803a';
+  const APP_BUILD = '20260803b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -1896,7 +1926,18 @@
     }).then(function(result) {
       document.getElementById('maker-orders-loading').style.display = 'none';
       if (result.error) { alert('読み込みエラー: ' + result.error); return; }
+      window._lastMakerResult = result;
+      renderMakerOrders(result);
+    }).catch(function(err) {
+      document.getElementById('maker-orders-loading').style.display = 'none';
+      alert('通信エラー: ' + err.message);
+    });
+  }
 
+  // ⚡ 一覧の描画。サーバーから取り直さずに手元のデータだけで描き直せるよう切り出した（2026-08-03）。
+  // 以前は発送処理・下書き保存・取消操作のたびに loadMakerOrders() を呼び直しており、
+  // 1件処理するごとに回答シート全体の読み込み（実測 約3.3秒）が走っていた。
+  function renderMakerOrders(result) {
       const orders = result.orders || [];
       const notShipped = orders.filter(function(o) { return o.shipStatus !== '発送済'; });
       // 店舗からキャンセル連絡がある注文(取消申請中/取消済)は「未発送」から切り離し、専用タブに隔離する。
@@ -2034,10 +2075,24 @@
       _renderShippedTable(shipped);
 
       switchMakerTab(_currentMakerTab);
-    }).catch(function(err) {
-      document.getElementById('maker-orders-loading').style.display = 'none';
-      alert('通信エラー: ' + err.message);
-    });
+  }
+
+  /**
+   * 発送処理などの後、サーバーに取り直さずに該当行だけ手元で更新して描き直す。
+   * サーバーが返した更新後の注文(updatedOrders)で置き換えるので、追跡番号の全角→半角変換など
+   * サーバー側の正規化がそのまま画面に反映される（手元で組み立てると表示がズレる）。
+   * 手元にデータが無いとき（別タブから開いた直後など）は通常の再読込にフォールバックする。
+   */
+  function patchMakerOrders(updatedOrders) {
+    const res = window._lastMakerResult;
+    if (!res || !Array.isArray(res.orders) || !updatedOrders || !updatedOrders.length) {
+      loadMakerOrders();
+      return;
+    }
+    const byRow = {};
+    updatedOrders.forEach(function(u) { if (u && u.rowIdx) byRow[u.rowIdx] = u; });
+    res.orders = res.orders.map(function(o) { return byRow[o.rowIdx] || o; });
+    renderMakerOrders(res);
   }
 
   function _fmtTime(ts) {
@@ -2291,7 +2346,7 @@
       if (!result.success) { _showShipMsg(result.error || 'エラーが発生しました', 'error'); return; }
       document.getElementById('ship-modal').style.display = 'none';
       _shipTargetIdx = null;
-      loadMakerOrders();
+      patchMakerOrders(result.updatedOrders);
     }).catch(function(err) {
       btn.disabled = false;
       btn.textContent = '保存だけする';
@@ -2412,7 +2467,7 @@
       btn.disabled = false; btn.textContent = '保存';
       if (result.success) {
         closeShipModal();
-        loadMakerOrders();
+        patchMakerOrders(result.updatedOrders);
       } else {
         alert('エラー: ' + (result.error || '不明'));
       }
@@ -2435,11 +2490,12 @@
     btn.disabled = true; btn.textContent = '処理中...';
     // 複数件を順次addTracking
     var i = 0;
+    var lastUpdated = null; // 最後に成功した更新結果（画面の該当行だけ差し替えるため）
     function next() {
       if (i >= inputs.length) {
         btn.disabled = false; btn.textContent = '追加登録';
         closeShipModal();
-        loadMakerOrders();
+        patchMakerOrders(lastUpdated);
         return;
       }
       var p = inputs[i++];
@@ -2452,6 +2508,7 @@
           btn.disabled = false; btn.textContent = '追加登録';
           return;
         }
+        if (result.updatedOrders) lastUpdated = result.updatedOrders;
         next();
       }).catch(function(err) {
         btn.disabled = false; btn.textContent = '追加登録';
@@ -2470,7 +2527,7 @@
       action: 'undoShipment',
       params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
     }).then(function(result) {
-      if (result.success) loadMakerOrders();
+      if (result.success) patchMakerOrders(result.updatedOrders);
       else alert('エラー: ' + (result.error || '不明'));
     }).catch(function(err) { alert('通信エラー: ' + err.message); });
   }
@@ -2484,7 +2541,7 @@
       action: 'undoWebedi',
       params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
     }).then(function(result) {
-      if (result.success) loadMakerOrders();
+      if (result.success) patchMakerOrders(result.updatedOrders);
       else alert('エラー: ' + (result.error || '不明'));
     }).catch(function(err) { alert('通信エラー: ' + err.message); });
   }
@@ -2692,7 +2749,7 @@
       let msg = result.succeeded + '件の発送処理が完了しました。確認メールをお送りしました。';
       if (result.failed > 0) msg += '\n（' + result.failed + '件は処理できませんでした）';
       alert(msg);
-      loadMakerOrders();
+      patchMakerOrders(result.updatedOrders);
     }).catch(function(err) {
       btn.disabled = false;
       btn.textContent = 'まとめて発送処理';
@@ -2730,12 +2787,13 @@
         return;
       }
       var i = 0;
+      var lastUpdated = result.updatedOrders || null; // 追加分が無ければ発送処理の結果をそのまま使う
       function addNext() {
         if (i >= rest.length) {
           btn.textContent = '発送済みにする';
           document.getElementById('ship-modal').style.display = 'none';
           _shipTargetIdx = null;
-          loadMakerOrders();
+          patchMakerOrders(lastUpdated);
           return;
         }
         var p = rest[i++];
@@ -2744,6 +2802,7 @@
           params: { rowIdx: o.rowIdx, carrier: p.carrier, trackingNo: p.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
         }).then(function(r) {
           if (!r.success) { alert('追加伝票エラー: ' + r.error); }
+          else if (r.updatedOrders) { lastUpdated = r.updatedOrders; }
           addNext();
         }).catch(function(e) { alert('通信エラー: ' + e.message); addNext(); });
       }
@@ -2785,7 +2844,7 @@
       } else {
         alert('エラー: ' + (result.error || '不明なエラー'));
       }
-      loadMakerOrders();
+      patchMakerOrders(result.updatedOrders);
     }).catch(function(err) {
       alert('通信エラー: ' + err.message);
     });
