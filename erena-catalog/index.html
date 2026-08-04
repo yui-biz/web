@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260803c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260804a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -574,7 +574,8 @@
           <div id="maker-unshipped-wrap" style="display:none;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkShipSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分を発送処理</button>
-              <button onclick="downloadUnshippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
+              <button onclick="downloadUnshippedCsv(false)" title="そのままの値で出力します。発送システムに取り込む方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
+              <button onclick="downloadUnshippedCsv(true)" title="Excelで開いても番地が「9月7日」のような日付に化けません。Excelで開いて作業する方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">Excelで開く用CSV</button>
               <button type="button" onclick="document.getElementById('ship-csv-upload').click()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVアップロードで一括発送</button>
               <input type="file" id="ship-csv-upload" accept=".csv" onchange="uploadShipmentCsv(this)" style="display:none;">
               <label style="font-size:12px;color:#555;white-space:nowrap;">伝票:
@@ -589,10 +590,12 @@
             <div id="csv-help-box" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.7;">
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
               <ol style="margin:0;padding-left:20px;">
-                <li><b>「CSVダウンロード」</b>をクリック → 未発送注文一覧のCSVが保存されます
+                <li><b>「CSVダウンロード」</b>または<b>「Excelで開く用CSV」</b>をクリック → 未発送注文一覧のCSVが保存されます
                   <ul><li><b>チェックを入れた注文だけを出せます。</b>チェックが1つも入っていないときは、いま表示されている注文（絞り込み後）がすべて出ます</li></ul>
                   <ul style="margin:4px 0;padding-left:20px;color:#555;">
-                    <li>Excelでそのまま開くと<b>番地が日付のように表示される</b>ことがありますが、値は正しく、取り込みや発送には影響しません。気になる場合はExcelの<b>「データ」→「テキストまたはCSVから」</b>で開いてください</li>
+                    <li><b>Excelで開いて作業する方は「Excelで開く用CSV」</b>をお使いください。番地の <code>9-7</code> が <b>9月7日</b> のような日付に化けるのを防ぎます（郵便番号・電話番号・追跡番号も同様に文字列のまま保てます）</li>
+                    <li><b>発送システムに取り込む方は「CSVダウンロード」</b>のままでお願いします。こちらは従来どおり、そのままの値だけが入ります</li>
+                    <li>どちらで保存しても<b>「CSVアップロードで一括発送」に戻せます</b></li>
                   </ul>
                 </li>
                 <li>Excel等で開いて、<b>「運送会社」列</b>と<b>「追跡番号」列</b>に値を入力します
@@ -665,7 +668,8 @@
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
-              <button onclick="downloadShippedCsv()" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
+              <button onclick="downloadShippedCsv(false)" title="そのままの値で出力します。発送システムに取り込む方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
+              <button onclick="downloadShippedCsv(true)" title="Excelで開いても番地が「9月7日」のような日付に化けません。Excelで開いて作業する方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">Excelで開く用CSV</button>
             </div>
             <div id="maker-shipped-empty" style="display:none;text-align:center;padding:40px;color:#999;">発送済みの発注はまだありません</div>
             <div style="overflow-x:auto;">
@@ -1742,7 +1746,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260803c';
+  const APP_BUILD = '20260804a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2869,6 +2873,31 @@
     return String(v == null ? '' : v).trim();
   }
 
+  // ="値" で囲って Excel に強制的に文字列として読ませる（2026-08-04）。
+  // 2026-07-24 に外したのはこの形。ただし外した結果、Excelで開くメーカーの側で
+  // 番地 9-7 が「9月7日」になる状態が続いていた（S列の指摘）。
+  // 実データ737件の監査では、お届け先番地の 368件(49.9%) が数字だけの番地で日付化の
+  // 対象になりうる（確実に日付になる 9-7 形だけでも37件）。特定のメーカーに偏っておらず
+  // 24社すべてに散っていたため、「Excelで開く人」と「システムに取り込む人」の
+  // どちらかを切り捨てる選択はやめ、CSVを2種類出して選べるようにした。
+  //   素の値  … 従来どおり。発送システムに取り込む人向け（既定・挙動不変）
+  //   ="..." … Excelで開いて作業する人向け
+  // アップロード側は _stripCsvArmor() が ="..." を剥がすので、どちらで落としても
+  // 「CSVアップロードで一括発送」に戻せる。
+  // ⚠️ ここで " をエスケープしてはいけない。CSVの引用は行を組み立てる側が一括でやるので、
+  //    両方でエスケープすると二重になり、アップロードで元の値に戻らなくなる（往復テストで検出）。
+  // 空欄は ="" にせず空欄のまま返す（Excelで空セルのままにするため）。
+  function _csvArmor(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (s === '') return '';
+    return '="' + s + '"';
+  }
+
+  /** armor=true なら ="..." で囲む。false（既定）なら素の値。 */
+  function _csvCell(v, armor) {
+    return armor ? _csvArmor(v) : _csvText(v);
+  }
+
   /**
    * CSVに出す対象を決める（2026-08-03）。
    * それまでは常にキャッシュを丸ごと出しており、チェックを入れても絞り込んでも
@@ -2889,7 +2918,7 @@
     return idxs.map(function(i) { return (cache || {})[i]; }).filter(Boolean);
   }
 
-  function downloadUnshippedCsv() {
+  function downloadUnshippedCsv(armor) {
     const orders = _csvTargets(window._makerOrderCache, '.unshipped-check', '#maker-orders-table');
     if (orders.length === 0) { alert('出力する注文がありません。'); return; }
     const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
@@ -2904,19 +2933,19 @@
         o.quantity || '',
         o.ordererName || '',
         o.ordererFurigana || '',
-        _csvText(o.ordererZip),
+        _csvCell(o.ordererZip, armor),
         o.ordererPref || '',
         o.ordererCity || '',
-        _csvText(o.ordererAddress),
-        _csvText(o.ordererTel),
+        _csvCell(o.ordererAddress, armor),
+        _csvCell(o.ordererTel, armor),
         o.ordererEmail || '',
         o.recipientName || '',
         o.recipientFurigana || '',
-        _csvText(o.recipientZip),
+        _csvCell(o.recipientZip, armor),
         o.recipientPref || '',
         o.recipientCity || '',
-        _csvText(o.recipientAddress),
-        _csvText(o.recipientTel),
+        _csvCell(o.recipientAddress, armor),
+        _csvCell(o.recipientTel, armor),
         o.store || '',
         o.deliveryDate || '',
         o.noshiType || 'なし',
@@ -2936,13 +2965,13 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = '未発送注文_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.download = '未発送注文_' + new Date().toISOString().slice(0,10) + (armor ? '_Excel用' : '') + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   }
 
   // === 発送済CSVダウンロード(エレナアカウント/管理者専用) ===
-  function downloadShippedCsv() {
+  function downloadShippedCsv(armor) {
     const orders = _csvTargets(window._makerShippedCache, '.shipped-check', '#maker-shipped-table');
     if (orders.length === 0) { alert('出力する注文がありません。'); return; }
     const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量',
@@ -2957,25 +2986,27 @@
         o.quantity || '',
         o.ordererName || '',
         o.ordererFurigana || '',
-        _csvText(o.ordererZip),
+        _csvCell(o.ordererZip, armor),
         o.ordererPref || '',
         o.ordererCity || '',
-        _csvText(o.ordererAddress),
-        _csvText(o.ordererTel),
+        _csvCell(o.ordererAddress, armor),
+        _csvCell(o.ordererTel, armor),
         o.ordererEmail || '',
         o.recipientName || '',
         o.recipientFurigana || '',
-        _csvText(o.recipientZip),
+        _csvCell(o.recipientZip, armor),
         o.recipientPref || '',
         o.recipientCity || '',
-        _csvText(o.recipientAddress),
-        _csvText(o.recipientTel),
+        _csvCell(o.recipientAddress, armor),
+        _csvCell(o.recipientTel, armor),
         o.deliveryDate || '',
         o.noshiType || 'なし',
         o.noshiName || '',
         o.store || '',
         o.carrier || '',
-        o.trackingNo || '',
+        // 追跡番号は12桁前後の数字。Excelは桁が多いと指数表記(1.23457E+11)にしたり
+        // 先頭の0を落としたりするので、Excel用では囲う。
+        _csvCell(o.trackingNo, armor),
         o.shippedAt || '',
         o.webediStatus || '',
         o.webediAt || ''
@@ -2992,7 +3023,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = '発送済注文_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.download = '発送済注文_' + new Date().toISOString().slice(0,10) + (armor ? '_Excel用' : '') + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   }
