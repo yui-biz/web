@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260804a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260804b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -454,18 +454,27 @@
             <span><span style="color:#666;">ログインアカウント:</span> <b id="maker-name"></b><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
           </div>
-          <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_maker_20260728">
-            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_maker_20260728')" title="閉じる">×</button>
-            <div class="update-notice-title">🆕 アップデート情報（2026/7/28）</div>
+          <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_maker_20260804">
+            <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_maker_20260804')" title="閉じる">×</button>
+            <div class="update-notice-title">🆕 アップデート情報（2026/8/4）</div>
             <div class="update-notice-body">
-              <b>電話番号が空欄のご注文が届くことがあります。伝票の電話欄は空欄のままご発送ください。</b><br>
-              ・店頭でお客様から電話番号を伺えず、お渡し後にご確認もできないケースがあるため、<b>電話番号を任意入力</b>に変更しました。<br>
-              ・注文詳細・CSVでは、電話番号のない注文は「<b>(未入力)</b>」または空欄で表示されます（CSVは空欄です）。<br>
-              ・<b>事務局へのご確認は不要です。</b>お手数ですが伝票の電話欄は空欄のまま、そのままご発送ください。<br>
-              ・運送会社の受付や配達で電話番号がないために支障が出た場合は、事務局（info@yui.gift / 03-6441-0931）へご連絡ください。個別に対応いたします。
+              <b>CSVを「Excelで開く用」でも保存できるようになりました。番地が日付に化けるのを防げます。</b><br>
+              ・Excelで開くと<b>番地の「9-7」が「9月7日」のように表示される</b>、とご指摘をいただきました。CSVの中身は正しく <code>9-7</code> のままで、<b>Excelが開くときに日付として読んでしまう</b>ことが原因です。<br>
+              ・そこで未発送・発送済の両方に<b>「Excelで開く用CSV」</b>ボタンを追加しました。こちらで保存すると、<b>番地・郵便番号・電話番号・追跡番号が文字列のまま</b>開きます。<br>
+              ・<b>CSVを発送システムに取り込まれている方は、これまでどおり左の「CSVダウンロード」をお使いください。</b>出力される内容はこれまでと変わっていません。<br>
+              ・どちらで保存しても<b>「CSVアップロードで一括発送」に戻せます。</b><br>
+              ・すでに発送された分の伝票に影響はありません。<b>お手元の作業を変えていただく必要はなく</b>、Excelで開いて作業される場合のみ新しいボタンをお使いください。
             </div>
             <details class="update-history">
               <summary>これまでの更新履歴</summary>
+              <div class="update-history-item">
+                <div class="update-history-date">2026/7/28</div>
+                <b>電話番号が空欄のご注文が届くことがあります。伝票の電話欄は空欄のままご発送ください。</b><br>
+                ・店頭でお客様から電話番号を伺えず、お渡し後にご確認もできないケースがあるため、<b>電話番号を任意入力</b>に変更しました。<br>
+                ・注文詳細・CSVでは、電話番号のない注文は「<b>(未入力)</b>」または空欄で表示されます（CSVは空欄です）。<br>
+                ・<b>事務局へのご確認は不要です。</b>お手数ですが伝票の電話欄は空欄のまま、そのままご発送ください。<br>
+                ・運送会社の受付や配達で電話番号がないために支障が出た場合は、事務局（info@yui.gift / 03-6441-0931）へご連絡ください。個別に対応いたします。
+              </div>
               <div class="update-history-item">
               <div class="update-history-date">2026/7/24</div>
               <b>CSVアップロードのあとに、確認画面が出るようになりました。</b><br>
@@ -1746,7 +1755,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260804a';
+  const APP_BUILD = '20260804b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
