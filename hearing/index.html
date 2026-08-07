@@ -228,10 +228,17 @@ function init() {
     document.getElementById('f-venue').closest('.field').classList.add('hidden');
   }
   // 納品
-  if (FD.deliveryType === '式場指定（住所あり）') {
+  // 式場マスタに固定値が入っている項目は聞かない。聞くと、お客様の回答が
+  // 式場の指定を上書きしてしまう（サーバー側は回答が空のときだけ固定値を補うため）。2026-08-07
+  var fixed = FD.deliveryFixed || {};
+  var hidePlace = FD.deliveryType === '式場指定（住所あり）'
+    || FD.deliveryType === '式場指定（住所未定）' || !!fixed.place;
+  var hideDateTime = FD.deliveryType === '式場指定（住所あり）' || !!fixed.dateTime;
+  if (hidePlace && hideDateTime) {
     document.getElementById('f-delivery-fields').classList.add('hidden');
-  } else if (FD.deliveryType === '式場指定（住所未定）') {
-    document.getElementById('f-delivPlace').closest('.field').classList.add('hidden');
+  } else {
+    if (hidePlace) document.getElementById('f-delivPlace').closest('.field').classList.add('hidden');
+    if (hideDateTime) document.getElementById('f-delivDate').closest('.row').classList.add('hidden');
   }
   renderGroups();
 }
