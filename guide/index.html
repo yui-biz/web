@@ -210,9 +210,12 @@ function setLoadingText(msg) {
 //    （2026-08-12 saito 報告）。実測でサーバの応答は5〜120秒とばらつくので、
 //    ⭐ 経過秒を出して【止まっていないこと】が分かるようにする。
 var _guideWaitTimer = null;
+var _guideWaitFrom = null;   // 読み込みを始めた時刻。やり直しても戻さない
 function startWaitCounter() {
-  stopWaitCounter();
-  var t0 = Date.now();
+  // 🚨 やり直しのたびに作り直していたので、画面の秒数が戻って見えた（2026-08-12 saito 指摘）。
+  //    利用者が知りたいのは「開き始めてから何秒か」なので、1回の読み込みで通しで数える。
+  if (_guideWaitTimer) return;
+  var t0 = _guideWaitFrom || (_guideWaitFrom = Date.now());
   _guideWaitTimer = setInterval(function() {
     var sec = Math.floor((Date.now() - t0) / 1000);
     if (sec >= GUIDE_SLOW_MS / 1000) {
@@ -222,6 +225,7 @@ function startWaitCounter() {
 }
 function stopWaitCounter() {
   if (_guideWaitTimer) { clearInterval(_guideWaitTimer); _guideWaitTimer = null; }
+  _guideWaitFrom = null;
 }
 
 function fetchFromGas(customerId, cacheKey, showResult, attempt) {

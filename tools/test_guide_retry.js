@@ -46,7 +46,7 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(decls+'\nvar _guideWaitTimer=null;\n'+cut('setLoadingText')+'\n'+cut('startWaitCounter')
+  vm.runInContext(decls+'\nvar _guideWaitTimer=null;var _guideWaitFrom=null;\n'+cut('setLoadingText')+'\n'+cut('startWaitCounter')
     +'\n'+cut('stopWaitCounter')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
   ctx.fetchFromGas('C1','guide_C1',true,0);
   return new Promise(r=>setImmediate(()=>setImmediate(()=>setImmediate(()=>
