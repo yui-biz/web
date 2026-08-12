@@ -195,7 +195,10 @@ var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 //   お客様には見えない／DevTools を開かなくても報告できる
 var GUIDE_DEBUG = /[?&]debug=1(&|$)/.test(location.search);
 var GUIDE_MAX_RETRY = 1;          // 初回＋やり直し1回まで
-var GUIDE_TIMEOUT_MS = 45000;     // 1回あたりの上限。GASは全行読むので短くしすぎない
+// 🚨 45秒にしていたら【動いている呼び出しを殺していた】。実測でサーバの初回応答は
+//    44〜62秒かかっていた（2026-08-12）。サーバ側を速くしたが、余裕を持って90秒にする。
+//    上限は「固まったまま永久に待たない」ためのもので、遅いものを切るためではない。
+var GUIDE_TIMEOUT_MS = 90000;     // 1回あたりの上限
 var GUIDE_SLOW_MS = 8000;         // これを過ぎたら「時間がかかっています」と出す
 
 function setLoadingText(msg) {
