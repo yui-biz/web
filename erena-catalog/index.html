@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812e"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812f"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1705,23 +1705,114 @@
   // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
   const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1 };
 
-  // ===== 更新系の再送（2026-08-12） =====
+  // ===== 更新系: 答えを取り落としたら【確認してから】判断する（2026-08-12） =====
   // 🚨 GASの応答は script.googleusercontent.com へ302で飛ばされ、その先が高頻度で404を返す。
-  //    実測（同日・同エンドポイント）: 32回中18回が404。時間帯で成功率 17%〜60% と揺れる。
-  //    読み込み系は上の RETRIABLE_ACTIONS で吸収できていたので「一覧は普通に見える」。
-  //    一方この下の更新系は二重登録を恐れて1発勝負にしてあり、発送処理・計上が半分通らない
-  //    状態だった（白雪食品様「押しても反映されない」/ 2026-08-12）。
+  //    実測（同エンドポイント・サーバー同士のcurl）: 32回中18回が404。時間帯で成功率17%〜60%。
+  //    読み込み系は上の RETRIABLE_ACTIONS の再送で吸収できるので「一覧は普通に見える」。
+  //    更新系は二重登録を恐れて1発勝負にしてあり、発送処理・計上が半分通らなかった
+  //    （白雪食品様「押しても反映されない」/ 2026-08-12。全メーカー・全店舗に影響していた）。
   //
-  // ⭐ 再送してよいのは【2回目がサーバー側で必ず弾かれる】action だけ。根拠を1つずつ確認した:
-  //    updateShipment      … row[23]==='発送済' で「すでに発送済みです」
-  //    updateWebedi        … row[27]==='計上済' で「すでに計上済みです」
-  //    undoShipment/undoWebedi … 発送済/計上済でなければ弾く
-  //    replaceTrackings    … 伝票を【置換】するので同じ値を2回書いても結果は同じ
-  //    updateShipmentBatch/updateWebediBatch … 行ごとに上と同じガードがあり、済みの行は failedItems へ
-  // 🚨🚨 addTracking は【追記】なので絶対に入れない。2回通ると伝票が重複して二重発送になる。
-  // 🚨 再送するのは【HTTPレベルで落ちたとき】だけ。サーバーがJSONで success:false を返したのは
-  //    正当な拒否なので、それを再送でねじ伏せない（下の gasPost の catch でのみ再送している）。
-  const IDEMPOTENT_WRITE_ACTIONS = {
+  // ⭐⭐ 決め手は【404が応答側で起きている】こと。GASは302を返す時点で doPost を実行し終えており、
+  //    302の行き先は「実行結果の置き場」でしかない。つまり404を引いたときは
+  //    【書き込みは成功していて、答えだけを受け取り損ねている】ことが多い。
+  //    だから正しい対処は「もう一度実行する」ではなく【どうなったか読みに行く】。
+  //
+  //    ①更新を1回投げる ②答えを落としたら注文を読み直す（読み込みは元から再送できる）
+  //    ③意図した状態になっていれば成功 ④なっていなければ改めて投げる
+  //
+  // ⭐ 再実行を伴わないので、追記系(addTracking)にも安全に使える。
+  //    ④に進むのは「反映されていない」と【確かめられたとき】だけなので、二重にならない。
+  // 🚨 読み直しにも失敗して判定できなかったときだけ話が別。そのときに投げ直してよいのは
+  //    「2回目をサーバー側が必ず弾く」action に限る（下の SAFE_TO_RESEND）。
+  //    addTracking は【追記】なのでここに入れない＝確認が取れないまま投げ直さない。
+  // 🚨 投げ直すのは【HTTPレベルで落ちたとき】だけ。サーバーがJSONで success:false を返したのは
+  //    正当な拒否なので、それを再送でねじ伏せない。
+
+  /** 追跡番号は全角/半角・ハイフンの揺れがあるので【数字だけ】で比べる。
+   *  ⚠️ サーバーの normalizeTrackingNo_ を写すとズレるので写さない。標準の NFKC だけ使う。
+   *  🚨 NFKC を掛けないと、利用者が全角で入力した番号の数字が1つも残らず「未反映」と誤判定し、
+   *     追記系を投げ直して伝票を重複させる（テストで捕まえた）。 */
+  function _digits(s) {
+    let t = String(s == null ? '' : s);
+    if (t.normalize) t = t.normalize('NFKC');
+    return t.replace(/[^0-9]/g, '');
+  }
+  function _trackingParts(s) { return String(s == null ? '' : s).split(',').map(_digits).filter(Boolean); }
+  function _hasTracking(actual, wanted) {
+    const w = _digits(wanted);
+    return !!w && _trackingParts(actual).indexOf(w) >= 0;
+  }
+  function _sameTrackingSet(actual, items) {
+    const a = _trackingParts(actual).slice().sort();
+    const b = (items || []).map(function(p) { return _digits(p.trackingNo); }).filter(Boolean).sort();
+    return a.length > 0 && a.length === b.length && a.every(function(v, i) { return v === b[i]; });
+  }
+
+  // 一括は「全部そろっているか」だけ見る。揃っていなければ丸ごと投げ直してよい
+  // （行ごとにサーバー側のガードがあり、済みの行は failedItems に落ちるので二重にならない）。
+  function _batchConfirm(items, byRow, isDone) {
+    const list = items || [];
+    if (list.length === 0) return null;
+    for (let i = 0; i < list.length; i++) {
+      const o = byRow[list[i].rowIdx];
+      if (!o) return null;          // 読めなかった行がある＝判定しない
+      if (!isDone(o, list[i])) return false;
+    }
+    return true;
+  }
+
+  // action ごとの「意図した状態になったか」。true=反映済み / false=反映されていない / null=判定できない
+  const WRITE_CONFIRM = {
+    updateShipment: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      if (!_digits(p.trackingNo)) return null;   // 比べる材料が無い＝判定しない
+      // ⚠️ 発送済かどうかだけでは、他の人が別の伝票で発送した場合と見分けられない。
+      //    自分が送った追跡番号が入っていることまで確かめる。
+      return o.shipStatus === '発送済' && _hasTracking(o.trackingNo, p.trackingNo);
+    },
+    addTracking: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      if (!_digits(p.trackingNo)) return null;
+      return _hasTracking(o.trackingNo, p.trackingNo);
+    },
+    replaceTrackings: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      const items = p.items || [];
+      if (items.length === 0 || items.some(function(it) { return !_digits(it.trackingNo); })) return null;
+      return _sameTrackingSet(o.trackingNo, items);
+    },
+    updateWebedi: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.webediStatus === '計上済';
+    },
+    undoShipment: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.shipStatus !== '発送済';
+    },
+    undoWebedi: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.webediStatus !== '計上済';
+    },
+    updateShipmentBatch: function(p, byRow) {
+      const items = p.items || [];
+      if (items.some(function(it) { return !_digits(it.trackingNo); })) return null;
+      return _batchConfirm(items, byRow, function(o, it) {
+        return o.shipStatus === '発送済' && _hasTracking(o.trackingNo, it.trackingNo);
+      });
+    },
+    updateWebediBatch: function(p, byRow) {
+      return _batchConfirm(p.items, byRow, function(o) { return o.webediStatus === '計上済'; });
+    }
+  };
+
+  // 読み直せず【判定できなかった】ときに限り、投げ直してよいもの。根拠はサーバー実装:
+  //   updateShipment … row[23]==='発送済' で「すでに発送済みです」
+  //   updateWebedi   … row[27]==='計上済' で「すでに計上済みです」
+  //   undoShipment/undoWebedi … 発送済/計上済でなければ弾く
+  //   replaceTrackings … 伝票を【置換】するので同じ値を2回書いても結果は同じ
+  //   updateShipmentBatch/updateWebediBatch … 行ごとに上と同じガード
+  // 🚨🚨 addTracking は【追記】なので絶対に入れない。
+  const SAFE_TO_RESEND = {
     updateShipment: 1, updateWebedi: 1, undoShipment: 1, undoWebedi: 1,
     replaceTrackings: 1, updateShipmentBatch: 1, updateWebediBatch: 1
   };
@@ -1736,10 +1827,8 @@
   };
   // 一括処理のときは行ごとの failedItems に入る（文言はサーバー側の原文どおり）
   const BATCH_ALREADY_DONE = { '発送済み済み': 1, '計上済み': 1 };
-  // 更新系は落ちやすいので読み込み系より粘る。ただし回数を増やしても取りこぼしは残るため、
-  // 本筋は中継（Worker）を挟んで404そのものを無くすこと。
-  const MAX_RETRY_READ = 2;
-  const MAX_RETRY_WRITE = 5;
+  const MAX_RETRY_READ = 2;    // 読み込み系: 初回 + 2回
+  const WRITE_ROUNDS = 6;      // 更新系: 「投げる → 読んで確かめる」を最大6巡
 
   /**
    * 再送した後の応答を読み替える。
@@ -1771,8 +1860,8 @@
     return json;
   }
 
-  function gasPost(payload, _attempt) {
-    _attempt = _attempt || 0;
+  /** 1回だけ投げる。再送も確認もしない純粋な往復。 */
+  function _gasPostOnce(payload) {
     // 🔒 ログイン済みならセッショントークンを毎回添える。サーバー側はこれで本人確認する
     // （storeId / email を名乗るだけでは通らない）。付け忘れを防ぐためここで一括して付ける。
     if (payload && payload.params && currentAuthToken && !payload.params.token) {
@@ -1784,19 +1873,90 @@
       body: JSON.stringify(payload)
     }).then(res => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();  // HTML(瞬断エラーページ)が来た場合もここでthrow→リトライ対象なら再試行
+      return res.json();  // HTML(瞬断エラーページ)が来た場合もここでthrow
     }).then(json => {
       // 🔒 セッション切れ・本人確認NGは、各画面のエラー表示に流さず再ログインへ誘導する
       if (json && (json.error === 'session_expired' || json.error === 'unauthorized') && currentAuthToken) {
         handleSessionExpired();
       }
-      // 再送した回だけ「すでに済んでいます」を成功として読み替える（初回は読み替えない）
-      return _attempt > 0 ? _readAlreadyDoneAsSuccess(json) : json;
-    }).catch(err => {
-      const isWrite = !!(payload && IDEMPOTENT_WRITE_ACTIONS[payload.action]);
-      const retriable = isWrite || !!(payload && RETRIABLE_ACTIONS[payload.action]);
-      const limit = isWrite ? MAX_RETRY_WRITE : MAX_RETRY_READ;
-      if (retriable && _attempt < limit) {
+      return json;
+    });
+  }
+
+  /** 確認のために注文を読み直す。読めなければ null（＝判定しない）。 */
+  function _readOrdersForConfirm() {
+    if (!currentMakerEmail) return Promise.resolve(null);
+    return gasPost({ action: 'getOrdersForMaker', params: { email: currentMakerEmail, isAdmin: currentIsAdmin } })
+      .then(function(r) {
+        if (!r || !Array.isArray(r.orders)) return null;
+        const byRow = {};
+        r.orders.forEach(function(o) { if (o && o.rowIdx) byRow[o.rowIdx] = o; });
+        return { byRow: byRow, orders: r.orders };
+      })
+      .catch(function() { return null; });
+  }
+
+  /**
+   * 読み直して「反映済み」と分かったときに、呼び出し側が期待する形の成功応答を組み立てる。
+   * ⭐ 読み直した注文をそのまま updatedOrders に載せる＝画面はこれで最新に描き直せる
+   *    （もう一度読ませない）。
+   */
+  function _successFromRead(payload, state) {
+    const p = payload.params || {};
+    const o = state.byRow[p.rowIdx];
+    const out = { success: true, _confirmedByRead: true, updatedOrders: state.orders };
+    if (o) {
+      out.carrier = o.carrier || '';
+      out.trackingNo = o.trackingNo || '';
+      out.webediAt = o.webediAt || '';
+    }
+    if (payload.action === 'updateShipmentBatch' || payload.action === 'updateWebediBatch') {
+      out.succeeded = (p.items || []).length;
+      out.failed = 0;
+      out.failedItems = [];
+    }
+    return out;
+  }
+
+  /** 更新系: 投げる → 落としたら読んで確かめる → 未反映なら改めて投げる。 */
+  function _sendWrite(payload) {
+    const action = payload.action;
+    let round = 0;
+    let lastErr = null;
+
+    function once() {
+      return _gasPostOnce(payload)
+        // 投げ直した回だけ「すでに済んでいます」を成功として読み替える（初回は読み替えない）
+        .then(function(json) { return round > 0 ? _readAlreadyDoneAsSuccess(json) : json; })
+        .catch(function(err) {
+          if (err && err._unconfirmed) throw err;   // 下で自分が投げたものは素通しする
+          lastErr = err;
+          return _readOrdersForConfirm().then(function(state) {
+            const verdict = state ? WRITE_CONFIRM[action](payload.params || {}, state.byRow) : null;
+            if (verdict === true) return _successFromRead(payload, state);   // 実は通っていた
+            // verdict === false … 反映されていないと【確かめた】ので、投げ直しても二重にならない
+            // verdict === null  … 判定できない。ここで投げ直してよいのは弾かれる側だけ
+            if (verdict === null && !SAFE_TO_RESEND[action]) {
+              const e = new Error('通信が不安定で、処理できたかどうかを確認できませんでした。'
+                + '二重に登録しないため、ここでは何もしていません。画面を再読み込みしてご確認ください。');
+              e._unconfirmed = true;
+              throw e;
+            }
+            if (round >= WRITE_ROUNDS) throw lastErr;
+            round++;
+            return new Promise(function(r) { setTimeout(r, 600 * round); }).then(once);
+          });
+        });
+    }
+    return once();
+  }
+
+  function gasPost(payload, _attempt) {
+    // 更新系は「投げる→確認する」の専用経路へ（入口でだけ振り分ける）
+    if (!_attempt && payload && WRITE_CONFIRM[payload.action]) return _sendWrite(payload);
+    _attempt = _attempt || 0;
+    return _gasPostOnce(payload).catch(err => {
+      if (RETRIABLE_ACTIONS[payload && payload.action] && _attempt < MAX_RETRY_READ) {
         return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
           .then(() => gasPost(payload, _attempt + 1));  // 600ms刻みのバックオフ
       }
@@ -1833,7 +1993,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812e';
+  const APP_BUILD = '20260812f';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
