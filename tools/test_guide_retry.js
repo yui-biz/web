@@ -22,13 +22,14 @@ const decls=['GUIDE_MAX_RETRY','GUIDE_TIMEOUT_MS','GUIDE_SLOW_MS']
 
 function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
   let calls=0, appHtml='', rendered=null, notFound=false;
-  const loadingTexts=[];
+  const loadingTexts=[]; const warned=[];
   const ctx={
-    console, JSON, Date, String, AbortController,
+    console:{log:console.log, warn:(m)=>{warned.push(String(m));}},
+    JSON, Date, String, AbortController,
     // 待ち時間は詰める。ただし「上限で中断」のタイマーは走らせない（即発火すると全部中断になる）
     setTimeout:(f,ms)=>{ if(ms>=10000) return 0; f(); return 0; },
     clearTimeout:()=>{},
-    GAS_API:'https://example.test/exec',
+    GAS_API:'https://example.test/exec', GUIDE_DEBUG:false,
     localStorage:{setItem(){},getItem(){return null;}},
     location:{reload(){ctx._reloaded=true;}},
     document:{
@@ -47,7 +48,7 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
   vm.runInContext(decls+'\n'+cut('setLoadingText')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
   ctx.fetchFromGas('C1','guide_C1',true,0);
   return new Promise(r=>setImmediate(()=>setImmediate(()=>setImmediate(()=>
-    r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded, loadingTexts})))));
+    r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded, loadingTexts, warned})))));
 }
 
 const GOOD={text:JSON.stringify({pages:[{title:'案内',sections:[]}]})};
@@ -55,6 +56,9 @@ const GOOD={text:JSON.stringify({pages:[{title:'案内',sections:[]}]})};
 (async()=>{
 console.log('\n== 1回目だけ失敗 → 自動でやり直して表示できる（saito の症状）==');
 let r=await run(['throw', GOOD]);
+ok('やり直し中の文言に不安にさせる言葉が無い',
+  !r.loadingTexts.some(t=>/接続できませんでした|失敗|エラー/.test(t)), JSON.stringify(r.loadingTexts));
+ok('原因は console に出す（画面には出さない）', r.warned.some(w=>/取得に失敗/.test(w)), JSON.stringify(r.warned));
 ok('2回呼んでいる', r.calls===2, '呼び出し'+r.calls+'回');
 ok('最終的に表示できた', !!r.rendered);
 ok('エラー画面を出していない', !/読み込めませんでした/.test(r.appHtml), r.appHtml.slice(0,80));
@@ -74,8 +78,9 @@ ok('「もう一度読み込む」ボタンを出す', /もう一度読み込む
 ok('押すと再読み込みする', /location\.reload\(\)/.test(r.appHtml));
 ok('原因の当たりを伝える', /通信が不安定/.test(r.appHtml));
 ok('技術的な理由も小さく添える（報告を受けて切り分けられる）', /ネットワーク/.test(r.appHtml), r.appHtml.slice(-160));
-ok('やり直す前に「もう一度試しています」と伝える＝黙らない',
-  r.loadingTexts.some(t=>/もう一度試しています/.test(t)), JSON.stringify(r.loadingTexts));
+// 🚨 最終的に開けるページで「接続できませんでした」と出すと利用者を不安にさせる
+ok('やり直し中に不安にさせる文言を出さない',
+  !r.loadingTexts.some(t=>/接続できませんでした|失敗/.test(t)), JSON.stringify(r.loadingTexts));
 
 console.log('\n== 「顧客が見つからない」はやり直さない ==');
 r=await run([{text:JSON.stringify({error:'not_found'})}, GOOD]);

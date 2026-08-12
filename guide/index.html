@@ -146,6 +146,16 @@ var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
   var params = new URLSearchParams(location.search);
   var customerId = params.get('id') || '';
 
+  // ?debug=1 のときだけ、経過を書き出す場所を用意する
+  if (GUIDE_DEBUG) {
+    var dbg = document.createElement('pre');
+    dbg.id = 'guide-debug';
+    dbg.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;margin:0;padding:8px 12px;'
+      + 'background:#111;color:#8f8;font:11px/1.5 monospace;max-height:35vh;overflow:auto;white-space:pre-wrap;';
+    dbg.textContent = '[debug] 取得の経過\n';
+    document.body.appendChild(dbg);
+  }
+
   // IDが無い場合はご案内ページを表示しない（ヒアリングフォームと同じ制限）
   if (!customerId) { showNotFound(); return; }
 
@@ -181,6 +191,9 @@ var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 //    無言で繰り返すと利用者には「読み込み中から進まない」＝固まって見える
 //    （2026-08-12 に実際そうなった。再試行2回で最大70秒の無言スピナーになっていた）。
 //    ⭐ ①待たせるなら待たせていると伝える ②回数を減らす ③1回ごとに上限時間を設ける
+// ⭐ 切り分け用。URLに ?debug=1 を足したときだけ、失敗の理由を画面の下に出す。
+//   お客様には見えない／DevTools を開かなくても報告できる
+var GUIDE_DEBUG = /[?&]debug=1(&|$)/.test(location.search);
 var GUIDE_MAX_RETRY = 1;          // 初回＋やり直し1回まで
 var GUIDE_TIMEOUT_MS = 45000;     // 1回あたりの上限。GASは全行読むので短くしすぎない
 var GUIDE_SLOW_MS = 8000;         // これを過ぎたら「時間がかかっています」と出す
@@ -206,8 +219,18 @@ function fetchFromGas(customerId, cacheKey, showResult, attempt) {
 
   var retry = function(reason) {
     done();
+    // 🚨 1回目が落ちても最終的に表示できることは多い。そこで「接続できませんでした」と
+    //    出すと、無事に開くページで利用者を不安にさせる（2026-08-12 saito 指摘）。
+    //    画面には途中経過を出さず、原因は console と ?debug=1 にだけ出す。
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[guide] 取得に失敗（' + (attempt + 1) + '回目）: ' + reason);
+    }
+    if (GUIDE_DEBUG && showResult) {
+      var d = document.getElementById('guide-debug');
+      if (d) d.textContent += (attempt + 1) + '回目: ' + reason + '\n';
+    }
     if (attempt < GUIDE_MAX_RETRY) {
-      if (showResult) setLoadingText('接続できませんでした。もう一度試しています…');
+      if (showResult) setLoadingText('読み込んでいます');
       setTimeout(function() { fetchFromGas(customerId, cacheKey, showResult, attempt + 1); }, 1200);
       return;
     }
