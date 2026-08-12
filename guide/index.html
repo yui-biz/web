@@ -206,40 +206,18 @@ function setLoadingText(msg) {
   if (el) el.textContent = msg;
 }
 
-// 🚨 「時間がかかっています」のまま何十秒も動かないと、結局固まって見える
-//    （2026-08-12 saito 報告）。実測でサーバの応答は5〜120秒とばらつくので、
-//    ⭐ 経過秒を出して【止まっていないこと】が分かるようにする。
-var _guideWaitTimer = null;
-var _guideWaitFrom = null;   // 読み込みを始めた時刻。やり直しても戻さない
-function startWaitCounter() {
-  // 🚨 やり直しのたびに作り直していたので、画面の秒数が戻って見えた（2026-08-12 saito 指摘）。
-  //    利用者が知りたいのは「開き始めてから何秒か」なので、1回の読み込みで通しで数える。
-  if (_guideWaitTimer) return;
-  var t0 = _guideWaitFrom || (_guideWaitFrom = Date.now());
-  _guideWaitTimer = setInterval(function() {
-    var sec = Math.floor((Date.now() - t0) / 1000);
-    if (sec >= GUIDE_SLOW_MS / 1000) {
-      setLoadingText('読み込んでいます（' + sec + '秒）　混み合っているとお時間がかかります');
-    }
-  }, 1000);
-}
-function stopWaitCounter() {
-  if (_guideWaitTimer) { clearInterval(_guideWaitTimer); _guideWaitTimer = null; }
-  _guideWaitFrom = null;
-}
 
 function fetchFromGas(customerId, cacheKey, showResult, attempt) {
   attempt = attempt || 0;
   var url = GAS_API + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
 
   // 遅いときに黙らない。裏での更新（showResult=false）では何も出さない
-  if (showResult) startWaitCounter();
   var slowTimer = null;
 
   // 1回あたりの上限。応答が返らないまま永久に待つのを防ぐ
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var killTimer = setTimeout(function() { if (ctrl) ctrl.abort(); }, GUIDE_TIMEOUT_MS);
-  var done = function() { if (slowTimer) clearTimeout(slowTimer); clearTimeout(killTimer); if (showResult) stopWaitCounter(); };
+  var done = function() { if (slowTimer) clearTimeout(slowTimer); clearTimeout(killTimer); };
 
   var retry = function(reason) {
     done();
@@ -254,7 +232,6 @@ function fetchFromGas(customerId, cacheKey, showResult, attempt) {
       if (d) d.textContent += (attempt + 1) + '回目: ' + reason + '\n';
     }
     if (attempt < GUIDE_MAX_RETRY) {
-      if (showResult) setLoadingText('読み込んでいます');
       setTimeout(function() { fetchFromGas(customerId, cacheKey, showResult, attempt + 1); }, 1200);
       return;
     }
