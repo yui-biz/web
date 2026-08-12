@@ -42,6 +42,7 @@ const ctx = {
   GAS_URL: 'https://example.invalid/exec',
   currentAuthToken: 'tok',
   currentMakerEmail: 'maker@example.com',
+  currentStoreId: '',
   currentIsAdmin: false,
   handleSessionExpired: () => {},
   fetch: (url, opt) => {
@@ -210,6 +211,63 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   r = await ctx.gasPost({ action: 'updateWebediBatch', params: { items: [{ rowIdx: 5 }, { rowIdx: 6 }] } });
   check('一括計上: 全部反映済みなら投げ直さない', countPosts('updateWebediBatch') === 1 && r.succeeded === 2, r);
 
+  // ================= 5.5 店舗側 =================
+  const SROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', cancelStatus: '',
+    store: 'A店', staffId: '1', quantity: 2, deliveryDate: '2026-08-20',
+    noshiType: '内祝', noshiName: '山田', recipientName: '田中' }, o);
+
+  // 店舗は getOrders で読む（getOrdersForMaker は使わない）
+  ctx.currentMakerEmail = '';
+  ctx.currentStoreId = 'S001';
+  setup({ requestCancellation: [R404], getOrders: [OK({ orders: [SROW({ cancelStatus: '取消申請中' })] })] });
+  r = await ctx.gasPost({ action: 'requestCancellation', params: { rowIdx: 5, storeId: 'S001', reason: '' } });
+  check('店舗: 取消申請が通っていれば投げ直さない', countPosts('requestCancellation') === 1, { posts: countPosts('requestCancellation') });
+  check('店舗: 確認には getOrders を使う', countPosts('getOrders') === 1 && countPosts('getOrdersForMaker') === 0);
+  check('店舗: 画面に出す message を必ず入れる', typeof r.message === 'string' && r.message.length > 0, r);
+
+  setup({ requestCancellation: [R404, OK({ success: true, message: 'ok' })],
+          getOrders: [OK({ orders: [SROW({ cancelStatus: '' })] })] });
+  r = await ctx.gasPost({ action: 'requestCancellation', params: { rowIdx: 5, storeId: 'S001' } });
+  check('店舗: 未申請なら投げ直す', countPosts('requestCancellation') === 2, { posts: countPosts('requestCancellation') });
+
+  // 注文の編集（行まるごとの上書き）
+  const FIELDS = { store: 'A店', staffId: '1', quantity: '2', deliveryDate: '2026-08-20',
+                   noshiType: '内祝', noshiName: '山田', recipientName: '田中' };
+  setup({ updateOrder: [R404], getOrders: [OK({ orders: [SROW({})] })] });
+  r = await ctx.gasPost({ action: 'updateOrder', params: { rowIdx: 5, fields: FIELDS, storeId: 'S001' } });
+  check('店舗: 編集が入っていれば投げ直さない', countPosts('updateOrder') === 1, { posts: countPosts('updateOrder') });
+  check('店舗: 数量の数値/文字列の違いを吸収する', r.success === true, r);
+  check('店舗: 編集の message も入る（undefinedを出さない）', r.message === '保存しました', r);
+
+  setup({ updateOrder: [R404, OK({ success: true, message: '1項目を更新しました', changes: [1] })],
+          getOrders: [OK({ orders: [SROW({ noshiName: '別の名前' })] })] });
+  r = await ctx.gasPost({ action: 'updateOrder', params: { rowIdx: 5, fields: FIELDS, storeId: 'S001' } });
+  check('店舗: 1項目でも違えば未反映と見て投げ直す', countPosts('updateOrder') === 2, { posts: countPosts('updateOrder') });
+
+  // 取消の承認・却下（管理者）。店舗画面から呼ぶので email は空
+  setup({ approveCancellation: [R404], getOrders: [OK({ orders: [SROW({ cancelStatus: '取消済' })] })] });
+  r = await ctx.gasPost({ action: 'approveCancellation', params: { rowIdx: 5, storeId: 'S001', email: '' } });
+  check('管理者: 承認が通っていれば投げ直さない', countPosts('approveCancellation') === 1 && r.success === true, r);
+
+  setup({ rejectCancellation: [R404], getOrders: [OK({ orders: [SROW({ cancelStatus: '取消却下' })] })] });
+  r = await ctx.gasPost({ action: 'rejectCancellation', params: { rowIdx: 5, storeId: 'S001', email: '' } });
+  check('管理者: 却下が通っていれば投げ直さない', countPosts('rejectCancellation') === 1 && r.success === true, r);
+
+  // 承認の投げ直しは「（現在の状況: 取消済）」が後ろに付く＝前方一致で拾う
+  setup({ approveCancellation: [R404, OK({ success: false, error: '取消申請中の注文のみ承認できます（現在の状況: 取消済）' })],
+          getOrders: [R404] });
+  r = await ctx.gasPost({ action: 'approveCancellation', params: { rowIdx: 5, storeId: 'S001', email: '' } });
+  check('管理者: 「（現在の状況: …）」付きでも済みと読み替える', r.success === true, r);
+
+  // 管理者がメーカー画面から呼んだときは getOrdersForMaker を使う
+  setup({ approveCancellation: [R404], getOrdersForMaker: [ORDERS([SROW({ cancelStatus: '取消済' })])] });
+  r = await ctx.gasPost({ action: 'approveCancellation', params: { rowIdx: 5, storeId: 'S001', email: 'admin@example.com' } });
+  check('管理者: メーカー画面からなら getOrdersForMaker を使う',
+        countPosts('getOrdersForMaker') === 1 && countPosts('getOrders') === 0 && r.success === true, r);
+
+  ctx.currentMakerEmail = 'maker@example.com';
+  ctx.currentStoreId = '';
+
   // ================= 6. 読み込み系は従来どおり =================
   setup({ getOrdersForMaker: [R404] });
   threw = null;
@@ -228,10 +286,11 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   check('addTracking にも確認の手だてがある', typeof CONF.addTracking === 'function');
   check('submitForm が更新系に混ざっていない', !CONF.submitForm && !SAFE.submitForm);
   const expectConf = ['updateShipment', 'updateWebedi', 'undoShipment', 'undoWebedi',
-                      'replaceTrackings', 'addTracking', 'updateShipmentBatch', 'updateWebediBatch'].sort();
-  check('確認の対象は宣言した8つ', JSON.stringify(Object.keys(CONF).sort()) === JSON.stringify(expectConf), Object.keys(CONF).sort());
+                      'replaceTrackings', 'addTracking', 'updateShipmentBatch', 'updateWebediBatch',
+                      'requestCancellation', 'approveCancellation', 'rejectCancellation', 'updateOrder'].sort();
+  check('確認の対象は宣言した12個', JSON.stringify(Object.keys(CONF).sort()) === JSON.stringify(expectConf), Object.keys(CONF).sort());
   const expectSafe = expectConf.filter(function(a) { return a !== 'addTracking'; });
-  check('判定不能で投げ直してよいのは addTracking を除く7つ',
+  check('判定不能で投げ直してよいのは addTracking を除く11個',
         JSON.stringify(Object.keys(SAFE).sort()) === JSON.stringify(expectSafe), Object.keys(SAFE).sort());
 
   // 発送処理の本線が【追記】を使っていないこと（実ファイルを直接見る）

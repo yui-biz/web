@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812f"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812g"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1802,8 +1802,45 @@
     },
     updateWebediBatch: function(p, byRow) {
       return _batchConfirm(p.items, byRow, function(o) { return o.webediStatus === '計上済'; });
+    },
+    // ===== 店舗側 =====
+    requestCancellation: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.cancelStatus === '取消申請中';
+    },
+    approveCancellation: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.cancelStatus === '取消済';
+    },
+    rejectCancellation: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      return o.cancelStatus === '取消却下';
+    },
+    // 注文内容の編集は【行まるごとの上書き】なので、同じ内容を2回書いても結果は同じ。
+    // 送った項目が全部そのまま入っていれば反映済みと見る。
+    updateOrder: function(p, byRow) {
+      const o = byRow[p.rowIdx]; if (!o) return null;
+      const f = p.fields || {};
+      const keys = Object.keys(f);
+      if (keys.length === 0) return null;
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i];
+        if (!(k in o)) return null;          // 読み側に無い項目がある＝判定しない
+        if (!_sameFieldValue(o[k], f[k])) return false;
+      }
+      return true;
     }
   };
+
+  /** 項目の値が同じか。数量のように片方が数値・片方が文字列で来るものを吸収する。 */
+  function _sameFieldValue(a, b) {
+    const x = String(a == null ? '' : a).trim();
+    const y = String(b == null ? '' : b).trim();
+    if (x === y) return true;
+    if (x === '' || y === '') return false;
+    const nx = Number(x), ny = Number(y);
+    return !isNaN(nx) && !isNaN(ny) && nx === ny;
+  }
 
   // 読み直せず【判定できなかった】ときに限り、投げ直してよいもの。根拠はサーバー実装:
   //   updateShipment … row[23]==='発送済' で「すでに発送済みです」
@@ -1812,19 +1849,32 @@
   //   replaceTrackings … 伝票を【置換】するので同じ値を2回書いても結果は同じ
   //   updateShipmentBatch/updateWebediBatch … 行ごとに上と同じガード
   // 🚨🚨 addTracking は【追記】なので絶対に入れない。
+  //   requestCancellation … 取消申請中/取消済なら弾く
+  //   approveCancellation/rejectCancellation … 取消申請中でなければ弾く
+  //   updateOrder … 行まるごとの【上書き】。同じ内容を2回書いても結果は同じで、
+  //                 変化が無ければサーバーが「変更はありません」で書き込みもしない
   const SAFE_TO_RESEND = {
     updateShipment: 1, updateWebedi: 1, undoShipment: 1, undoWebedi: 1,
-    replaceTrackings: 1, updateShipmentBatch: 1, updateWebediBatch: 1
+    replaceTrackings: 1, updateShipmentBatch: 1, updateWebediBatch: 1,
+    requestCancellation: 1, approveCancellation: 1, rejectCancellation: 1, updateOrder: 1
   };
   // 404で応答を受け取れなかっただけで、サーバー側の書き込みは通っていたときに返る文言。
-  // ⚠️ 取消（undo）は「もう未発送だから取消できません」という言い方で返る。文言が肯定形と
-  //    逆向きなので、素直に読むと成功しているのにエラーに見える。ここに並べて拾う。
-  const ALREADY_DONE_ERRORS = {
-    'すでに発送済みです': 1,
-    'すでに計上済みです': 1,
-    '発送済みの注文のみ取消できます': 1,
-    '計上済みの注文のみ取消できます': 1
-  };
+  // ⚠️ 取消（undo）や取消申請の承認は「もう〇〇だからできません」という言い方で返る。
+  //    文言が肯定形と逆向きなので、素直に読むと成功しているのにエラーに見える。ここに並べて拾う。
+  // ⚠️ 承認/却下は後ろに「（現在の状況: 取消済）」が付くので【前方一致】で見る。
+  const ALREADY_DONE_ERRORS = [
+    'すでに発送済みです',
+    'すでに計上済みです',
+    '発送済みの注文のみ取消できます',
+    '計上済みの注文のみ取消できます',
+    'この注文はすでに取消申請中です',
+    '取消申請中の注文のみ承認できます',
+    '取消申請中の注文のみ却下できます'
+  ];
+  function _isAlreadyDone(msg) {
+    const m = String(msg == null ? '' : msg);
+    return ALREADY_DONE_ERRORS.some(function(s) { return m.indexOf(s) === 0; });
+  }
   // 一括処理のときは行ごとの failedItems に入る（文言はサーバー側の原文どおり）
   const BATCH_ALREADY_DONE = { '発送済み済み': 1, '計上済み': 1 };
   const MAX_RETRY_READ = 2;    // 読み込み系: 初回 + 2回
@@ -1840,7 +1890,7 @@
    */
   function _readAlreadyDoneAsSuccess(json) {
     if (!json || typeof json !== 'object') return json;
-    if (json.success !== true && ALREADY_DONE_ERRORS[json.error]) {
+    if (json.success !== true && _isAlreadyDone(json.error)) {
       return Object.assign({}, json, { success: true, error: '', updatedOrders: null, _recoveredFromRetry: true });
     }
     if (Array.isArray(json.failedItems) && json.failedItems.length > 0) {
@@ -1883,10 +1933,21 @@
     });
   }
 
-  /** 確認のために注文を読み直す。読めなければ null（＝判定しない）。 */
-  function _readOrdersForConfirm() {
-    if (!currentMakerEmail) return Promise.resolve(null);
-    return gasPost({ action: 'getOrdersForMaker', params: { email: currentMakerEmail, isAdmin: currentIsAdmin } })
+  /**
+   * 確認のために注文を読み直す。読めなければ null（＝判定しない）。
+   * ⚠️ 読み口は役割で違う（メーカー=getOrdersForMaker / 店舗=getOrders）。
+   *    取消の承認・却下は管理者が【どちらの画面からも】呼ぶので、globalではなく
+   *    その要求が名乗っている身元を先に見る。
+   */
+  function _readOrdersForConfirm(payload) {
+    const p = (payload && payload.params) || {};
+    const email = p.email || currentMakerEmail;
+    const storeId = p.storeId || currentStoreId;
+    let req = null;
+    if (email) req = { action: 'getOrdersForMaker', params: { email: email, isAdmin: currentIsAdmin } };
+    else if (storeId) req = { action: 'getOrders', params: { storeId: storeId, isAdmin: currentIsAdmin } };
+    if (!req) return Promise.resolve(null);
+    return gasPost(req)
       .then(function(r) {
         if (!r || !Array.isArray(r.orders)) return null;
         const byRow = {};
@@ -1915,6 +1976,18 @@
       out.failed = 0;
       out.failedItems = [];
     }
+    // 🚨 店舗側の画面は result.message をそのまま文字列に足して表示する。
+    //    入れ忘れると画面に「undefined」と出るので、action ごとに必ず用意する。
+    const MSG = {
+      updateOrder: '保存しました',
+      requestCancellation: '取消申請を受け付けました',
+      approveCancellation: '取消を承認しました',
+      rejectCancellation: '取消申請を却下しました'
+    };
+    if (MSG[payload.action]) {
+      out.message = MSG[payload.action];
+      out.changes = [];   // 何項目変わったかは読み直しでは分からないので空にする
+    }
     return out;
   }
 
@@ -1931,7 +2004,7 @@
         .catch(function(err) {
           if (err && err._unconfirmed) throw err;   // 下で自分が投げたものは素通しする
           lastErr = err;
-          return _readOrdersForConfirm().then(function(state) {
+          return _readOrdersForConfirm(payload).then(function(state) {
             const verdict = state ? WRITE_CONFIRM[action](payload.params || {}, state.byRow) : null;
             if (verdict === true) return _successFromRead(payload, state);   // 実は通っていた
             // verdict === false … 反映されていないと【確かめた】ので、投げ直しても二重にならない
@@ -1993,7 +2066,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812f';
+  const APP_BUILD = '20260812g';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
