@@ -139,7 +139,8 @@ a:hover{text-decoration:underline}
 <body>
 <div id="app"><div class="loading"><div class="loading-spinner"></div><p class="loading-text">読み込み中</p></div></div>
 <script>
-var GAS_API = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';
+var GAS_API = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（いまは使わない・戻すとき用に残す）
+var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
 var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 
 (function() {
@@ -213,7 +214,11 @@ function setLoadingText(msg) {
 
 function fetchFromGas(customerId, cacheKey, showResult, attempt) {
   attempt = attempt || 0;
-  var url = GAS_API + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
+  // 🚨 GAS を直接叩くと googleusercontent へのリダイレクトが3〜5割で404になる。
+  //    中継（Cloudflare Worker）を通すと、リダイレクトを踏むのはサーバ同士になるので404にならず、
+  //    CORSヘッダも中継側で付く（HtmlServiceで返す案はここが無くて本番を壊した）。
+  //    中継はキャッシュも持つので2回目以降は0.4秒。⚠️ 文面を直したら最大30分ぶん古いものが出る。
+  var url = GAS_PROXY + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
 
   // 遅いときに黙らない。裏での更新（showResult=false）では何も出さない
   var slowTimer = null;

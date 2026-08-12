@@ -1,0 +1,10 @@
+# ⚠️ このWorkerは【ご案内ページ・ヒアリングフォーム専用】。
+#    studio.yui.gift（yui-catalog-studio）とは別物で、互いに影響しない。
+#    🚨 名前を絶対に変えないこと。既存のWorkerと同じ名前で deploy すると上書きになる。
+name = "yui-gas-proxy"
+main = "src/index.js"
+compatibility_date = "2026-08-12"
+
+# routes は書かない＝ workers.dev のURLで配信する。
+# 独自ドメインを当てるとDNS設定が要り、既存ゾーンに触ることになるので避ける。
+workers_dev = true

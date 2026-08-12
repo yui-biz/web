@@ -150,7 +150,8 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <script>
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
+var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
 var CACHE_TTL = 60 * 60 * 1000; // 1時間
 var FD = null;
 
@@ -189,7 +190,11 @@ var FD = null;
 var FORM_MAX_RETRY = 3;
 function fetchFromGas(customerId, cacheKey, showResult, attempt) {
   attempt = attempt || 0;
-  fetch(GAS_URL + '?action=formData&customer=' + encodeURIComponent(customerId))
+  // 🚨 GAS を直接叩くと googleusercontent へのリダイレクトが3〜5割で404になる
+  //    （ご案内ページと同じ原因）。中継（Cloudflare Worker）を通すと、
+  //    リダイレクトを踏むのはサーバ同士になるので404にならず、CORSヘッダも中継側で付く。
+  //    ⚠️ HtmlService で返す案はCORSが無くて本番を壊した。中継ならその問題が起きない。
+  fetch(GAS_PROXY + '?action=formData&customer=' + encodeURIComponent(customerId))
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();

@@ -17,7 +17,7 @@ function run(responses){
   let calls=0, shown=null, notFound=false, boxHtml='', saved=null;
   const ctx={
     console:{log:console.log,warn:()=>{}}, JSON, Date, String, setTimeout:(f)=>f(),
-    GAS_URL:'https://example.test/exec', encodeURIComponent,
+    GAS_URL:'https://example.test/exec', GAS_PROXY:'https://example.test/proxy', encodeURIComponent,
     localStorage:{setItem:(k,v)=>{saved=v;},getItem:()=>null},
     location:{reload(){}},
     document:{getElementById:()=>({ set innerHTML(v){boxHtml=v;}, get innerHTML(){return boxHtml;},
