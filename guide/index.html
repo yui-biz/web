@@ -201,6 +201,20 @@ var GUIDE_MAX_RETRY = 1;          // 初回＋やり直し1回まで
 var GUIDE_TIMEOUT_MS = 90000;     // 1回あたりの上限
 var GUIDE_SLOW_MS = 8000;         // これを過ぎたら「時間がかかっています」と出す
 
+// HTMLに埋め込まれたデータを取り出す。
+// ⚠️ 素の base64 は + / = を含み、GAS が HTML に埋めるときにエスケープして分断する
+//    （実際に10回とも取り出せなかった）。サーバ側で base64url にしてあるので元に戻す。
+function parseGuidePayload(text) {
+  var m = /@@GUIDE@@([A-Za-z0-9\-_]+)@@END@@/.exec(text);
+  if (!m) throw new Error('応答が読めませんでした');
+  var b = m[1].replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  var raw = atob(b);
+  var bytes = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
+
 function setLoadingText(msg) {
   var el = document.querySelector('.loading-text');
   if (el) el.textContent = msg;
@@ -230,7 +244,11 @@ function stopWaitCounter() {
 
 function fetchFromGas(customerId, cacheKey, showResult, attempt) {
   attempt = attempt || 0;
-  var url = GAS_API + '?action=guideData' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
+  // 🚨 以前は ?action=guideData（ContentServiceのJSON）を叩いていたが、
+  //    script.googleusercontent.com へのリダイレクトが遅い・404になることがあった
+  //    （cookieなしの実測: 404/56秒が混ざる）。HTMLで返す経路は15回とも200・1〜2秒。
+  //    ⭐ 中身の作り方はサーバ側でも変えていない。包み方だけ変えた。
+  var url = GAS_API + '?action=guideDataHtml' + (customerId ? '&customer=' + encodeURIComponent(customerId) : '');
 
   // 遅いときに黙らない。裏での更新（showResult=false）では何も出さない
   if (showResult) startWaitCounter();
@@ -267,9 +285,7 @@ function fetchFromGas(customerId, cacheKey, showResult, attempt) {
       return r.text();
     })
     .then(function(t) {
-      var data;
-      try { data = JSON.parse(t); }
-      catch (e) { throw new Error('応答が読めませんでした'); }   // GASのエラーページなど
+      var data = parseGuidePayload(t);   // GASのエラーページなど
       // 「見つからない」はやり直しても結果が変わらないので、その場で確定させる
       if (data.error === 'not_found') { done(); if (showResult) showNotFound(); return; }
       if (data.error) throw new Error(data.error);
