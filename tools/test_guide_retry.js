@@ -17,16 +17,24 @@ function cut(name){
     if(c==='{')d++;else if(c==='}'&&--d===0)return html.slice(m.index,j+1);}
   throw new Error('閉じ括弧なし: '+name);
 }
-const maxRetryDecl=/var GUIDE_MAX_RETRY = \d+;/.exec(html)[0];
+const decls=['GUIDE_MAX_RETRY','GUIDE_TIMEOUT_MS','GUIDE_SLOW_MS']
+  .map(n=>new RegExp('var '+n+' = \\d+;').exec(html)[0]).join('\n');
 
 function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
   let calls=0, appHtml='', rendered=null, notFound=false;
+  const loadingTexts=[];
   const ctx={
-    console, JSON, Date, setTimeout:(f)=>f(),   // 待ち時間は詰める
+    console, JSON, Date, String, AbortController,
+    // 待ち時間は詰める。ただし「上限で中断」のタイマーは走らせない（即発火すると全部中断になる）
+    setTimeout:(f,ms)=>{ if(ms>=10000) return 0; f(); return 0; },
+    clearTimeout:()=>{},
     GAS_API:'https://example.test/exec',
     localStorage:{setItem(){},getItem(){return null;}},
     location:{reload(){ctx._reloaded=true;}},
-    document:{getElementById:()=>({ set innerHTML(v){appHtml=v;}, get innerHTML(){return appHtml;} })},
+    document:{
+      getElementById:()=>({ set innerHTML(v){appHtml=v;}, get innerHTML(){return appHtml;} }),
+      querySelector:()=>({ set textContent(v){loadingTexts.push(v);}, get textContent(){return '';} }),
+    },
     render:(d)=>{rendered=d;},
     showNotFound:()=>{notFound=true;},
     fetch:(u)=>{
@@ -36,10 +44,10 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(maxRetryDecl+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
+  vm.runInContext(decls+'\n'+cut('setLoadingText')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
   ctx.fetchFromGas('C1','guide_C1',true,0);
   return new Promise(r=>setImmediate(()=>setImmediate(()=>setImmediate(()=>
-    r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded})))));
+    r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded, loadingTexts})))));
 }
 
 const GOOD={text:JSON.stringify({pages:[{title:'案内',sections:[]}]})};
@@ -61,10 +69,13 @@ ok('やり直して表示できた', !!r.rendered);
 
 console.log('\n== ずっと失敗 → 行き止まりにしない ==');
 r=await run(['throw']);
-ok('3回まで試す（初回+再試行2）', r.calls===3, '呼び出し'+r.calls+'回');
+ok('2回まで試す（初回+再試行1）＝無言で長く待たせない', r.calls===2, '呼び出し'+r.calls+'回');
 ok('「もう一度読み込む」ボタンを出す', /もう一度読み込む/.test(r.appHtml));
 ok('押すと再読み込みする', /location\.reload\(\)/.test(r.appHtml));
 ok('原因の当たりを伝える', /通信が不安定/.test(r.appHtml));
+ok('技術的な理由も小さく添える（報告を受けて切り分けられる）', /ネットワーク/.test(r.appHtml), r.appHtml.slice(-160));
+ok('やり直す前に「もう一度試しています」と伝える＝黙らない',
+  r.loadingTexts.some(t=>/もう一度試しています/.test(t)), JSON.stringify(r.loadingTexts));
 
 console.log('\n== 「顧客が見つからない」はやり直さない ==');
 r=await run([{text:JSON.stringify({error:'not_found'})}, GOOD]);
