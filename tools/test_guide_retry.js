@@ -25,8 +25,6 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
   const loadingTexts=[]; const warned=[];
   const ctx={
     console:{log:console.log, warn:(m)=>{warned.push(String(m));}},
-    atob:(b)=>Buffer.from(b,'base64').toString('binary'),
-    Uint8Array, TextDecoder,
     JSON, Date, String, AbortController,
     // 待ち時間は詰める。ただし「上限で中断」のタイマーは走らせない（即発火すると全部中断になる）
     setTimeout:(f,ms)=>{ if(ms>=10000) return 0; f(); return 0; },
@@ -48,20 +46,14 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(decls+'\nvar _guideWaitTimer=null;var _guideWaitFrom=null;\n'+cut('parseGuidePayload')+'\n'+cut('setLoadingText')+'\n'+cut('startWaitCounter')
+  vm.runInContext(decls+'\nvar _guideWaitTimer=null;var _guideWaitFrom=null;\n'+cut('setLoadingText')+'\n'+cut('startWaitCounter')
     +'\n'+cut('stopWaitCounter')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
   ctx.fetchFromGas('C1','guide_C1',true,0);
   return new Promise(r=>setImmediate(()=>setImmediate(()=>setImmediate(()=>
     r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded, loadingTexts, warned})))));
 }
 
-// 実際の応答と同じ形（HTMLに base64url で埋め込む）
-function wrap(obj){
-  const b=Buffer.from(JSON.stringify(obj),'utf8').toString('base64')
-    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  return {text:'<!doctype html><body><div id="d">@@GUIDE@@'+b+'@@END@@</div></body>'};
-}
-const GOOD=wrap({pages:[{title:'案内',sections:[]}]});
+const GOOD={text:JSON.stringify({pages:[{title:'案内',sections:[]}]})};
 
 (async()=>{
 console.log('\n== 1回目だけ失敗 → 自動でやり直して表示できる（saito の症状）==');
@@ -74,7 +66,7 @@ ok('最終的に表示できた', !!r.rendered);
 ok('エラー画面を出していない', !/読み込めませんでした/.test(r.appHtml), r.appHtml.slice(0,80));
 
 console.log('\n== GASがJSONでないエラーページを返した場合 ==');
-r=await run([{text:'<html>Service invoked too many times</html>'}, GOOD]);  // 目印が無い＝読めない
+r=await run([{text:'<html>Service invoked too many times</html>'}, GOOD]);
 ok('やり直して表示できた', !!r.rendered, '呼び出し'+r.calls+'回');
 
 console.log('\n== HTTPエラーでもやり直す ==');
@@ -93,7 +85,7 @@ ok('やり直し中に不安にさせる文言を出さない',
   !r.loadingTexts.some(t=>/接続できませんでした|失敗/.test(t)), JSON.stringify(r.loadingTexts));
 
 console.log('\n== 「顧客が見つからない」はやり直さない ==');
-r=await run([wrap({error:'not_found'}), GOOD]);
+r=await run([{text:JSON.stringify({error:'not_found'})}, GOOD]);
 ok('1回で確定する', r.calls===1, '呼び出し'+r.calls+'回');
 ok('専用の画面を出す', r.notFound===true);
 ok('エラー画面は出さない', !/もう一度読み込む/.test(r.appHtml));
