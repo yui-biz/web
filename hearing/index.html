@@ -182,67 +182,15 @@ var FD = null;
   fetchFromGas(customerId, cacheKey, true);
 })();
 
-// HTMLに埋め込まれたデータを取り出す。
-// ⚠️ 素の base64 は + / = を含み、GAS が HTML に埋めるときにエスケープして分断する。
-//    サーバ側で base64url にしてあるので元に戻す。
-function parseFormPayload(text) {
-  var m = /@@GUIDE@@([A-Za-z0-9\-_]+)@@END@@/.exec(text);
-  if (!m) throw new Error('応答が読めませんでした');
-  var b = m[1].replace(/-/g, '+').replace(/_/g, '/');
-  while (b.length % 4) b += '=';
-  var raw = atob(b);
-  var bytes = new Uint8Array(raw.length);
-  for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
-}
-
-// 🚨 以前は ?action=formData（ContentServiceのJSON）を叩いていた。
-//    googleusercontent へのリダイレクトが遅い・404になることがあり
-//    （cookieなしの実測: 5回中3回が404・最大148秒）、
-//    その失敗を【フォームが見つかりません】と表示していた＝原因を取り違える文言だった。
-//    HTMLで返す経路は8回とも200・5〜8秒。
-var FORM_MAX_RETRY = 1;
-function fetchFromGas(customerId, cacheKey, showResult, attempt) {
-  attempt = attempt || 0;
-  var url = GAS_URL + '?action=formDataHtml&customer=' + encodeURIComponent(customerId);
-  var retry = function(reason) {
-    if (typeof console !== 'undefined' && console.warn) {
-      console.warn('[form] 取得に失敗（' + (attempt + 1) + '回目）: ' + reason);
-    }
-    if (attempt < FORM_MAX_RETRY) {
-      setTimeout(function() { fetchFromGas(customerId, cacheKey, showResult, attempt + 1); }, 1200);
-      return;
-    }
-    if (showResult) showLoadError(reason);
-  };
-  fetch(url)
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.text();
-    })
-    .then(function(t) {
-      var data = parseFormPayload(t);
-      // ⭐ 「見つからない」と「読み込めなかった」を分ける。前者はやり直しても変わらない
+function fetchFromGas(customerId, cacheKey, showResult) {
+  fetch(GAS_URL + '?action=formData&customer=' + encodeURIComponent(customerId))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
       if (data.error) { if (showResult) showError(); return; }
       try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
       if (showResult) showForm(data);
     })
-    .catch(function(e) { retry(e && e.message ? e.message : String(e)); });
-}
-
-/** 読み込めなかったとき。⚠️「見つかりません」とは別物として出す（行き止まりにしない） */
-function showLoadError(msg) {
-  var el = document.getElementById('loading-area');
-  if (!el) return;
-  el.innerHTML = '<div style="padding:60px 24px;text-align:center;color:#666;">'
-    + '<p style="margin:0 0 6px;">フォームを読み込めませんでした</p>'
-    + '<p style="margin:0 0 20px;font-size:.8rem;color:#aaa;">通信が不安定なときに起こります。もう一度お試しください。</p>'
-    + '<button onclick="location.reload()" style="font-family:inherit;font-size:.9rem;padding:10px 22px;'
-    + 'border:1px solid #f01e00;background:#fff;color:#f01e00;border-radius:999px;cursor:pointer;">'
-    + 'もう一度読み込む</button>'
-    + (msg ? '<p style="margin:22px 0 0;font-size:.68rem;color:#ccc;">' + String(msg).slice(0, 120) + '</p>' : '')
-    + '</div>';
-  el.classList.remove('hidden');
+    .catch(function() { if (showResult) showError(); });
 }
 
 function showForm(data) {
