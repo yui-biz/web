@@ -75,7 +75,7 @@ ok('やり直して表示できた', !!r.rendered);
 
 console.log('\n== ずっと失敗 → 行き止まりにしない ==');
 r=await run(['throw']);
-ok('2回まで試す（初回+再試行1）＝無言で長く待たせない', r.calls===2, '呼び出し'+r.calls+'回');
+ok('4回まで試す（初回+再試行3）＝404が3〜5割でも利用者に見えにくくする', r.calls===4, '呼び出し'+r.calls+'回');
 ok('「もう一度読み込む」ボタンを出す', /もう一度読み込む/.test(r.appHtml));
 ok('押すと再読み込みする', /location\.reload\(\)/.test(r.appHtml));
 ok('原因の当たりを伝える', /通信が不安定/.test(r.appHtml));

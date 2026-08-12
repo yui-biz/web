@@ -182,15 +182,46 @@ var FD = null;
   fetchFromGas(customerId, cacheKey, true);
 })();
 
-function fetchFromGas(customerId, cacheKey, showResult) {
+// 🚨 GAS の JSON 応答は googleusercontent へのリダイレクトが【3〜5割の確率で404になる】
+//    （cookieなしの実測: 5回中3回）。それを【フォームが見つかりません】と出していたので、
+//    読み込めなかっただけなのに原因を取り違えさせていた（2026-08-12 saito 報告）。
+//    ⚠️ HtmlService で返す案は CORS が通らず不可（同日に試して失敗・元に戻した）。
+var FORM_MAX_RETRY = 3;
+function fetchFromGas(customerId, cacheKey, showResult, attempt) {
+  attempt = attempt || 0;
   fetch(GAS_URL + '?action=formData&customer=' + encodeURIComponent(customerId))
-    .then(function(res) { return res.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
     .then(function(data) {
+      // ⭐「見つからない」はやり直しても変わらないので即確定
       if (data.error) { if (showResult) showError(); return; }
       try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
       if (showResult) showForm(data);
     })
-    .catch(function() { if (showResult) showError(); });
+    .catch(function(e) {
+      var reason = e && e.message ? e.message : String(e);
+      if (typeof console !== 'undefined' && console.warn) console.warn('[form] 取得に失敗（' + (attempt + 1) + '回目）: ' + reason);
+      if (attempt < FORM_MAX_RETRY) {
+        setTimeout(function() { fetchFromGas(customerId, cacheKey, showResult, attempt + 1); }, 1200);
+        return;
+      }
+      if (showResult) showLoadError(reason);
+    });
+}
+
+/** 読み込めなかったとき。⚠️「見つかりません」とは別物として出す（行き止まりにしない） */
+function showLoadError(msg) {
+  var el = document.getElementById('loading-area');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:60px 24px;text-align:center;color:#666;">'
+    + '<p style="margin:0 0 6px;">フォームを読み込めませんでした</p>'
+    + '<p style="margin:0 0 20px;font-size:.8rem;color:#aaa;">通信が不安定なときに起こります。もう一度お試しください。</p>'
+    + '<button onclick="location.reload()" style="font-family:inherit;font-size:.9rem;padding:10px 22px;'
+    + 'border:1px solid #f01e00;background:#fff;color:#f01e00;border-radius:999px;cursor:pointer;">'
+    + 'もう一度読み込む</button></div>';
+  el.classList.remove('hidden');
 }
 
 function showForm(data) {
