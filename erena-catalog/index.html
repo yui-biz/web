@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812e"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1705,6 +1705,72 @@
   // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
   const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1 };
 
+  // ===== 更新系の再送（2026-08-12） =====
+  // 🚨 GASの応答は script.googleusercontent.com へ302で飛ばされ、その先が高頻度で404を返す。
+  //    実測（同日・同エンドポイント）: 32回中18回が404。時間帯で成功率 17%〜60% と揺れる。
+  //    読み込み系は上の RETRIABLE_ACTIONS で吸収できていたので「一覧は普通に見える」。
+  //    一方この下の更新系は二重登録を恐れて1発勝負にしてあり、発送処理・計上が半分通らない
+  //    状態だった（白雪食品様「押しても反映されない」/ 2026-08-12）。
+  //
+  // ⭐ 再送してよいのは【2回目がサーバー側で必ず弾かれる】action だけ。根拠を1つずつ確認した:
+  //    updateShipment      … row[23]==='発送済' で「すでに発送済みです」
+  //    updateWebedi        … row[27]==='計上済' で「すでに計上済みです」
+  //    undoShipment/undoWebedi … 発送済/計上済でなければ弾く
+  //    replaceTrackings    … 伝票を【置換】するので同じ値を2回書いても結果は同じ
+  //    updateShipmentBatch/updateWebediBatch … 行ごとに上と同じガードがあり、済みの行は failedItems へ
+  // 🚨🚨 addTracking は【追記】なので絶対に入れない。2回通ると伝票が重複して二重発送になる。
+  // 🚨 再送するのは【HTTPレベルで落ちたとき】だけ。サーバーがJSONで success:false を返したのは
+  //    正当な拒否なので、それを再送でねじ伏せない（下の gasPost の catch でのみ再送している）。
+  const IDEMPOTENT_WRITE_ACTIONS = {
+    updateShipment: 1, updateWebedi: 1, undoShipment: 1, undoWebedi: 1,
+    replaceTrackings: 1, updateShipmentBatch: 1, updateWebediBatch: 1
+  };
+  // 404で応答を受け取れなかっただけで、サーバー側の書き込みは通っていたときに返る文言。
+  // ⚠️ 取消（undo）は「もう未発送だから取消できません」という言い方で返る。文言が肯定形と
+  //    逆向きなので、素直に読むと成功しているのにエラーに見える。ここに並べて拾う。
+  const ALREADY_DONE_ERRORS = {
+    'すでに発送済みです': 1,
+    'すでに計上済みです': 1,
+    '発送済みの注文のみ取消できます': 1,
+    '計上済みの注文のみ取消できます': 1
+  };
+  // 一括処理のときは行ごとの failedItems に入る（文言はサーバー側の原文どおり）
+  const BATCH_ALREADY_DONE = { '発送済み済み': 1, '計上済み': 1 };
+  // 更新系は落ちやすいので読み込み系より粘る。ただし回数を増やしても取りこぼしは残るため、
+  // 本筋は中継（Worker）を挟んで404そのものを無くすこと。
+  const MAX_RETRY_READ = 2;
+  const MAX_RETRY_WRITE = 5;
+
+  /**
+   * 再送した後の応答を読み替える。
+   * 「すでに発送済みです」は、1回目がサーバーに届いて書き込みが通っていた証拠なので成功として扱う。
+   * ⚠️ 再送していないとき（_attempt===0）には絶対に読み替えない。1発目のこの応答は
+   *    「別の人が処理した／画面が古い」を意味しており、隠すと気づけなくなる。
+   * ⚠️ 読み替えたときは updatedOrders を落とす。手元の1行差し替えでは追いつかないので、
+   *    呼び出し側（patchMakerOrders）が全件再読込にフォールバックして真の状態を取り直す。
+   */
+  function _readAlreadyDoneAsSuccess(json) {
+    if (!json || typeof json !== 'object') return json;
+    if (json.success !== true && ALREADY_DONE_ERRORS[json.error]) {
+      return Object.assign({}, json, { success: true, error: '', updatedOrders: null, _recoveredFromRetry: true });
+    }
+    if (Array.isArray(json.failedItems) && json.failedItems.length > 0) {
+      const done = json.failedItems.filter(function(f) { return f && BATCH_ALREADY_DONE[f.error]; });
+      if (done.length > 0) {
+        const rest = json.failedItems.filter(function(f) { return !(f && BATCH_ALREADY_DONE[f.error]); });
+        return Object.assign({}, json, {
+          success: true,
+          succeeded: (json.succeeded || 0) + done.length,
+          failed: rest.length,
+          failedItems: rest,
+          updatedOrders: null,
+          _recoveredFromRetry: true
+        });
+      }
+    }
+    return json;
+  }
+
   function gasPost(payload, _attempt) {
     _attempt = _attempt || 0;
     // 🔒 ログイン済みならセッショントークンを毎回添える。サーバー側はこれで本人確認する
@@ -1724,12 +1790,15 @@
       if (json && (json.error === 'session_expired' || json.error === 'unauthorized') && currentAuthToken) {
         handleSessionExpired();
       }
-      return json;
+      // 再送した回だけ「すでに済んでいます」を成功として読み替える（初回は読み替えない）
+      return _attempt > 0 ? _readAlreadyDoneAsSuccess(json) : json;
     }).catch(err => {
-      const retriable = payload && RETRIABLE_ACTIONS[payload.action];
-      if (retriable && _attempt < 2) {
+      const isWrite = !!(payload && IDEMPOTENT_WRITE_ACTIONS[payload.action]);
+      const retriable = isWrite || !!(payload && RETRIABLE_ACTIONS[payload.action]);
+      const limit = isWrite ? MAX_RETRY_WRITE : MAX_RETRY_READ;
+      if (retriable && _attempt < limit) {
         return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
-          .then(() => gasPost(payload, _attempt + 1));  // 600ms,1200ms バックオフで最大2回再試行
+          .then(() => gasPost(payload, _attempt + 1));  // 600ms刻みのバックオフ
       }
       throw err;
     });
@@ -1764,7 +1833,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812d';
+  const APP_BUILD = '20260812e';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2842,7 +2911,13 @@
     const badTracking = inputs.map(function(p) { return trackingProblem(p.trackingNo); }).find(Boolean);
     if (badTracking) { _showShipMsg(badTracking, 'error'); return; }
 
-    // 1セット目で発送処理、2セット目以降はaddTrackingで追記
+    // 1セット目で発送処理、2セット目以降がある場合は【まとめて置換】する。
+    // 🚨 以前は残りを addTracking で1件ずつ【追記】していた。追記は再送すると伝票が重複する＝
+    //    通信が落ちても再送できないので、GASの404（実測で半分近く落ちる）に当たると
+    //    「追加伝票エラー」で止まり、押し直せば重複するという逃げ場の無い作りだった。
+    // ⭐ replaceTrackings は入力の全件を ", " 連結で【置換】する。addTracking を順に呼んだ結果と
+    //    同じ文字列になり（サーバー側で確認済み・どちらもメール送信なし）、
+    //    同じ内容を2回書いても結果が変わらないので再送できる。通信も1往復で済む。
     const btn = document.getElementById('ship-submit-btn');
     btn.disabled = true;
     btn.textContent = '処理中...';
@@ -2858,27 +2933,25 @@
         _showShipMsg(result.error || 'エラーが発生しました', 'error');
         return;
       }
-      var i = 0;
-      var lastUpdated = result.updatedOrders || null; // 追加分が無ければ発送処理の結果をそのまま使う
-      function addNext() {
-        if (i >= rest.length) {
-          btn.textContent = '発送済みにする';
-          document.getElementById('ship-modal').style.display = 'none';
-          _shipTargetIdx = null;
-          patchMakerOrders(lastUpdated);
-          return;
-        }
-        var p = rest[i++];
-        gasPost({
-          action: 'addTracking',
-          params: { rowIdx: o.rowIdx, carrier: p.carrier, trackingNo: p.trackingNo, email: currentMakerEmail, isAdmin: currentIsAdmin }
-        }).then(function(r) {
-          if (!r.success) { alert('追加伝票エラー: ' + r.error); }
-          else if (r.updatedOrders) { lastUpdated = r.updatedOrders; }
-          addNext();
-        }).catch(function(e) { alert('通信エラー: ' + e.message); addNext(); });
+      function finish(updated) {
+        btn.textContent = '発送済みにする';
+        document.getElementById('ship-modal').style.display = 'none';
+        _shipTargetIdx = null;
+        patchMakerOrders(updated);
       }
-      addNext();
+      if (rest.length === 0) { finish(result.updatedOrders || null); return; }
+      gasPost({
+        action: 'replaceTrackings',
+        params: { rowIdx: o.rowIdx, items: inputs, email: currentMakerEmail, isAdmin: currentIsAdmin }
+      }).then(function(r) {
+        // 発送処理そのものは通っている。伝票の追加分だけ入らなかった場合は、
+        // 何が起きたかを言い切って「伝票編集」へ誘導する（黙って閉じない）。
+        if (!r.success) alert('発送処理は完了しましたが、2件目以降の伝票が登録できませんでした。\n（' + (r.error || '不明なエラー') + '）\n発送済タブの「伝票編集」から登録してください。');
+        finish(r.updatedOrders || result.updatedOrders || null);
+      }).catch(function(e) {
+        alert('発送処理は完了しましたが、2件目以降の伝票が登録できませんでした。\n（通信エラー: ' + e.message + '）\n発送済タブの「伝票編集」から登録してください。');
+        finish(result.updatedOrders || null);
+      });
     }).catch(function(err) {
       btn.disabled = false;
       btn.textContent = '発送済みにする';
