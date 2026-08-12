@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -667,8 +667,12 @@
           <!-- 発送済みテーブル -->
           <div id="maker-shipped-wrap" style="display:none;">
             <!-- 計上日フィルタ(管理者のみ) -->
-            <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:12px;align-items:center;gap:6px;flex-wrap:wrap;max-width:520px;">
-              <select id="webedi-date-basis" onchange="applyShippedFilter()" style="padding:3px 5px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-weight:bold;">
+            <!-- max-width は中身の実測に合わせる。基準の切り替え(約70px)と「で絞り込み:」を
+                 足したぶん 520→640。狭いままだと日付欄が次の行に折り返す -->
+            <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:12px;align-items:center;gap:6px;flex-wrap:wrap;max-width:640px;">
+              <!-- ⚠️ width:auto は必須。グローバルの `select { width:60% }`(上部CSS)を拾って
+                   絞り込みバーいっぱいに広がり、日付欄が次の行に落ちる -->
+              <select id="webedi-date-basis" onchange="applyShippedFilter()" style="width:auto;flex:0 0 auto;padding:3px 5px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-weight:bold;">
                 <option value="webedi">計上日</option>
                 <option value="shipped">発送日</option>
               </select>
@@ -1760,7 +1764,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812c';
+  const APP_BUILD = '20260812d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
