@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260804b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1755,7 +1755,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260804b';
+  const APP_BUILD = '20260812a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -1991,9 +1991,14 @@
         const sel = document.getElementById('maker-product-filter');
         const currentValue = sel.value;
         sel.innerHTML = '<option value="">すべての商品</option>';
+        // 表示は「メーカー名 / 商品名」。値は商品名のままなので絞り込みの動きは変わらない。
+        // 商品名に社名が入らない商品があり（例: 松浦アールスメロン = 有限会社かねしめ青果）、
+        // 社名では探せなかったため（2026-08-12 エレナ様のご指摘）。
+        const makers = result.productMakers || {};
         result.productList.forEach(function(p) {
           const opt = document.createElement('option');
-          opt.value = p; opt.textContent = p;
+          opt.value = p;
+          opt.textContent = makers[p] ? makers[p] + ' / ' + p : p;
           if (p === currentValue) opt.selected = true;
           sel.appendChild(opt);
         });
@@ -2031,7 +2036,9 @@
           tr.innerHTML =
             '<td style="text-align:center;"><input type="checkbox" class="unshipped-check" data-idx="' + i + '"></td>' +
             '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
-            '<td>' + escapeHtml(o.productName || '') + '</td>' +
+            '<td>' + escapeHtml(o.productName || '') +
+              // 管理者は全メーカーの注文が混ざるため添える（発送済タブと同じ扱い）
+              (currentIsAdmin && o.makerName ? '<br><small style="color:#1565c0;">' + escapeHtml(o.makerName) + '</small>' : '') + '</td>' +
             '<td>' + (o.quantity || '') + '</td>' +
             '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
             '<td>' + escapeHtml(o.store || '') + '</td>' +
@@ -2085,8 +2092,13 @@
         document.getElementById('maker-cancel-table').style.display = 'table';
       }
 
-      // 発送済みテーブル描画(初回はフィルタなし)
-      _renderShippedTable(shipped);
+      // 発送済みテーブル描画。
+      // ⚠️ 直接 _renderShippedTable(shipped) を呼ばないこと。計上日の入力欄は値を保持したままなので、
+      //    素で描き直すと「入力欄は 7/1〜7/31 のままなのに全期間が表示される」状態になる。
+      //    商品で絞り込みを変えるたびにこれが起きており、その画面から取ったCSVには
+      //    期間外の注文まで入っていた（2026-08-12 エレナ様のご指摘で判明）。
+      //    applyShippedFilter() は絞り込みが空なら全件描くので、初回もこれで正しい。
+      applyShippedFilter();
 
       switchMakerTab(_currentMakerTab);
   }
@@ -2145,7 +2157,11 @@
       tr.innerHTML =
         checkboxCell +
         '<td>' + (o.isTest ? '<span class="test-badge">TEST</span>' : '') + _fmtTime(o.timestamp) + '</td>' +
-        '<td>' + escapeHtml(o.productName || '') + (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
+        '<td>' + escapeHtml(o.productName || '') +
+          // 管理者は全メーカーの注文が混ざるため、どのメーカーの分か分かるように添える。
+          // 列を足すと表が横に伸びるので商品名の下に置く（2026-08-12 エレナ様のご指摘）
+          (currentIsAdmin && o.makerName ? '<br><small style="color:#1565c0;">' + escapeHtml(o.makerName) + '</small>' : '') +
+          (o.orderNo ? '<br><small style="color:#888;">' + escapeHtml(o.orderNo) + '</small>' : '') + '</td>' +
         '<td>' + (o.quantity || '') + '</td>' +
         '<td>' + escapeHtml(o.recipientName || '') + '<br><small style="color:#888;">' + escapeHtml(o.recipientPref || '') + escapeHtml(o.recipientCity || '') + '</small></td>' +
         '<td>' + escapeHtml(o.store || '') + '</td>' +
@@ -2932,7 +2948,11 @@
     if (orders.length === 0) { alert('出力する注文がありません。'); return; }
     const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
       'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
-      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '店舗', '配達日', 'のしの種類', 'のし名入れ', '運送会社', '追跡番号']];
+      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '店舗', '配達日', 'のしの種類', 'のし名入れ', '運送会社', '追跡番号',
+      // ⚠️ 末尾に足すこと。このCSVは「ダウンロード→Excelで記入→アップロードで一括発送」の
+      //    往復に使う。取込側(uploadShipmentCsv)は列名で探すので増えても壊れないが、
+      //    メーカー様の発送システムが位置で読む場合に備えて既存の列順は動かさない
+      'メーカー名']];
     orders.forEach(function(o) {
       rows.push([
         o.rowIdx,
@@ -2960,7 +2980,8 @@
         o.noshiType || 'なし',
         o.noshiName || '',
         '',  // 運送会社（空欄 → 記入する）
-        ''   // 追跡番号（空欄 → 記入する）
+        '',  // 追跡番号（空欄 → 記入する）
+        o.makerName || ''
       ]);
     });
     const csv = rows.map(function(r) {
@@ -2985,7 +3006,9 @@
     if (orders.length === 0) { alert('出力する注文がありません。'); return; }
     const rows = [['注文番号', '申込日時', 'テスト注文', '商品名', '数量',
       'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
-      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '希望配達日', 'のしの種類', 'のし名入れ', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時']];
+      'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '希望配達日', 'のしの種類', 'のし名入れ', '店舗', '運送会社', '追跡番号', '発送日時', '計上/報告状況', '計上/報告日時',
+      // ⚠️ 末尾に足すこと。列を位置で読む取込先を壊さないため（既存の列順は1つも動かさない）
+      'メーカー名']];
     orders.forEach(function(o) {
       rows.push([
         o.orderNo || '',
@@ -3018,7 +3041,8 @@
         _csvCell(o.trackingNo, armor),
         o.shippedAt || '',
         o.webediStatus || '',
-        o.webediAt || ''
+        o.webediAt || '',
+        o.makerName || ''
       ]);
     });
     const csv = rows.map(function(r) {
