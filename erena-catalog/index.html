@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260812c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -668,13 +668,17 @@
           <div id="maker-shipped-wrap" style="display:none;">
             <!-- 計上日フィルタ(管理者のみ) -->
             <div id="webedi-date-filter" style="display:none;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:12px;align-items:center;gap:6px;flex-wrap:wrap;max-width:520px;">
-              <b style="white-space:nowrap;">計上日:</b>
+              <select id="webedi-date-basis" onchange="applyShippedFilter()" style="padding:3px 5px;border:1px solid #ccc;border-radius:3px;font-size:12px;font-weight:bold;">
+                <option value="webedi">計上日</option>
+                <option value="shipped">発送日</option>
+              </select>
+              <span style="white-space:nowrap;">で絞り込み:</span>
               <input type="date" id="webedi-from" onchange="applyShippedFilter()" style="padding:3px 5px;border:1px solid #ccc;border-radius:3px;font-size:12px;width:120px;">
               <span>～</span>
               <input type="date" id="webedi-to" onchange="applyShippedFilter()" style="padding:3px 5px;border:1px solid #ccc;border-radius:3px;font-size:12px;width:120px;">
               <button onclick="clearWebediFilter()" style="padding:3px 8px;background:#fff;color:#666;border:1px solid #ccc;border-radius:3px;cursor:pointer;font-size:11px;">クリア</button>
               <span id="webedi-filter-count" style="color:#666;font-size:11px;white-space:nowrap;"></span>
-              <span style="color:#888;font-size:11px;flex-basis:100%;">まだ計上/報告していない注文は、発送日がこの期間に入っていれば表示します。</span>
+              <span id="webedi-filter-note" style="color:#888;font-size:11px;flex-basis:100%;"></span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
               <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
@@ -1756,7 +1760,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812b';
+  const APP_BUILD = '20260812c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2184,33 +2188,51 @@
     const all = window._allShipped || [];
     const from = document.getElementById('webedi-from').value;
     const to = document.getElementById('webedi-to').value;
+    // 絞り込みの基準。既定は計上日＝従来どおり。
+    // ⚠️ 基準を混ぜないこと。「計上日で絞りつつ未計上だけ発送日で拾う」形にすると、
+    //    出てきた行がどちらの日付で当たったのか誰にも分からなくなる。
+    const basisEl = document.getElementById('webedi-date-basis');
+    const basis = basisEl ? basisEl.value : 'webedi';
+    const byShipped = basis === 'shipped';
+
+    // 'yyyy-MM-dd HH:mm' は Safari 等で new Date() が通らないことがあるので / に直して渡す
+    const ms = function(s) { return s ? new Date(String(s).replace(/-/g, '/')).getTime() : NaN; };
+
     let filtered = all;
-    let uncounted = 0;
+    let hiddenUncounted = 0;
     if (from || to) {
       const fromMs = from ? new Date(from + 'T00:00:00+09:00').getTime() : 0;
       const toMs = to ? new Date(to + 'T23:59:59+09:00').getTime() : Infinity;
-      // 'yyyy-MM-dd HH:mm' は Safari 等で new Date() が通らないことがあるので / に直して渡す
-      const ms = function(s) { return s ? new Date(String(s).replace(/-/g, '/')).getTime() : NaN; };
+      const inRange = function(t) { return !isNaN(t) && t >= fromMs && t <= toMs; };
       filtered = all.filter(function(o) {
-        const w = ms(o.webediAt);
-        if (!isNaN(w)) return w >= fromMs && w <= toMs;
-        // ⚠️ 計上日が無い注文を捨てないこと。
-        //    以前はここで return false しており、7月に発送済みでも未計上なら
-        //    7月の抽出に出てこなかった。しかも消えたことが画面のどこにも出ないため、
-        //    「そのメーカーの注文が無い」と読めてしまう（2026-08-12 エレナ様のご指摘）。
-        //    見たいのは「その月に動いた分」なので、発送日で拾って残す。
-        const s = ms(o.shippedAt);
-        if (isNaN(s) || s < fromMs || s > toMs) return false;
-        uncounted++;
-        return true;
+        return inRange(ms(byShipped ? o.shippedAt : o.webediAt));
       });
+      if (!byShipped) {
+        // 計上日が無い注文は計上日基準では出ない。それ自体は正しいが、黙って消えると
+        // 「その月に発注が無かった」と読めてしまうので件数を出す（2026-08-12 エレナ様のご指摘）
+        hiddenUncounted = all.filter(function(o) {
+          return !o.webediAt && inRange(ms(o.shippedAt));
+        }).length;
+      }
     }
     _renderShippedTable(filtered);
+
     const cnt = document.getElementById('webedi-filter-count');
-    if (cnt) cnt.textContent = (from || to)
-      ? '(' + filtered.length + ' / ' + all.length + ' 件表示'
-        + (uncounted > 0 ? '・うち未計上 ' + uncounted + '件' : '') + ')'
-      : '';
+    if (cnt) cnt.textContent = (from || to) ? '(' + filtered.length + ' / ' + all.length + ' 件表示)' : '';
+
+    const note = document.getElementById('webedi-filter-note');
+    if (note) {
+      if (byShipped) {
+        note.textContent = '発送日で絞り込んでいます。計上/報告がまだの発注も含まれます。';
+      } else if (hiddenUncounted > 0) {
+        note.textContent = 'この期間に発送した未計上の発注が ' + hiddenUncounted
+          + '件ありますが、計上日が無いため表示されていません。「発送日」に切り替えると表示されます。';
+      } else if (from || to) {
+        note.textContent = '計上日で絞り込んでいます。発送した月で見るときは「発送日」に切り替えてください。';
+      } else {
+        note.textContent = '';
+      }
+    }
   }
 
   function clearWebediFilter() {
