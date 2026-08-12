@@ -32,6 +32,7 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
     GAS_API:'https://example.test/exec', GUIDE_DEBUG:false,
     localStorage:{setItem(){},getItem(){return null;}},
     location:{reload(){ctx._reloaded=true;}},
+    setInterval:()=>0, clearInterval:()=>{},
     document:{
       getElementById:()=>({ set innerHTML(v){appHtml=v;}, get innerHTML(){return appHtml;} }),
       querySelector:()=>({ set textContent(v){loadingTexts.push(v);}, get textContent(){return '';} }),
@@ -45,7 +46,8 @@ function run(responses){   // responses: 各回の {ok,status,text} か 'throw'
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(decls+'\n'+cut('setLoadingText')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
+  vm.runInContext(decls+'\nvar _guideWaitTimer=null;\n'+cut('setLoadingText')+'\n'+cut('startWaitCounter')
+    +'\n'+cut('stopWaitCounter')+'\n'+cut('fetchFromGas')+'\n'+cut('showError'), ctx);
   ctx.fetchFromGas('C1','guide_C1',true,0);
   return new Promise(r=>setImmediate(()=>setImmediate(()=>setImmediate(()=>
     r({calls, appHtml, rendered, notFound, reloaded:ctx._reloaded, loadingTexts, warned})))));
