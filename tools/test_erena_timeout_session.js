@@ -115,10 +115,10 @@ function countPosts(action) { return posts.filter(p => p.action === action).leng
 
 (async function () {
   // ---- 1. 上限そのものの値 ----
-  check('1回目の上限は10秒（実測の404は10.2〜31.5秒＝ここで切る）', netCtx._timeoutFor(0) === 10000, netCtx._timeoutFor(0));
-  check('2回目は30秒まで待つ（実測のコールドスタート26〜28秒をまたぐ）', netCtx._timeoutFor(1) === 30000, netCtx._timeoutFor(1));
-  check('3回目は40秒まで待つ', netCtx._timeoutFor(2) === 40000, netCtx._timeoutFor(2));
-  check('それ以上は40秒で頭打ち（無限に伸びない）', netCtx._timeoutFor(9) === 40000, netCtx._timeoutFor(9));
+  check('1回目は8秒で打ち切る（通るときは約2秒。粘るより投げ直す方が速い）', netCtx._timeoutFor(0) === 8000, netCtx._timeoutFor(0));
+  check('2回目も8秒（早い試行で拾えるほうが多い）', netCtx._timeoutFor(1) === 8000, netCtx._timeoutFor(1));
+  check('3回目から待つ側に倒す(15秒)', netCtx._timeoutFor(2) === 15000, netCtx._timeoutFor(2));
+  check('最後は40秒で頭打ち（無限に伸びない）', netCtx._timeoutFor(9) === 40000, netCtx._timeoutFor(9));
 
   // ---- 2. 返ってこない応答を待ち続けない ----
   setup({ getOrders: [{ delay: Infinity }] });
@@ -127,10 +127,10 @@ function countPosts(action) { return posts.filter(p => p.action === action).leng
   await drain();
   await p1;
   check('返らない応答は打ち切られる（永久に待たない）', threw !== null, String(threw && threw.name));
-  check('打ち切って3試行まで投げ直す', countPosts('getOrders') === 3, { posts: countPosts('getOrders') });
+  check('打ち切って6試行まで投げ直す', countPosts('getOrders') === 6, { posts: countPosts('getOrders') });
   const at = posts.filter(p => p.action === 'getOrders').map(p => p.at);
-  check('1回目は10秒で打ち切る', at[1] >= 10000 && at[1] < 11000, { 二回目の投げた時刻: at[1] });
-  check('2回目は30秒まで待ってから打ち切る', at[2] - at[1] >= 30000, { 差: at[2] - at[1] });
+  check('1回目は8秒で打ち切る', at[1] >= 8000 && at[1] < 9000, { 二回目の投げた時刻: at[1] });
+  check('2回目も8秒で打ち切る', at[2] - at[1] >= 8000 && at[2] - at[1] < 9500, { 差: at[2] - at[1] });
 
   // ---- 3. 「遅いが生きている」応答を切り捨てない（実測の26秒コールドスタート） ----
   setup({ getOrders: [{ delay: 26000, status: 200, body: { orders: [] } }] });
@@ -138,8 +138,8 @@ function countPosts(action) { return posts.filter(p => p.action === action).leng
   const p2 = netCtx.gasPost({ action: 'getOrders', params: {} }).then(r => { got = r; });
   await drain();
   await p2;
-  check('26秒かかる応答も、2回目(30秒上限)で受け取れる', got !== null && !!got.orders, { got: !!got });
-  check('そのとき投げ直しは2回で済む（3回目まで行かない＝合計時間が跳ねない）', countPosts('getOrders') === 2, { posts: countPosts('getOrders') });
+  check('26秒かかる「遅いが生きている」応答も、最後の試行で受け取れる（切り捨てない）', got !== null && !!got.orders, { got: !!got });
+  check('そのとき5試行かかる（早く切る代償。失敗率50%では早期投げ直しの方が期待値がよい）', countPosts('getOrders') === 5, { posts: countPosts('getOrders') });
 
   // ---- 4. 404 は打ち切りを待たずに即座に投げ直す ----
   setup({ getOrders: [{ delay: 50, status: 404 }, { delay: 50, status: 200, body: { orders: [] } }] });

@@ -278,14 +278,14 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   setup({ getOrdersForMaker: [R404] });
   threw = null;
   try { await ctx.gasPost({ action: 'getOrdersForMaker', params: {} }); } catch (e) { threw = e; }
-  check('読み込み系の上限は従来どおり3試行', countPosts('getOrdersForMaker') === 3, { posts: countPosts('getOrdersForMaker') });
+  check('読み込み系は6試行まで投げ直す（失敗率50%で3試行だと12.5%が失敗しきる）', countPosts('getOrdersForMaker') === 6, { posts: countPosts('getOrdersForMaker') });
 
   // 2026-08-13: ログインメールの請求は再送対象に入れた（404でも実際には送られているのに
   // 失敗と出ていたため）。ただしメールが増えるので上限は低く＝初回+1回まで。
   setup({ requestMagicLinkMaker: [R404] });
   threw = null;
   try { await ctx.gasPost({ action: 'requestMagicLinkMaker', params: {} }); } catch (e) { threw = e; }
-  check('ログインメールの請求は2試行まで（メールが増えすぎない）', countPosts('requestMagicLinkMaker') === 2, { posts: countPosts('requestMagicLinkMaker') });
+  check('ログインメールの請求も6試行まで（60秒のレート制限が2通目を防ぐ）', countPosts('requestMagicLinkMaker') === 6, { posts: countPosts('requestMagicLinkMaker') });
 
   // 本当に対象外の action は1回きりであること（再送の網を広げすぎていないかの歯止め）
   setup({ updateOrderUnknownAction: [R404] });
@@ -313,6 +313,39 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   check('発送処理の本線は replaceTrackings で置換している', shipFn.indexOf("action: 'replaceTrackings'") >= 0);
   const addTrackingCalls = (src.match(/action: 'addTracking'/g) || []).length;
   check('addTracking の呼び出しはデッドコードの1か所だけ', addTrackingCalls === 1, { count: addTrackingCalls });
+
+
+  // ================= 7. ログインメールの「リクエストが多すぎます」の読み替え(2026-08-13) =================
+  // 🚨 1回目の応答を404で落とすと、サーバーはメールを送り終えている。
+  //    投げ直すと60秒のレート制限に当たり「リクエストが多すぎます」が返る。
+  //    そのまま出すと【メールは届いているのに失敗に見える】。数十の店舗・メーカーが
+  //    問い合わせてくる形なので、投げ直した後だけ成功として読み替える。
+  setup({ requestMagicLink: [R404, OK({ success: false, message: 'リクエストが多すぎます。1分後に再試行してください' })] });
+  r = await ctx.gasPost({ action: 'requestMagicLink', email: 'a@example.com' });
+  check('投げ直し後のレート制限は「送信済み」として読み替える', r.success === true, r);
+  check('その文言は利用者に意味が通るものにする', /お送りしました/.test(r.message || ''), r.message);
+  check('読み替えたことが分かる印を残す', r._recoveredFromRetry === true, r);
+
+  // ⚠️ 1発目のレート制限は【読み替えない】。本当に連打しているので、隠すと気づけない。
+  setup({ requestMagicLink: [OK({ success: false, message: 'リクエストが多すぎます。1分後に再試行してください' })] });
+  r = await ctx.gasPost({ action: 'requestMagicLink', email: 'a@example.com' });
+  check('1発目のレート制限は隠さずそのまま出す', r.success === false && /多すぎます/.test(r.message), r);
+  check('1発目なので投げ直しもしない', countPosts('requestMagicLink') === 1, { posts: countPosts('requestMagicLink') });
+
+  // ⚠️ ふつうの success:false を読み替えてしまわないこと
+  setup({ requestMagicLink: [R404, OK({ success: false, message: '登録されていないメールアドレスです' })] });
+  r = await ctx.gasPost({ action: 'requestMagicLink', email: 'a@example.com' });
+  check('レート制限【以外】の失敗は成功に読み替えない', r.success === false, r);
+
+  // ================= 8. 進捗の通知(2026-08-13) =================
+  // 業務用の画面で「送信中...」のまま固まると、利用者は別画面から二重に注文する。
+  const seen = [];
+  ctx._gasOnAttempt = function (n, total) { seen.push(n + '/' + total); };
+  setup({ getOrders: [R404, R404, OK({ orders: [] })] });
+  await ctx.gasPost({ action: 'getOrders', params: {} });
+  ctx._gasOnAttempt = null;
+  check('試行のたびに進捗を通知する', seen.length === 3, seen);
+  check('何回中の何回目かが分かる', seen[0] === '1/6' && seen[2] === '3/6', seen);
 
   console.log('\n' + (fail === 0 ? '全' + pass + '件 PASS' : pass + '件 PASS / ' + fail + '件 FAIL'));
   process.exit(fail === 0 ? 0 : 1);

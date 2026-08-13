@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260813a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260813b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1904,7 +1904,10 @@
   }
   // 一括処理のときは行ごとの failedItems に入る（文言はサーバー側の原文どおり）
   const BATCH_ALREADY_DONE = { '発送済み済み': 1, '計上済み': 1 };
-  const MAX_RETRY_READ = 2;    // 読み込み系: 初回 + 2回
+  // 🚨 2026-08-13: 2 → 5 に引き上げた（初回+5回=6試行）。
+  //    失敗率50%の実測に対し3試行だと 12.5% が失敗しきる。6試行なら 1.6%。
+  //    1回あたりの打ち切りが早い（8秒）ので、普通に通るときの体感は変わらない。
+  const MAX_RETRY_READ = 5;    // 読み込み系: 初回 + 5回
   const WRITE_ROUNDS = 6;      // 更新系: 「投げる → 読んで確かめる」を最大6巡
 
   // ===== ログインメールの請求（2026-08-13） =====
@@ -1915,9 +1918,34 @@
   //    いちばん分かりにくい壊れ方をしていた。
   // ⭐ 再送対象に入れる。メールが2通届いても実害はない
   //    （ログインリンクは72時間・再利用可で、古い方も生きたまま使える）。
-  // ⚠️ ただし1通ずつ増えるので上限は低くする＝初回+1回まで。
+  // ⭐ メールが増える心配は要らない。サーバー側に60秒のレート制限があり、
+  //    投げ直しても2通目は送られない（下の _readRateLimitAsSent 参照）。
+  //    なので上限は読み込み系と同じでよい。
   const MAGIC_LINK_ACTIONS = { requestMagicLink: 1, requestMagicLinkMaker: 1, requestMagicLinkVendor: 1 };
-  const MAX_RETRY_MAGIC = 1;
+  const MAX_RETRY_MAGIC = MAX_RETRY_READ;
+
+  // 🚨 投げ直したときサーバーは「リクエストが多すぎます。1分後に再試行してください」を返す。
+  //    これは失敗ではなく【1回目が届いてメールが送られた証拠】。
+  //    そのまま画面に出すと、メールは届いているのに利用者は失敗したと思い、
+  //    1分待ってまた押す。いちばんITに不慣れな方が最初に触る場所なので、ここは読み替える。
+  // ⚠️ 投げ直していないとき(_attempt===0)は【絶対に読み替えない】。
+  //    1発目のこの応答は「本当に短時間に連打している」を意味しており、隠すと気づけなくなる。
+  const MAGIC_RATE_LIMIT_HEAD = 'リクエストが多すぎます';
+  const MAGIC_SENT_MSG = '登録済みの場合、ログインリンクをお送りしました。メールをご確認ください';
+  function _readRateLimitAsSent(json, attempt) {
+    if (attempt > 0 && json && json.success === false
+      && String(json.message || '').indexOf(MAGIC_RATE_LIMIT_HEAD) === 0) {
+      return { success: true, message: MAGIC_SENT_MSG, _recoveredFromRetry: true };
+    }
+    return json;
+  }
+
+  // 進捗の通知先。長く待たされるとき「固まった」と思わせないために画面へ出す。
+  // ⚠️ 業務用の画面では、待たされること自体より【何が起きているか分からないこと】が事故を生む。
+  //    分からないと、利用者は別のタブで二重に注文する。
+  // ⚠️ let ではなく var。let だと検査から差し替えられず「進捗が出ているつもり」を
+  //    機械で確かめられない（＝壊れても気づけない）。挙動は同じ。
+  var _gasOnAttempt = null;
   // 再送しても確認が取れなかったときの文言。
   // ⚠️ 「送信しました」と言い切らない（本当に落ちている可能性も残る）。
   //    かといって「失敗しました」も嘘になりうる。＝【確認できていない】と正直に言い、
@@ -1966,11 +1994,17 @@
   // ⚠️ ただし hop1 が 26〜28秒かかることも実測された（GASのコールドスタート）。
   //    毎回同じ上限で切ると、その「遅いが生きている」応答を永久に受け取れなくなる。
   //    → 投げ直すほど上限を伸ばし、2回目以降は待つ側に倒す。
-  // 🚨 刻みは実測から決めてある。2回目を25秒にしていたら【26秒の応答が2回目でも切られ】、
-  //    3回目までかかって合計65秒になった（テストが捕まえた）。2回目で実測の上限28秒を
-  //    確実にまたぐよう30秒にしてある＝ここを縮めるとコールドスタートが取りこぼされる。
-  //    1回目を10秒にしているのは、実測の404（10.2 / 20.5 / 31.5秒）を全部1回目で切るため。
-  const FETCH_TIMEOUTS_MS = [10000, 30000, 40000];
+  // 🚨🚨 失敗率は【変動する】。朝は20%、同日13時は50%、8/12の記録では56%だった。
+  //    低い方の数字で設計してはいけない。50%なら3試行でも 0.5^3 = 12.5% が失敗しきる。
+  //    業務用の注文受付でこれは通らない。試行回数で潰す:
+  //      3試行 → 12.5% / 6試行 → 1.6% / （失敗率50%のとき）
+  // ⭐ 実測(2026-08-13)で「通るまで投げ直す」と 8/8 成功。うち5回は1回目・約2秒で通った。
+  //    ＝早めに切って投げ直すのが正しい。粘って待つより、捨てて投げ直す方が速い。
+  // ⚠️ ただし hop1 が27〜31秒かかる「遅いが生きている」場合もあるので、
+  //    後半の試行は待つ側に倒す（早い試行で拾えなかったときの最後の受け皿）。
+  // ⚠️ 投げ直しても安全なのは、submitForm にサーバー側の冪等キーがあるから
+  //    （processForm がロックの内側で送信キーを突合し、2件目を作らない）。
+  const FETCH_TIMEOUTS_MS = [8000, 8000, 15000, 25000, 35000, 40000];
   function _timeoutFor(attempt) {
     return FETCH_TIMEOUTS_MS[Math.min(attempt || 0, FETCH_TIMEOUTS_MS.length - 1)];
   }
@@ -2111,13 +2145,16 @@
     const action = payload && payload.action;
     // ログインメールの請求だけは再送の上限を下げる（下の MAX_RETRY_MAGIC の理由を参照）
     const maxRetry = MAGIC_LINK_ACTIONS[action] ? MAX_RETRY_MAGIC : MAX_RETRY_READ;
-    return _gasPostOnce(payload, _attempt).catch(err => {
-      if (RETRIABLE_ACTIONS[action] && _attempt < maxRetry) {
-        return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
-          .then(() => gasPost(payload, _attempt + 1));  // 600ms刻みのバックオフ
-      }
-      throw err;
-    });
+    if (_gasOnAttempt) { try { _gasOnAttempt(_attempt + 1, maxRetry + 1); } catch (e) {} }
+    return _gasPostOnce(payload, _attempt)
+      .then(json => MAGIC_LINK_ACTIONS[action] ? _readRateLimitAsSent(json, _attempt) : json)
+      .catch(err => {
+        if (RETRIABLE_ACTIONS[action] && _attempt < maxRetry) {
+          return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
+            .then(() => gasPost(payload, _attempt + 1));  // 600ms刻みのバックオフ
+        }
+        throw err;
+      });
   }
 
   let formDataGlobal = {};
@@ -2149,7 +2186,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260813a';
+  const APP_BUILD = '20260813b';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -4027,8 +4064,16 @@
     const btn = document.querySelector("#form-confirm .btn-primary");
     btn.disabled = !0;
     btn.textContent = "送信中...";
+    // 通信が不安定なとき、何回目を試しているのかを出す。
+    // 🚨 「送信中...」のまま1分固まると、利用者は別の画面からもう一度注文する。
+    //    二重注文はサーバー側の冪等キーで防がれるが、そもそも不安にさせない。
+    _gasOnAttempt = function (n, total) {
+      btn.textContent = (n <= 1) ? '送信中...' : '送信中... 通信を確認しています (' + n + '/' + total + ')';
+    };
+    const _clearProgress = function () { _gasOnAttempt = null; };
     gasPost({ action: 'submitForm', payload: formDataGlobal })
       .then(result => {
+        _clearProgress();
         if (result && "success" === result.status) {
           showComplete();
         } else {
@@ -4038,6 +4083,7 @@
         }
       })
       .catch(err => {
+        _clearProgress();
         // 通信瞬断で結果が確認できないケース。サーバー側は成功している可能性があり、かつ二重注文は
         // 冪等キー/内容照合で自動防止されるため、無用な再送を煽らず「確認を促す」文言にする。
         alert("通信が不安定なため、送信結果が確認できませんでした。\n"
