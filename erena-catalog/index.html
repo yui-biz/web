@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260813b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260813c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -1730,7 +1730,7 @@
   // 開いた瞬間のGAS瞬断で「通信エラー: Failed to fetch」になりログインできない事故を自動リトライで防ぐ。
   // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
   // requestMagicLink* は「送ったのに失敗と出る」を無くすため 2026-08-13 に追加（下の MAGIC_LINK_ACTIONS 参照）
-  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1, requestMagicLink: 1, requestMagicLinkMaker: 1, requestMagicLinkVendor: 1 };
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1, findOrderBySubmitKey: 1, requestMagicLink: 1, requestMagicLinkMaker: 1, requestMagicLinkVendor: 1 };
 
   // ===== 更新系: 答えを取り落としたら【確認してから】判断する（2026-08-12） =====
   // 🚨 GASの応答は script.googleusercontent.com へ302で飛ばされ、その先が高頻度で404を返す。
@@ -2105,6 +2105,48 @@
     return out;
   }
 
+  // ===== 送信: 投げ直す前に「もう入っているか」を聞く（2026-08-13） =====
+  // 🚨 これが「送信に1分かかる」の直し方の本体。
+  //    404は【応答側】で起きるので、答えを落としたときは【注文はもう入っている】ことがほとんど。
+  //    それを知らずに、まるごと投げ直すのを6回繰り返していたのが1分の正体だった。
+  //    → 落としたらまず聞く。入っていれば即座に完了（数秒）。
+  // ⭐ 投げ直すのは「入っていない」と分かったときだけになるので、迷いが消える。
+  // ⚠️ そもそも投げ直し自体はサーバー側の冪等キーで安全（2件目を作らない）。
+  //    ここで聞くのは【速さ】と【入ったかどうかを言い切れるようにするため】。
+  const SUBMIT_ROUNDS = 5;
+
+  /** 送信キーの注文があるか聞く。true/false を返す。調べられなければ null（＝無いとは限らない）。 */
+  function _findSubmitted(key) {
+    if (!key) return Promise.resolve(null);
+    return gasPost({ action: 'findOrderBySubmitKey', submitKey: key })
+      .then(function(r) {
+        if (!r || r.error) return null;   // 🚨「調べられなかった」を「無い」にしない
+        return r.found ? r : { found: false };
+      })
+      .catch(function() { return null; });
+  }
+
+  function _sendSubmit(payload) {
+    const key = payload.payload && payload.payload.submitKey;
+    let round = 0;
+    let lastErr = null;
+    function once() {
+      return _gasPostOnce(payload, round).catch(function(err) {
+        lastErr = err;
+        return _findSubmitted(key).then(function(res) {
+          if (res && res.found) {
+            // 実は通っていた。投げ直さずに完了にする
+            return { status: 'success', orderNo: res.orderNo, _confirmedByRead: true };
+          }
+          if (round >= SUBMIT_ROUNDS) throw lastErr;
+          round++;
+          return new Promise(function(r) { setTimeout(r, 600 * round); }).then(once);
+        });
+      });
+    }
+    return once();
+  }
+
   /** 更新系: 投げる → 落としたら読んで確かめる → 未反映なら改めて投げる。 */
   function _sendWrite(payload) {
     const action = payload.action;
@@ -2139,6 +2181,8 @@
   }
 
   function gasPost(payload, _attempt) {
+    // 送信も「投げる→確認する」の専用経路へ（更新系と同じ考え方・2026-08-13）
+    if (!_attempt && payload && payload.action === 'submitForm') return _sendSubmit(payload);
     // 更新系は「投げる→確認する」の専用経路へ（入口でだけ振り分ける）
     if (!_attempt && payload && WRITE_CONFIRM[payload.action]) return _sendWrite(payload);
     _attempt = _attempt || 0;
@@ -2186,7 +2230,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260813b';
+  const APP_BUILD = '20260813c';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;

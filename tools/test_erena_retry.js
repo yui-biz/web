@@ -315,6 +315,48 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   check('addTracking の呼び出しはデッドコードの1か所だけ', addTrackingCalls === 1, { count: addTrackingCalls });
 
 
+  // ================= 9. 送信「投げ直す前に、もう入っているか聞く」(2026-08-13) =================
+  // 🚨 404は応答側で起きるので、答えを落としたとき注文は【もう入っている】ことがほとんど。
+  //    それを聞かずに投げ直していたのが「送信に1分かかる」の正体だった。
+  const SUBMIT = { action: 'submitForm', payload: { submitKey: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' } };
+
+  // 落としたが、実は入っていた → 投げ直さずに即完了
+  setup({ submitForm: [R404], findOrderBySubmitKey: [OK({ found: true, orderNo: '26-S-0999' })] });
+  r = await ctx.gasPost(SUBMIT);
+  check('送信: 実は入っていたら投げ直さない', countPosts('submitForm') === 1, { posts: countPosts('submitForm') });
+  check('送信: 入っていれば成功として返す', r.status === 'success' && r._confirmedByRead === true, r);
+  check('送信: 注文番号も返す（画面に出せる）', r.orderNo === '26-S-0999', r);
+
+  // 落ちて、入っていないと分かった → 投げ直す
+  setup({ submitForm: [R404, OK({ status: 'success', orderNo: '26-S-1000' })], findOrderBySubmitKey: [OK({ found: false })] });
+  r = await ctx.gasPost(SUBMIT);
+  check('送信: 入っていないと分かったら投げ直す', countPosts('submitForm') === 2, { posts: countPosts('submitForm') });
+  check('送信: 投げ直して通る', r.status === 'success', r);
+
+  // 確認そのものが落ちた → 「無い」と決めつけず、投げ直す（冪等キーがあるので安全）
+  setup({ submitForm: [R404, OK({ status: 'success', orderNo: '26-S-1001' })], findOrderBySubmitKey: [R404] });
+  r = await ctx.gasPost(SUBMIT);
+  check('送信: 確認できなくても投げ直す（サーバー側の冪等キーが2件目を作らない）', countPosts('submitForm') === 2, { posts: countPosts('submitForm') });
+
+  // サーバーが調べられなかったと言ってきた場合も「無い」と決めつけない
+  setup({ submitForm: [R404, OK({ status: 'success' })], findOrderBySubmitKey: [OK({ error: 'なにかの失敗' })] });
+  r = await ctx.gasPost(SUBMIT);
+  check('送信: error応答を found:false と取り違えない', countPosts('submitForm') === 2, { posts: countPosts('submitForm') });
+
+  // 全部落ち続けても、投げ直しは上限で止まる（無限に注文を投げ続けない）
+  setup({ submitForm: [R404], findOrderBySubmitKey: [OK({ found: false })] });
+  threw = null;
+  try { await ctx.gasPost(SUBMIT); } catch (e) { threw = e; }
+  check('送信: 上限で止まる（6回まで）', countPosts('submitForm') === 6, { posts: countPosts('submitForm') });
+  check('送信: 上限まで駄目ならエラーにする（成功を装わない）', !!threw);
+
+  // サーバーの正当な拒否（申込期限切れ等）は投げ直さない
+  setup({ submitForm: [OK({ status: 'error', message: 'この商品の申込期限を過ぎています' })] });
+  r = await ctx.gasPost(SUBMIT);
+  check('送信: 正当な拒否は投げ直さない', countPosts('submitForm') === 1, { posts: countPosts('submitForm') });
+  check('送信: 拒否の理由をそのまま返す', r.status === 'error' && /申込期限/.test(r.message), r);
+  check('送信: 拒否のときは確認にも行かない', countPosts('findOrderBySubmitKey') === 0);
+
   // ================= 7. ログインメールの「リクエストが多すぎます」の読み替え(2026-08-13) =================
   // 🚨 1回目の応答を404で落とすと、サーバーはメールを送り終えている。
   //    投げ直すと60秒のレート制限に当たり「リクエストが多すぎます」が返る。
