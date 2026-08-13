@@ -389,6 +389,19 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   check('試行のたびに進捗を通知する', seen.length === 3, seen);
   check('何回中の何回目かが分かる', seen[0] === '1/6' && seen[2] === '3/6', seen);
 
+  // 🚨 送信は【試行回数】ではなく【いま何をしているか】を日本語で出す。
+  //    「(2/6)」は実は確認の2回目で、店舗の方には意味が伝わらない（saito 指摘）。
+  const phases = [];
+  ctx._gasOnPhase = function (t) { phases.push(t); };
+  setup({ submitForm: [R404, OK({ status: 'success' })], findOrderBySubmitKey: [OK({ found: false })] });
+  await ctx.gasPost(SUBMIT);
+  ctx._gasOnPhase = null;
+  check('送信: 最初は「送信中...」', phases[0] === '送信中...', phases);
+  check('送信: 答えを落としたら「確認しています」と出す', /確認しています/.test(phases[1] || ''), phases);
+  check('送信: 投げ直すときは「もう一度お送りしています」', /もう一度お送りしています/.test(phases[2] || ''), phases);
+  check('送信: 何回目かは日本語で添える', /2回目/.test(phases[2] || ''), phases);
+  check('送信: 数字だけの表示は出さない', !phases.some(function (t) { return /\(\d+\/\d+\)/.test(t); }), phases);
+
   console.log('\n' + (fail === 0 ? '全' + pass + '件 PASS' : pass + '件 PASS / ' + fail + '件 FAIL'));
   process.exit(fail === 0 ? 0 : 1);
 })();
