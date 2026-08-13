@@ -115,10 +115,19 @@ function countPosts(action) { return posts.filter(p => p.action === action).leng
 
 (async function () {
   // ---- 1. 上限そのものの値 ----
-  check('1回目は8秒で打ち切る（通るときは約2秒。粘るより投げ直す方が速い）', netCtx._timeoutFor(0) === 8000, netCtx._timeoutFor(0));
+  check('読み込みの1回目は5秒で打ち切る（サーバー側1.5〜3秒なので健全な応答は巻き添えにしない）', netCtx._timeoutFor(0, 'getOrders') === 5000, netCtx._timeoutFor(0, 'getOrders'));
   check('2回目も8秒（早い試行で拾えるほうが多い）', netCtx._timeoutFor(1) === 8000, netCtx._timeoutFor(1));
   check('3回目から待つ側に倒す(15秒)', netCtx._timeoutFor(2) === 15000, netCtx._timeoutFor(2));
   check('最後は40秒で頭打ち（無限に伸びない）', netCtx._timeoutFor(9) === 40000, netCtx._timeoutFor(9));
+
+  // 🚨 読み込みと書き込みで所要時間が違うので、上限も分けてある。
+  //    書き込み(送信・発送処理)はメール送信を含み6秒前後かかる。5秒で切ると
+  //    健全な処理を毎回捨てて確認の往復が増え、かえって遅くなる。
+  check('送信の1回目は10秒（メール送信を含むので5秒では切らない）', netCtx._timeoutFor(0, 'submitForm') === 10000, netCtx._timeoutFor(0, 'submitForm'));
+  check('発送処理も書き込み側の上限を使う', netCtx._timeoutFor(0, 'updateShipment') === 10000, netCtx._timeoutFor(0, 'updateShipment'));
+  check('取消の承認も書き込み側', netCtx._timeoutFor(0, 'approveCancellation') === 10000, netCtx._timeoutFor(0, 'approveCancellation'));
+  check('action を渡さなければ読み込み側の上限', netCtx._timeoutFor(0) === 5000, netCtx._timeoutFor(0));
+  check('書き込み側も無限には伸びない（40秒で頭打ち）', netCtx._timeoutFor(9, 'submitForm') === 40000, netCtx._timeoutFor(9, 'submitForm'));
 
   // ---- 2. 返ってこない応答を待ち続けない ----
   setup({ getOrders: [{ delay: Infinity }] });
@@ -129,7 +138,7 @@ function countPosts(action) { return posts.filter(p => p.action === action).leng
   check('返らない応答は打ち切られる（永久に待たない）', threw !== null, String(threw && threw.name));
   check('打ち切って6試行まで投げ直す', countPosts('getOrders') === 6, { posts: countPosts('getOrders') });
   const at = posts.filter(p => p.action === 'getOrders').map(p => p.at);
-  check('1回目は8秒で打ち切る', at[1] >= 8000 && at[1] < 9000, { 二回目の投げた時刻: at[1] });
+  check('読み込みの1回目は5秒で打ち切る', at[1] >= 5000 && at[1] < 6000, { 二回目の投げた時刻: at[1] });
   check('2回目も8秒で打ち切る', at[2] - at[1] >= 8000 && at[2] - at[1] < 9500, { 差: at[2] - at[1] });
 
   // ---- 3. 「遅いが生きている」応答を切り捨てない（実測の26秒コールドスタート） ----

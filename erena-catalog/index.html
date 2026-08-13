@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260813c"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260813d"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -2004,9 +2004,18 @@
   //    後半の試行は待つ側に倒す（早い試行で拾えなかったときの最後の受け皿）。
   // ⚠️ 投げ直しても安全なのは、submitForm にサーバー側の冪等キーがあるから
   //    （processForm がロックの内側で送信キーを突合し、2件目を作らない）。
-  const FETCH_TIMEOUTS_MS = [8000, 8000, 15000, 25000, 35000, 40000];
-  function _timeoutFor(attempt) {
-    return FETCH_TIMEOUTS_MS[Math.min(attempt || 0, FETCH_TIMEOUTS_MS.length - 1)];
+  // ⚠️ 読み込みと書き込みで所要時間が違うので、上限も分ける（2026-08-13）。
+  //    読み込み（一覧・商品）はサーバー側 1.5〜3秒。5秒で切れば健全な応答を巻き添えにせず、
+  //    404のハング（4.9〜31.8秒）を早く捨てられる。
+  //    書き込み（送信・発送処理）はメール送信を含むので 6秒前後かかる。ここを5秒で切ると
+  //    健全な処理を毎回捨てて確認の往復が増え、かえって遅くなる。
+  const FETCH_TIMEOUTS_MS = [5000, 8000, 15000, 25000, 35000, 40000];
+  const FETCH_TIMEOUTS_SLOW_MS = [10000, 20000, 30000, 40000, 40000, 40000];
+  const SLOW_ACTIONS = { submitForm: 1 };   // 更新系は下で WRITE_CONFIRM も見る
+  function _timeoutFor(attempt, action) {
+    var slow = action && (SLOW_ACTIONS[action] || WRITE_CONFIRM[action]);
+    var table = slow ? FETCH_TIMEOUTS_SLOW_MS : FETCH_TIMEOUTS_MS;
+    return table[Math.min(attempt || 0, table.length - 1)];
   }
 
   /** 1回だけ投げる。再送も確認もしない純粋な往復。 */
@@ -2019,7 +2028,7 @@
     // ⚠️ AbortController が無い古い環境では、従来どおり上限なしで待つ（機能を止めない）
     const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     let timer = null;
-    if (ctrl) timer = setTimeout(function() { ctrl.abort(); }, _timeoutFor(attempt));
+    if (ctrl) timer = setTimeout(function() { ctrl.abort(); }, _timeoutFor(attempt, payload && payload.action));
     const opts = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -2230,7 +2239,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260813c';
+  const APP_BUILD = '20260813d';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2262,13 +2271,29 @@
       // 店舗ログイン
       showMainContent(auth.storeId, auth.storeName, auth.isAdmin);
       buildFormStructure();
+      // ⚡ 前回の商品情報があれば、その場で出してしまう（2026-08-13）。
+      //    通信は1回あたり5割の確率で404を引き、そのぶん毎回待たされていた。
+      //    商品情報は滅多に変わらないので、待たせる理由がない。
+      const _cachedP = _loadProductCache();
+      if (_cachedP) {
+        if (Array.isArray(_cachedP.holidays)) jpHolidaySet = new Set(_cachedP.holidays);
+        populateProductDropdown(_cachedP.products);
+      }
       gasPost({ action: 'getProducts' })
         .then(result => {
-          if (result.error) return onFailure({ message: result.error });
+          if (result.error) {
+            // キャッシュで既に出せているなら、画面を壊してまでエラーにしない
+            if (!_cachedP) return onFailure({ message: result.error });
+            return;
+          }
           if (Array.isArray(result.holidays)) jpHolidaySet = new Set(result.holidays);
-          populateProductDropdown(result.products);
+          // ⚠️ 中身が変わっていないなら触らない。作り直すと TomSelect を壊して作り直すことになり、
+          //    入力中の店舗の操作を邪魔する。変わったときだけ入れ替える。
+          const _same = _cachedP && JSON.stringify(_cachedP.products) === JSON.stringify(result.products);
+          if (!_same) populateProductDropdown(result.products);
+          _saveProductCache(result);
         })
-        .catch(err => onFailure(err));
+        .catch(err => { if (!_cachedP) onFailure(err); });
     });
     // 古いタブ検知: 初回 + 10分毎 + タブ復帰時に最新ビルドを確認（新版ならバナー表示）
     checkForUpdate();
@@ -3762,12 +3787,56 @@
     console.error('Script call failed:', error.message);
   }
 
+  // ===== 商品情報を画面側にも保存する（2026-08-13） =====
+  // 通信は1回あたり5割の確率で404を引き、そのたびに待たされる。商品情報は滅多に変わらないので、
+  // 待たせる理由がない。前回の内容をその場で出して、裏で最新に差し替える。
+  // ⭐ 古い内容で不正な注文が通る心配はない。申込期限と着日の妥当性はサーバー側(processForm)が
+  //    改めて検査するので、期限切れの注文は弾かれる。画面の一覧は「選ばせる」ためだけのもの。
+  // ⚠️ 入るのは商品名・商品番号・締切日などで、個人情報は含まない。
+  // ⚠️ 版が変わったら捨てる。応答の形が変わったとき、古い内容で画面が壊れるのを防ぐ。
+  const PRODUCT_CACHE_KEY = 'erena_products_v1';
+  const PRODUCT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;   // 1日以上前のものは使わない
+  function _loadProductCache() {
+    try {
+      const raw = localStorage.getItem(PRODUCT_CACHE_KEY);
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (!c || c.build !== APP_BUILD) return null;
+      if (!Array.isArray(c.products) || c.products.length === 0) return null;
+      if (!c.at || Date.now() - c.at > PRODUCT_CACHE_MAX_AGE_MS) return null;
+      return c;
+    } catch (e) { return null; }
+  }
+  function _saveProductCache(result) {
+    try {
+      if (!result || !Array.isArray(result.products) || result.products.length === 0) return;
+      localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify({
+        build: APP_BUILD,
+        at: Date.now(),
+        products: result.products,
+        holidays: Array.isArray(result.holidays) ? result.holidays : []
+      }));
+    } catch (e) { /* 容量超過など。保存できなくても本体は動く */ }
+  }
+
   function populateProductDropdown(products) {
     window._cachedProducts = products || [];  // 編集モーダルの商品選択肢用にキャッシュ
     const select = document.getElementById('productName');
     if (!products) {
       onFailure({ message: "サーバーから空の応答がありました。" });
       return;
+    }
+
+    // 🚨 裏で最新に差し替えるとき、選んでいる商品を失わないよう覚えておく（2026-08-13）。
+    //    入力途中の店舗の選択が黙って消えると、そのまま送信されかねない。
+    const _prevSelected = (select.tomselect ? select.tomselect.getValue() : select.value) || '';
+
+    // 🚨 この関数は2回呼ばれるようになった（キャッシュで即表示 → 裏で最新に差し替え）。
+    //    TomSelect は元の <select> を包んで別のUIを作るので、
+    //    壊さずにもう一度作ると【ドロップダウンが二重になって操作できなくなる】。
+    //    先に必ず片付ける。
+    if (select.tomselect) {
+      try { select.tomselect.destroy(); } catch (e) {}
     }
 
     // 商品番号順にソートして単一フラットリストで表示
@@ -3802,6 +3871,9 @@
     });
     select.disabled = false;
 
+    // 選んでいた商品を戻す（TomSelect を作る前に戻すこと。作った後だと拾われない）
+    if (_prevSelected) select.value = _prevSelected;
+
     // Tom Select で検索可能なリッチドロップダウン化(商品番号順)
     new TomSelect(select, {
       placeholder: '商品番号または商品名で検索',
@@ -3809,6 +3881,13 @@
       searchField: ['text'],
       onChange: function() { displayProductImage(select); }
     });
+
+    // 🚨 選んでいた商品が新しい一覧から消えていた場合（販売終了など）。
+    //    黙って未選択に戻すと、画面には前の商品の写真が残ったままになり、
+    //    店舗は選べているつもりで送信してしまう。表示も揃えて気づけるようにする。
+    if (_prevSelected && select.value !== _prevSelected) {
+      displayProductImage(select);
+    }
   }
 
   function displayProductImage(selectElement) {
