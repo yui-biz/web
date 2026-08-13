@@ -45,6 +45,12 @@ const ctx = {
   currentStoreId: '',
   currentIsAdmin: false,
   handleSessionExpired: () => {},
+  // 2026-08-13: _gasPostOnce が使うようになったもの。
+  // ⚠️ AbortController は【あえて置かない】。置くと上の setTimeout が即実行なので
+  //    毎回その場で abort してしまい、ここで見たい再送のふるまいが測れなくなる。
+  //    タイムアウト自体の検査は test_erena_timeout_session.js で行う。
+  touchAuth: () => {},
+  clearTimeout: () => {},
   fetch: (url, opt) => {
     const payload = JSON.parse(opt.body);
     posts.push(payload);
@@ -274,10 +280,18 @@ const ROW = (o) => Object.assign({ rowIdx: 5, shipStatus: '未発送', carrier: 
   try { await ctx.gasPost({ action: 'getOrdersForMaker', params: {} }); } catch (e) { threw = e; }
   check('読み込み系の上限は従来どおり3試行', countPosts('getOrdersForMaker') === 3, { posts: countPosts('getOrdersForMaker') });
 
+  // 2026-08-13: ログインメールの請求は再送対象に入れた（404でも実際には送られているのに
+  // 失敗と出ていたため）。ただしメールが増えるので上限は低く＝初回+1回まで。
   setup({ requestMagicLinkMaker: [R404] });
   threw = null;
   try { await ctx.gasPost({ action: 'requestMagicLinkMaker', params: {} }); } catch (e) { threw = e; }
-  check('対象外の action は1回だけ', countPosts('requestMagicLinkMaker') === 1, { posts: countPosts('requestMagicLinkMaker') });
+  check('ログインメールの請求は2試行まで（メールが増えすぎない）', countPosts('requestMagicLinkMaker') === 2, { posts: countPosts('requestMagicLinkMaker') });
+
+  // 本当に対象外の action は1回きりであること（再送の網を広げすぎていないかの歯止め）
+  setup({ updateOrderUnknownAction: [R404] });
+  threw = null;
+  try { await ctx.gasPost({ action: 'updateOrderUnknownAction', params: {} }); } catch (e) { threw = e; }
+  check('再送対象でない action は1回だけ', countPosts('updateOrderUnknownAction') === 1, { posts: countPosts('updateOrderUnknownAction') });
 
   // ================= 7. 一覧そのものの検査（取りこぼし防止） =================
   const CONF = vm.runInContext('WRITE_CONFIRM', ctx);

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20260812g"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20260813a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -873,6 +873,14 @@
 
   // === 認証関連 ===
   const AUTH_KEY = 'erena_auth';
+  // 「ログインから3時間」ではなく【最後に操作してから3時間】（2026-08-13）。
+  // 🚨 以前は固定だったため、店頭で作業している最中でも問答無用で切れていた。
+  //    ログインリンク自体は72時間・再利用可なので「メールを探して押し直す」で戻れるが、
+  //    それが1日2〜3回、使う人数ぶん起きる。ITに不慣れな方にはここがいちばん詰まる。
+  // ⭐ 放置された端末は【操作が無ければ同じ3時間で切れる】＝開きっぱなしの露出時間は延びない。
+  //    一覧には購入者・お届け先の個人情報が出るので、ここを延ばさないことが条件。
+  // ⚠️ 延ばせるのは手元の保持期限だけ。サーバー側のログイントークンは72時間で、
+  //    そちらは延びない＝無期限に居座ることはできない。
   const AUTH_SESSION_HOURS = 3;
   // 🔒 ログイン時のトークンを保持し、以降のリクエストに毎回添える（gasPost が自動で付ける）。
   // これが無いと、サーバーは「storeId / email を名乗る誰か」を本人と区別できない。
@@ -890,6 +898,24 @@
       currentAuthToken = auth.token || '';
       return auth;
     } catch (e) { return null; }
+  }
+
+  /**
+   * 操作があったら保持期限を延ばす（スライド式）。gasPost が通るたびに呼ぶ。
+   * ⚠️ 切れているものは生き返らせない（期限内のときだけ延ばす）。
+   * ⚠️ 10分ごとの checkForUpdate はページの版を見るだけで API を叩かないので、
+   *    タブを開いたまま放置しても「操作あり」にはならない＝3時間で正しく切れる。
+   */
+  function touchAuth() {
+    try {
+      const raw = localStorage.getItem(AUTH_KEY);
+      if (!raw) return;
+      const auth = JSON.parse(raw);
+      if (!auth || !auth.expiry) return;
+      if (Date.now() > auth.expiry) return;
+      auth.expiry = Date.now() + AUTH_SESSION_HOURS * 60 * 60 * 1000;
+      localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    } catch (e) { /* localStorage が使えない環境でも本体は動かす */ }
   }
 
   function saveAuth(storeId, storeName, isAdmin, token) {
@@ -1535,7 +1561,7 @@
           setLoginMessageVendor(result.message || 'ログインリンク送信に失敗しました', 'error');
         }
       })
-      .catch(err => setLoginMessageVendor('通信エラー: ' + err.message, 'error'))
+      .catch(err => setLoginMessageVendor(MAGIC_LINK_UNCONFIRMED_MSG, 'error'))
       .finally(() => {
         btn.disabled = false; btn.textContent = 'ログインURLを送信';
       });
@@ -1559,7 +1585,7 @@
           setLoginMessageMaker(result.message || 'ログインリンク送信に失敗しました', 'error');
         }
       })
-      .catch(err => setLoginMessageMaker('通信エラー: ' + err.message, 'error'))
+      .catch(err => setLoginMessageMaker(MAGIC_LINK_UNCONFIRMED_MSG, 'error'))
       .finally(() => {
         btn.disabled = false; btn.textContent = 'ログインURLを送信';
       });
@@ -1583,7 +1609,7 @@
           setLoginMessage(result.message || 'ログインリンク送信に失敗しました', 'error');
         }
       })
-      .catch(err => setLoginMessage('通信エラー: ' + err.message, 'error'))
+      .catch(err => setLoginMessage(MAGIC_LINK_UNCONFIRMED_MSG, 'error'))
       .finally(() => {
         btn.disabled = false; btn.textContent = 'ログインURLを送信';
       });
@@ -1703,7 +1729,8 @@
   // verifyToken/verifyTokenMaker は再利用可トークンの検証で完全冪等のため再試行安全。ログインURLを
   // 開いた瞬間のGAS瞬断で「通信エラー: Failed to fetch」になりログインできない事故を自動リトライで防ぐ。
   // saveShipDraft/clearShipDraft は rowIdx キーのupsert/削除＝完全冪等なので瞬断を自動リトライで吸収できる
-  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1 };
+  // requestMagicLink* は「送ったのに失敗と出る」を無くすため 2026-08-13 に追加（下の MAGIC_LINK_ACTIONS 参照）
+  const RETRIABLE_ACTIONS = { getProducts: 1, getMakerProducts: 1, getOrders: 1, getOrdersForMaker: 1, submitForm: 1, verifyToken: 1, verifyTokenMaker: 1, saveShipDraft: 1, clearShipDraft: 1, getVendorOrders: 1, verifyTokenVendor: 1, requestMagicLink: 1, requestMagicLinkMaker: 1, requestMagicLinkVendor: 1 };
 
   // ===== 更新系: 答えを取り落としたら【確認してから】判断する（2026-08-12） =====
   // 🚨 GASの応答は script.googleusercontent.com へ302で飛ばされ、その先が高頻度で404を返す。
@@ -1880,6 +1907,25 @@
   const MAX_RETRY_READ = 2;    // 読み込み系: 初回 + 2回
   const WRITE_ROUNDS = 6;      // 更新系: 「投げる → 読んで確かめる」を最大6巡
 
+  // ===== ログインメールの請求（2026-08-13） =====
+  // 🚨 これまで再送対象に入っていなかったので、404を引くと画面には失敗と出ていた。
+  //    ところが404は【応答側】で起きるので、GASは doPost を実行し終えており
+  //    メールは実際に送られている。＝「エラーが出たのにメールは届く」。
+  //    不安になって何度も押す → 何通も届く。いちばんITに不慣れな方が最初に触る場所で、
+  //    いちばん分かりにくい壊れ方をしていた。
+  // ⭐ 再送対象に入れる。メールが2通届いても実害はない
+  //    （ログインリンクは72時間・再利用可で、古い方も生きたまま使える）。
+  // ⚠️ ただし1通ずつ増えるので上限は低くする＝初回+1回まで。
+  const MAGIC_LINK_ACTIONS = { requestMagicLink: 1, requestMagicLinkMaker: 1, requestMagicLinkVendor: 1 };
+  const MAX_RETRY_MAGIC = 1;
+  // 再送しても確認が取れなかったときの文言。
+  // ⚠️ 「送信しました」と言い切らない（本当に落ちている可能性も残る）。
+  //    かといって「失敗しました」も嘘になりうる。＝【確認できていない】と正直に言い、
+  //    利用者がその場で取れる行動（メールを見る／数分待つ）を書く。
+  const MAGIC_LINK_UNCONFIRMED_MSG = '送信できたかどうかを確認できませんでした。'
+    + 'ログインメールが届いていないかご確認ください（迷惑メールフォルダもあわせてご確認ください）。'
+    + '届いていれば、そのままお使いいただけます。数分待っても届かない場合は、もう一度お試しください。';
+
   /**
    * 再送した後の応答を読み替える。
    * 「すでに発送済みです」は、1回目がサーバーに届いて書き込みが通っていた証拠なので成功として扱う。
@@ -1910,26 +1956,60 @@
     return json;
   }
 
+  // ===== 待ち時間の上限（2026-08-13） =====
+  // 🚨 これまで fetch にタイムアウトが無かった。実測（2026-08-13・15回）では
+  //    hop2(結果の取得)が 15回中3回 404 になり、その404は【10.2秒 / 20.5秒 / 31.5秒】
+  //    かけてから失敗していた。つまり1回落ちるだけで20秒待たされ、3回とも落ちれば
+  //    「送信できませんでした」になる＝報告されていた2症状はどちらもこれ。
+  // ⭐ 正常時は hop1 が 1.06〜1.75秒・hop2 が 0.31〜0.37秒＝合計2秒弱。
+  //    なので12秒はその6倍で、まともな応答を巻き添えにする幅ではない。
+  // ⚠️ ただし hop1 が 26〜28秒かかることも実測された（GASのコールドスタート）。
+  //    毎回同じ上限で切ると、その「遅いが生きている」応答を永久に受け取れなくなる。
+  //    → 投げ直すほど上限を伸ばし、2回目以降は待つ側に倒す。
+  // 🚨 刻みは実測から決めてある。2回目を25秒にしていたら【26秒の応答が2回目でも切られ】、
+  //    3回目までかかって合計65秒になった（テストが捕まえた）。2回目で実測の上限28秒を
+  //    確実にまたぐよう30秒にしてある＝ここを縮めるとコールドスタートが取りこぼされる。
+  //    1回目を10秒にしているのは、実測の404（10.2 / 20.5 / 31.5秒）を全部1回目で切るため。
+  const FETCH_TIMEOUTS_MS = [10000, 30000, 40000];
+  function _timeoutFor(attempt) {
+    return FETCH_TIMEOUTS_MS[Math.min(attempt || 0, FETCH_TIMEOUTS_MS.length - 1)];
+  }
+
   /** 1回だけ投げる。再送も確認もしない純粋な往復。 */
-  function _gasPostOnce(payload) {
+  function _gasPostOnce(payload, attempt) {
     // 🔒 ログイン済みならセッショントークンを毎回添える。サーバー側はこれで本人確認する
     // （storeId / email を名乗るだけでは通らない）。付け忘れを防ぐためここで一括して付ける。
     if (payload && payload.params && currentAuthToken && !payload.params.token) {
       payload.params.token = currentAuthToken;
     }
-    return fetch(GAS_URL, {
+    // ⚠️ AbortController が無い古い環境では、従来どおり上限なしで待つ（機能を止めない）
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    let timer = null;
+    if (ctrl) timer = setTimeout(function() { ctrl.abort(); }, _timeoutFor(attempt));
+    const opts = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
-    }).then(res => {
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(GAS_URL, opts).then(res => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();  // HTML(瞬断エラーページ)が来た場合もここでthrow
     }).then(json => {
       // 🔒 セッション切れ・本人確認NGは、各画面のエラー表示に流さず再ログインへ誘導する
       if (json && (json.error === 'session_expired' || json.error === 'unauthorized') && currentAuthToken) {
         handleSessionExpired();
+      } else if (currentAuthToken) {
+        // ⭐ 通信が通った＝この人は今この画面を使っている。保持期限を延ばす（放置時のみ切れる）
+        touchAuth();
       }
       return json;
+    }).then(function(json) {
+      if (timer) { clearTimeout(timer); timer = null; }
+      return json;
+    }, function(err) {
+      if (timer) { clearTimeout(timer); timer = null; }
+      throw err;
     });
   }
 
@@ -1998,7 +2078,7 @@
     let lastErr = null;
 
     function once() {
-      return _gasPostOnce(payload)
+      return _gasPostOnce(payload, round)
         // 投げ直した回だけ「すでに済んでいます」を成功として読み替える（初回は読み替えない）
         .then(function(json) { return round > 0 ? _readAlreadyDoneAsSuccess(json) : json; })
         .catch(function(err) {
@@ -2028,8 +2108,11 @@
     // 更新系は「投げる→確認する」の専用経路へ（入口でだけ振り分ける）
     if (!_attempt && payload && WRITE_CONFIRM[payload.action]) return _sendWrite(payload);
     _attempt = _attempt || 0;
-    return _gasPostOnce(payload).catch(err => {
-      if (RETRIABLE_ACTIONS[payload && payload.action] && _attempt < MAX_RETRY_READ) {
+    const action = payload && payload.action;
+    // ログインメールの請求だけは再送の上限を下げる（下の MAX_RETRY_MAGIC の理由を参照）
+    const maxRetry = MAGIC_LINK_ACTIONS[action] ? MAX_RETRY_MAGIC : MAX_RETRY_READ;
+    return _gasPostOnce(payload, _attempt).catch(err => {
+      if (RETRIABLE_ACTIONS[action] && _attempt < maxRetry) {
         return new Promise(r => setTimeout(r, 600 * (_attempt + 1)))
           .then(() => gasPost(payload, _attempt + 1));  // 600ms刻みのバックオフ
       }
@@ -2066,7 +2149,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260812g';
+  const APP_BUILD = '20260813a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
