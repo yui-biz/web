@@ -1,0 +1,822 @@
+<title>贈る場面の KV 案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap">
+<style>
+/* =========================================================================
+   KV 案：湾曲カードの横送り（weichie.com に倣う）／贈る場面 5つ
+   色・寸法・動きは catalog-studio の web/styles/app.css の段をそのまま使う。
+
+   ⭐ 色は3層（DESIGN-RULES §5）。この案でいちばん効いているのがここ。
+      ① 素の値   --p-*    このサイトが持つ色そのもの
+      ② 役割     --c-*    【器】ページの面。ダークモードで言い直すのはここだけ
+      ③ 部品     --sc-* / --pv-*   【中身】カードの中の画面とギフトカードの意匠。
+                 面に追従させない＝ダークモードでも言い直さない
+      🚨 ②と③を混ぜると、暗くした日にカードの中身まで暗転して
+         「お客様が見ている出来上がり」が実物と違うものになる。
+   ========================================================================= */
+:root{
+  /* ---- ① 素の値（app.css の --p-* をそのまま） ---- */
+  --p-ink-900:#222222; --p-ink-600:#52525b; --p-ink-500:#68686f;
+  --p-gray-200:#e5e7eb; --p-gray-100:#eff0f2; --p-gray-50:#f8f9fa;
+  --p-off-white:#fafafa; --p-white:#ffffff;
+  --p-indigo-600:#5B4BE8; --p-indigo-700:#4A3BD4; --p-indigo-50:#ebe9fc;
+  --p-indigo-300:#818CF8; --p-blue-100:#EFF3F8; --p-blue-600:#2A6BC9;
+  --p-navy-950:#0A1024; --p-navy-900b:#141B3D;
+  --p-sand-100:#efebe2; --p-coral-300:#f19d97;
+
+  /* ---- ② 役割：器（明るい面）。ダークはこの一式だけを言い直す ---- */
+  --c-bg:var(--p-white);
+  --c-surface:var(--p-off-white);
+  --c-ink:var(--p-ink-900);
+  --c-ink-2:var(--p-ink-600);
+  --c-ink-3:var(--p-ink-500);
+  --c-line:var(--p-gray-200);
+  --c-line-soft:var(--p-gray-100);
+  --c-tile:var(--p-gray-50);
+  --c-dim:#b6b9c2;                 /* 消えているアイコン。地が寒色なので寒色寄りの灰 */
+  --c-accent:var(--p-indigo-600);  /* 連動して色づく差し色 */
+  --c-cta:var(--p-blue-600); --c-cta-h:#245ba9;
+  --c-shadow:rgba(24,22,48,.10); --c-shadow-2:rgba(24,22,48,.05); --c-halo:transparent;
+  color-scheme:light;
+
+  /* ---- ③ 部品：中身。面に追従しない（ダークでも言い直さない） ---- */
+  /* カードの中の画面 */
+  --sc-bg:#ffffff; --sc-ink:#222222; --sc-ink-2:#52525b; --sc-ink-3:#68686f;
+  --sc-line:#e5e7eb; --sc-line-soft:#eff0f2; --sc-tile:#f8f9fa;
+  /* カードの地。これも【中身】＝暗くしない */
+  --k1a:var(--p-navy-950);  --k1b:var(--p-navy-900b);
+  --k2a:var(--p-sand-100);  --k2b:var(--p-sand-100);
+  --k3a:var(--p-sand-100);  --k3b:color-mix(in srgb,var(--p-coral-300) 30%,var(--p-sand-100));
+  --k4a:var(--p-gray-50);   --k4b:var(--p-gray-200);
+  --k5a:var(--p-blue-100);  --k5b:var(--p-indigo-50);
+
+  /* ---- 寸法（--s1〜--s7 / --r-sm --r-md --r-lg / --text-*） ---- */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  --r-sm:8px; --r-md:14px; --r-lg:22px;
+  --text-meta:11.5px; --text-small:15px; --text-body:17px; --text-h3:26px;
+  --text-lead:clamp(29px,3.3vw,44px);
+
+  /* ---- 動き（--anim-*） ---- */
+  --anim-fast:.16s; --anim-base:.26s; --anim-mid:.45s; --anim-xslow:.9s;
+  --ease:cubic-bezier(.22,1,.36,1);
+
+  /* ---- カードの寸法 ---- */
+  --cardW:min(82vw,380px);   /* 393pt で 322px。隣とのすき間は 15px（下の RATIO とセットで実測して決めた） */
+  /* ⭐ 【閉じた輪】にする。5場面を2周ぶん並べて10枠・36°間隔＝360°。
+     こうすると継ぎ目が無くなり、奥に回った札もそのまま見える（透けて見える球）。
+     ⚠️ 前の版は5枚を27°間隔で並べた「円弧」で、背面に回る位置がそもそも無かった。
+     ⚠️ 同じ場面の2枚は180°離れるので、同時に見えることはない。 */
+  /* ⚠️ 角度と半径は JS が持つ（RATIO / ANG）。ここに書くと出どころが2つになる */
+  --cardAsp:0.99;   /* 幅 ÷ 高さ。形は右下の「形を調整」から動かせる（モック用） */
+}
+
+/* 🚨 面の言い直しは【②の一式だけ】。③（--sc-* / --pv-* / --k*）には一切触らない。
+   ＝ 暗くなるのはページ側だけで、カードの中身とギフトカードは明るいまま。
+   ⚠️ 見る人の設定は3通りある（ライト／ダーク／指定なし）。
+      指定なしの人には data-theme が付かないので、媒体クエリ側も必ず書く。 */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --c-bg:var(--p-navy-950);
+    --c-surface:var(--p-navy-900b);
+    --c-ink:#eef0ff;
+    --c-ink-2:#b9bfdd;
+    --c-ink-3:#9aa2c8;
+    --c-line:#262f57;
+    --c-line-soft:#1b2344;
+    --c-tile:#111936;
+    --c-dim:#616d9e;
+    --c-accent:var(--p-indigo-300);  /* ⚠️ 藍紫は暗い地で沈む。ネオン側に振る（実測 5.97） */
+    --c-cta-h:#3a7ad6;
+    --c-shadow:rgba(0,0,0,.55); --c-shadow-2:rgba(0,0,0,.35); --c-halo:rgba(129,140,248,.20);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --c-bg:var(--p-navy-950);
+  --c-surface:var(--p-navy-900b);
+  --c-ink:#eef0ff;
+  --c-ink-2:#b9bfdd;
+  --c-ink-3:#9aa2c8;
+  --c-line:#262f57;
+  --c-line-soft:#1b2344;
+  --c-tile:#111936;
+  --c-dim:#616d9e;
+  --c-accent:var(--p-indigo-300);
+  --c-cta-h:#3a7ad6;
+  --c-shadow:rgba(0,0,0,.55); --c-shadow-2:rgba(0,0,0,.35); --c-halo:rgba(129,140,248,.20);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{
+  margin:0; background:var(--c-bg); color:var(--c-ink);
+  font-family:'Noto Sans JP',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-weight:400; font-size:var(--text-body); line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+  transition:background var(--anim-base) var(--ease), color var(--anim-base) var(--ease);
+}
+:focus-visible{outline:2px solid var(--c-accent); outline-offset:3px; border-radius:var(--r-sm)}
+.wrap{max-width:1280px; margin-inline:auto; padding-inline:var(--s4)}
+.mono{font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+
+/* ===================== 上の帯 ===================== */
+.bar{display:flex; align-items:center; justify-content:space-between; gap:var(--s4); padding-block:var(--s5)}
+.mark{
+  font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  font-weight:700; font-size:clamp(22px,2.6vw,30px); letter-spacing:-.02em;
+  line-height:1; color:var(--c-ink); display:flex; align-items:baseline; gap:.4em;
+}
+.mark span{font-size:.46em; letter-spacing:.16em; color:var(--c-ink-3); font-weight:500}
+.ctrls{display:flex; align-items:center; gap:var(--s2)}
+.circ{
+  width:44px; height:44px; border-radius:999px; border:0; cursor:pointer;
+  background:var(--c-line-soft); color:var(--c-ink);
+  font-family:'JetBrains Mono',monospace; font-size:var(--text-meta); font-weight:700; letter-spacing:.06em;
+  display:grid; place-items:center;
+  transition:background var(--anim-fast) var(--ease), color var(--anim-fast) var(--ease);
+}
+.circ:hover{background:var(--c-line)}
+.pill{
+  height:44px; padding-inline:20px; border-radius:999px; border:0; cursor:pointer;
+  background:var(--c-cta); color:#fff; font:500 var(--text-small)/1 'Noto Sans JP',sans-serif;
+  transition:background var(--anim-fast) var(--ease);
+}
+.pill:hover{background:var(--c-cta-h)}
+
+/* ===================== 舞台（湾曲カードの横送り） ===================== */
+.stage{
+  position:relative; width:100%; height:calc(var(--cardW) / var(--cardAsp) + 56px);
+  margin-top:var(--s4); touch-action:pan-y; overflow:hidden;
+  /* 🚨 遠近は【親】に置く。子に perspective() を書くと、カードごとに別々の消点ができて
+     並びが球にならない。値は top-bento.css の orbIn* と同じ 1400px。 */
+  /* ⭐ 消点はカードより【下】に置く＝少し下から見上げている画角。
+     これが上辺と下辺の反りの向きを決める（実測：上辺は上へ、下辺もごく浅く上へ）。 */
+  perspective:1400px; perspective-origin:50% 116%;
+}
+.slot{
+  position:absolute; top:24px; left:50%; width:var(--cardW);
+  aspect-ratio:var(--cardAsp); margin-left:calc(var(--cardW) / -2);
+  /* 🚨 【震えの原因だった】filter を外した。filter を持つ要素は、変形するたびに
+     まるごと描き直される。毎フレーム回しているので、そのたび再ラスタライズが走って
+     写真の画素がにじみ、カードが小刻みに震えて見えていた。
+     ⭐ transform と opacity だけなら GPU の合成で済む＝描き直しが起きない。
+     ⚠️ 影は drop-shadow（filter）をやめて box-shadow にする。こちらは層と一緒に
+        一度だけ焼かれるので、動かしても描き直されない。
+     ⚠️ 影は slot の箱そのものではなく ::before に付ける（すぐ下を見よ）。 */
+  transform-origin:50% 50%;
+  /* ⭐ 裏を向いた板も描く。これが「透けて見える球」の見え方そのもの。
+     ⚠️ backface-visibility:hidden にすると 90°を超えた板が丸ごと消えるので、
+        奥に回ったカードが1枚も見えなくなる。 */
+  backface-visibility:visible;
+  will-change:transform, opacity;
+  cursor:pointer;
+  /* ⚠️ transform / opacity に transition は付けない（毎フレーム JS が書き換えるため） */
+}
+/* 🚨 影は slot 本体ではなく ::before に持たせる（形と影のきわを合わせるため）。
+   ⚠️ 台形（tp）を 0 にしたので左右は箱いっぱい。台形を戻すときは、上端の狭まりぶんだけ
+      ここを inset:0 <tp/2>% に縮めること。縮めないと、形と箱のすき間にページの地が残って
+      白い縁に見える（生成りの地にしたときに実際そうなった）。
+   ⚠️ filter:drop-shadow は使わない（毎フレーム描き直しになり、震えが戻る）。 */
+.slot::before{
+  content:""; position:absolute; inset:0;
+  border-radius:11.5%;
+  box-shadow:0 18px 26px var(--c-shadow), 0 2px 5px var(--c-shadow-2);
+}
+.slot[data-here]{cursor:default}
+
+/* ⭐ 湾曲は clip-path（objectBoundingBox）で作る。上辺が上に、下辺が下に膨らむ「枕型」。
+   ⚠️ clip-path は box-shadow を落とすので、影は親の drop-shadow で出している。 */
+.card{position:absolute; inset:0; clip-path:url(#pillow); display:grid; place-items:center; overflow:hidden}
+.card::after{ /* 上ほど明るく：湾曲した面に当たる光 */
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  /* 🚨 上辺の白いハイライトが強すぎて、地を生成りにしたら「縁の白い余白」に見えていた。
+     曲面の手がかりは clip-path の形で足りているので、うんと弱める。 */
+  background:linear-gradient(176deg,rgba(255,255,255,.05),rgba(255,255,255,0) 24%,rgba(20,18,40,.08));
+}
+.k1{background:linear-gradient(168deg,var(--k1a),var(--k1b))}
+.k2{background:var(--k2a) center/cover no-repeat}
+.k3{background:linear-gradient(166deg,var(--k3a),var(--k3b))}
+.k4{background:linear-gradient(166deg,var(--k4a),var(--k4b))}
+.k5{background:linear-gradient(166deg,var(--k5a),var(--k5b))}
+
+/* ⭐ 地は実写をそのまま敷く（乗算はやめた）。使うのは現行 KV と同じ一式＝
+   static/img/kv/（浮遊する丸で使っていた写真。いまは Hero から外してあるが資産は残っている）と、
+   Hero の KV_SHOTS（白背景でない・焼き込み文字が無いと1枚ずつ確認済みのカット）。 */
+.t-photo{background:var(--p-gray-100) center/cover no-repeat}
+
+/* ===================== 連動する索引 ===================== */
+.tags{display:flex; flex-wrap:wrap; justify-content:center; gap:var(--s2) var(--s5); margin-top:var(--s4)}
+.tag{
+  display:flex; align-items:center; gap:var(--s2); position:relative;
+  padding:var(--s2) var(--s1) calc(var(--s2) + 3px);
+  background:none; border:0; cursor:pointer; font-family:inherit;
+  font-size:var(--text-small); font-weight:400; color:var(--c-ink-2);
+  transition:color var(--anim-fast) var(--ease);
+}
+.tag svg{width:18px; height:18px; flex:none; color:var(--c-dim); transition:color var(--anim-base) var(--ease)}
+.tag:hover{color:var(--c-ink)}
+/* ⚠️ 選ばれている時に太字にしない。字幅が変わると索引バーが組み直しになり、
+   ラベルが常時出ている今は横に1〜2px ずれて見える。色だけで差をつける。 */
+.tag[aria-current="true"]{color:var(--c-ink)}
+.tag[aria-current="true"] svg{color:var(--c-accent)}
+/* 押せる所の当たり判定を 44px にする。見た目は変えない（AA は 24×24、44 は自社の決めごと） */
+.tag::before{content:""; position:absolute; inset:50% 0 auto; height:44px; transform:translateY(-50%)}
+
+/* ===================== 見出し ===================== */
+.lead{margin-top:var(--s6); padding-bottom:var(--s7); text-align:center}
+.lead .eyebrow{
+  margin:0; font-family:'JetBrains Mono',monospace; font-size:var(--text-meta);
+  font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:var(--c-ink-3);
+}
+.lead h1{margin:var(--s4) 0 0; font-size:var(--text-lead); font-weight:700; letter-spacing:-.015em; line-height:1.35; text-wrap:balance}
+.lead h1 em{font-style:normal; color:var(--c-accent)}
+.lead .sub{margin:var(--s4) auto 0; max-width:34em; font-size:var(--text-body); font-weight:300; color:var(--c-ink-2); text-wrap:pretty}
+.acts{display:flex; flex-wrap:wrap; gap:var(--s3); justify-content:center; margin-top:var(--s5)}
+.ghost{
+  height:44px; padding-inline:20px; border-radius:999px; cursor:pointer;
+  background:transparent; border:1px solid var(--c-line);
+  font:500 var(--text-small)/1 'Noto Sans JP',sans-serif; color:var(--c-ink);
+  transition:border-color var(--anim-fast) var(--ease), background var(--anim-fast) var(--ease);
+}
+.ghost:hover{border-color:var(--c-ink-3); background:var(--c-tile)}
+
+/* ===================== 下：この案の決めごと ===================== */
+.spec{background:var(--c-surface); border-top:1px solid var(--c-line)}
+.spec .wrap{padding-block:var(--s7)}
+.spec h2{margin:0 0 var(--s5); font-size:var(--text-h3); font-weight:700; letter-spacing:-.01em}
+.notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:var(--s5) var(--s6)}
+.note h3{margin:0 0 var(--s2); font-family:'JetBrains Mono',monospace; font-size:var(--text-meta); font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--c-ink-3)}
+.note p{margin:0; font-size:var(--text-small); line-height:1.85; color:var(--c-ink-2)}
+.note p + p{margin-top:var(--s3)}
+.note b{color:var(--c-ink); font-weight:500}
+.note code{font-family:'JetBrains Mono',monospace; font-size:.92em; color:var(--c-ink)}
+.reg{
+  margin-top:var(--s6); padding:var(--s5); border-radius:var(--r-md);
+  background:var(--c-tile); border:1px solid var(--c-line-soft);
+  font-family:'JetBrains Mono',monospace; font-size:var(--text-meta); line-height:2;
+  color:var(--c-ink-2); overflow-x:auto; white-space:pre;
+}
+.reg b{color:var(--c-ink); font-weight:700}
+.reg .k{color:var(--c-accent)}
+
+.tune-open{
+  position:fixed; right:var(--s4); bottom:var(--s4); z-index:50;
+  height:40px; padding-inline:14px; border-radius:999px; cursor:pointer;
+  background:var(--c-ink); color:var(--c-bg); border:0;
+  font:500 var(--text-meta)/1 'Noto Sans JP',sans-serif; letter-spacing:.04em;
+  box-shadow:0 8px 20px -8px rgba(0,0,0,.45);
+}
+.tune{
+  position:fixed; right:var(--s4); bottom:calc(var(--s4) + 48px); z-index:50;
+  width:min(320px,calc(100vw - var(--s6))); padding:var(--s4) var(--s5) var(--s5);
+  background:var(--c-surface); color:var(--c-ink);
+  border:1px solid var(--c-line); border-radius:var(--r-md);
+  box-shadow:0 18px 40px -14px rgba(0,0,0,.4);
+}
+.tune h3{margin:0 0 var(--s1); font-size:var(--text-small); font-weight:700}
+.tune > p{margin:0 0 var(--s3); font-size:var(--text-meta); line-height:1.7; color:var(--c-ink-3)}
+.tune label{display:block; margin-top:var(--s3); font-size:var(--text-meta); color:var(--c-ink-2)}
+.tune .lv{display:flex; justify-content:space-between; align-items:baseline}
+.tune .lv b{font-family:'JetBrains Mono',monospace; font-size:var(--text-meta); font-weight:700; color:var(--c-ink); font-variant-numeric:tabular-nums}
+.tune input[type=range]{width:100%; margin:2px 0 0; accent-color:var(--c-accent)}
+.tune .btns{display:flex; gap:var(--s2); margin-top:var(--s4)}
+.tune button{
+  flex:1; height:34px; border-radius:999px; cursor:pointer; font:500 var(--text-meta)/1 'Noto Sans JP',sans-serif;
+  background:transparent; color:var(--c-ink); border:1px solid var(--c-line);
+}
+.tune button.on{background:var(--c-ink); color:var(--c-bg); border-color:var(--c-ink)}
+.tune .out{
+  margin-top:var(--s3); padding:var(--s3); border-radius:var(--r-sm);
+  background:var(--c-tile); border:1px solid var(--c-line-soft);
+  font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.7;
+  color:var(--c-ink-2); white-space:pre-wrap;
+}
+@media (max-width:560px){
+  .bar{flex-wrap:wrap}
+  .tags{gap:var(--s1) var(--s4)}
+  /* ⭐ 参考サイトと同じで、ラベルは常に出す。入り切らないぶんは折り返す */
+  .tag{font-size:13px; padding-inline:0}
+  .tag svg{width:19px; height:19px}
+  .gcard{width:66%}
+}
+/* ⚠️ モックは【動きを見るためのもの】なので、全部の動きは殺さない。
+   本番に載せるときは、ここで自動送りを止める判断を入れる（下の決めごとに書いた）。 */
+@media (prefers-reduced-motion:reduce){
+  .tag svg{transition:none}
+}
+</style>
+<script>
+  /* 面の指定を先に当てる（本文が描かれてから切り替わると一瞬ちらつくため） */
+  try { var t = localStorage.getItem('cgs-kv-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <!-- 樽型：4辺すべてが外へ膨らむ。上下は深く（高さの7.5%）、左右は浅く（幅の2.2%）。
+         ⚠️ 制御点は枠の外に出しているが、曲線そのものは 0〜1 に収まる。
+            外に出ると【その分が切り落とされて辺が平らになる】。 -->
+    <clipPath id="pillow" clipPathUnits="objectBoundingBox">
+      <path d="M.013 .100 Q.013 .055 .058 .055 Q.5 -.055 .942 .055 Q.987 .055 .987 .100
+               Q1.013 .5 .987 .900 Q.987 .945 .942 .945 Q.5 1.055 .058 .945
+               Q.013 .945 .013 .900 Q-.013 .5 .013 .100 Z"/>
+    </clipPath>
+  </defs>
+</svg>
+
+<header class="bar wrap">
+  <div class="mark">yui<span>Catalog Studio</span></div>
+  <div class="ctrls">
+    <button class="circ" type="button" id="theme" aria-label="ダークモードにする">
+      <svg id="theme-i" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor"
+           stroke-width="1.7" stroke-linecap="round" aria-hidden="true"></svg>
+    </button>
+    <button class="circ" type="button" aria-label="メニューを開く">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>
+    </button>
+    <button class="pill" type="button">無料ではじめる</button>
+  </div>
+</header>
+
+<main>
+  <section aria-label="贈る場面">
+    <div class="stage" id="stage" tabindex="0" role="group" aria-roledescription="カルーセル" aria-label="贈る場面（左右キーで送る）">
+
+      <!-- 01 周年記念 -->
+      <div class="slot" data-i="0">
+        <div class="card t-photo" data-bg="c1">
+        </div>
+      </div>
+
+      <!-- 02 従業員の誕生日：実素材の写真をそのまま敷く（public/img/bg） -->
+      <div class="slot" data-i="1">
+        <div class="card t-photo" data-bg="c2">
+        </div>
+      </div>
+
+      <!-- 03 社内表彰 -->
+      <div class="slot" data-i="2">
+        <div class="card t-photo" data-bg="c3">
+        </div>
+      </div>
+
+      <!-- 04 クライアントギフト -->
+      <div class="slot" data-i="3">
+        <div class="card t-photo" data-bg="c4">
+        </div>
+      </div>
+
+      <!-- 05 株主優待・キャンペーン -->
+      <div class="slot" data-i="4">
+        <div class="card t-photo" data-bg="c5">
+        </div>
+      </div>
+
+    </div>
+
+    <nav class="tags wrap" id="tags" aria-label="贈る場面"></nav>
+  </section>
+
+  <div class="lead wrap">
+    <p class="eyebrow">Self-serve catalog studio</p>
+    <h1>贈る場面の数だけ、<br><em>カタログはつくれる。</em></h1>
+    <p class="sub">周年記念も、誕生日も、表彰も。予算を決めて3,579点から選び、表紙と挨拶文をつけるだけ。印刷もやりとりの往復もなく、その日のうちに贈り先へ届く形になります。</p>
+    <div class="acts">
+      <button class="pill" type="button">無料ではじめる</button>
+      <button class="ghost" type="button">つくり方を見る</button>
+    </div>
+  </div>
+</main>
+
+<section class="spec">
+  <div class="wrap">
+    <h2>この案の決めごと</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>震えを止めた</h3>
+        <p>🚨 カードに <code>filter</code>（<code>drop-shadow</code> と <code>brightness</code>）を掛けたまま毎フレーム回していた。<b>filter を持つ要素は変形のたびにまるごと描き直される</b>ので、そのつど写真の画素がにじんで小刻みに震えて見えていた。</p>
+        <p>⭐ <code>transform</code> と <code>opacity</code> だけなら GPU の合成で済む。影は <code>box-shadow</code> に移し、奥の暗さは <code>opacity</code> だけで出すようにした。<code>transform</code> も CSS 変数経由をやめて JS が直に書く（変数が変わるとスタイル計算がやり直されて合成に載らないため）。</p>
+      </div>
+      <div class="note">
+        <h3>回り方</h3>
+        <p>🚨 コマ送り（3.6秒ごとに1枚ぶん動いて止まる）をやめ、<b>毎フレーム少しずつ回す連続回転</b>にした。カードは常に右から中央、そして左へ流れる。</p>
+        <p>⚠️ <code>transition</code> は外してある。毎フレーム JS が値を書き換えるので、残すと常に前の値へ引き戻されて重く・遅れて見える。⚠️ 止まるのは<b>指で掴んでいる間だけ</b>（「常に回っている」ので、マウスを乗せただけでは止めない）。</p>
+      </div>
+      <div class="note">
+        <h3>倣った形</h3>
+        <p><b>中央固定のカルーセル＋連動する索引</b>（weichie.com / Apple の製品切り替え / Stripe の用途切り替えに共通）。</p>
+        <p>並べているのは<b>機能ではなく贈る場面</b>。「何ができるか」より「うちの場合はどれか」のほうが先に知りたいことなので、索引もそのまま場面名にしてある。</p>
+        <p>⭐ <b>カードの上に見出しは置かない</b>。元も写真と浮かせた画面だけで、名前を持っているのは下の索引だけ。カードに文字を乗せると索引と二重になり、絵の面積も削れる。</p>
+      </div>
+      <div class="note">
+        <h3>歪みのつくり方</h3>
+        <p>🚨 最初の版は<b>横移動＋静止した反り</b>で、平らな板が滑っているだけだった。正しくは<b>縦軸まわりの回転＋遠近</b>で、中心の1枚だけが正面を向き、両隣は回った分だけ細く見えて奥へ下がる。</p>
+        <p>倣い先はサイトの外ではなく<b>本番の中</b>にある。<code>TopUses</code>（導入事例の下の「贈る場面」）の <code>orbIn*</code> が <code>perspective(1400px) rotateY(-108deg) translateZ(-260px)</code>。遠近の値もそこに合わせた。</p>
+        <p>⚠️ 遠近は<b>親に置く</b>。子に <code>perspective()</code> を書くとカードごとに別々の消点ができて、並びが球にならない。</p>
+      </div>
+      <div class="note">
+        <h3>カードの形</h3>
+        <p>🚨 <b>左右は直線だった</b>。外へ膨らませていたが、実測すると直線からのずれは幅 1000px に対して 0〜2.5px＝ほぼ直線で、<b>上端が下端より 2.7% 狭い台形</b>。少し下から見上げた遠近そのもの。</p><p>🚨 <b>下辺の向きも逆だった</b>。上辺が上・下辺が下に膨らむ「枕型」にしていたが、キャプチャを測ると<b>上辺も下辺も上へ反る三日月型</b>（実測：上辺 2.4%／下辺はごく浅く同じ向き）。カメラがカード下端よりやや下にある画角なので、両方が同じ向きに反る。消点も <code>perspective-origin:50% 116%</code> でカードの下へ置いた。</p><p>角丸は 7% → <b>4.5%</b>（丸すぎた）。値は右下の「形を調整」で独立して動かせる。</p>
+        <p>曲がりの大半は回転が作るので、反り自体は浅くしてある（球の面に沿っている分だけ）。</p>
+        <p>⚠️ <code>clip-path</code> は <code>box-shadow</code> を落とす。影は親の <code>drop-shadow</code>。角丸だけの <code>border-radius</code> では辺は曲がらない。制御点を枠の外に置くと、その分が切り落とされて辺が平らになる。</p>
+      </div>
+      <div class="note">
+        <h3>ダークモードを入れた</h3>
+        <p>ご指示どおり切り替えを付けた。DESIGN-RULES §5 の手順のまま、<b>言い直したのは②役割の層だけ</b>。見る人の設定は<b>3通り</b>あるので（ライト／ダーク／指定なし）、<code>data-theme</code> と <code>prefers-color-scheme</code> の両方を書いてある。</p>
+        <p>⚠️ 差し色は暗い地で藍紫 <code>#5B4BE8</code> が沈むので、ネオン <code>--p-indigo-300</code> に振っている（app.css に実測 5.97 と書いてある色）。</p>
+      </div>
+      <div class="note">
+        <h3>暗くしたのは器だけ</h3>
+        <p>カードの写真は、暗くしても<b>明るいまま据え置き</b>。③部品の層に置いて、面の言い直しから外してある。</p>
+        <p>写真はお客様に見せる絵であって、このサイトのUIではないため。§5 の「プレビューの中身は入れない（確定）」をそのまま広げた形。<b>暗くして確かめてほしいのはここ。</b></p>
+      </div>
+      <div class="note">
+        <h3>差し色を橙にしない</h3>
+        <p>元ネタは選択中のアイコンを橙〜赤にしている。ここは<b>藍紫／ネオン</b>を使った。</p>
+        <p>「サイト内から赤い要素と黒ボタンをなくす」（2026-08-11 saito）が生きているため。<code>#F01E00</code> はロゴ・印刷物の色として残っているが、画面には出さない。</p>
+      </div>
+      <div class="note">
+        <h3>いま入れている画像</h3>
+        <p>⭐ 同じ日につくった別案 <b>「KV案S 場面送り」</b>の写真をそのまま使っている（<code>.pan-bg</code> の5枚）。場面の対応も向こうと揃えてあるので、2案を並べて比べられる。</p><p>⚠️ このモックは<b>動きを減らす設定でも動く</b>ようにしてある（動きを見るためのものなので）。本番に載せるときは <code>prefers-reduced-motion</code> で自動送りを止める判断が要る。</p>
+        <p>01 乾杯／02 HAPPY BIRTHDAY／03 表彰の場／04 ギフトの手渡し／05 赤地にギフト箱。いずれも 1920×1080 の実写で、場面がそのまま写っているものを当ててある。写真は <code>imgs.js</code> の1行差し替えで入る。</p>
+      </div>
+    </div>
+
+    <div class="reg"><b>docs/design-registry.json に足す宣言（案）</b>
+
+"<span class="k">web/pages/index.astro</span>": {
+  "<span class="k">pattern</span>": "中央固定のカルーセル＋連動する索引（weichie / Apple の製品切り替え / Stripe の用途切り替え）",
+  "<span class="k">why</span>":     "並べるのは機能ではなく贈る場面。法人のお客様は『何ができるか』より
+              『うちの場合はどれか』を先に探すので、索引をそのまま場面名にする。
+              縦に積むと畳んだ分が読まれない。中央1枚なら話が常に1つに決まる",
+  "<span class="k">status</span>":  "declared"
+}</div>
+  </div>
+</section>
+
+<button class="tune-open" type="button" id="tune-open" aria-expanded="false" aria-controls="tune">形を調整</button>
+<aside class="tune" id="tune" hidden>
+  <h3>形を調整</h3>
+  <p>モック用のつまみ。合った数値を教えてください（本番には入れません）。</p>
+  <label><span class="lv">比率（幅÷高さ）<b id="v-asp"></b></span><input type="range" id="r-asp" min="0.75" max="1.35" step="0.01"></label>
+  <label><span class="lv">角丸（幅の%）<b id="v-r"></b></span><input type="range" id="r-r" min="0" max="12" step="0.1"></label>
+  <label><span class="lv">上辺の反り（幅の%・上へ）<b id="v-bt"></b></span><input type="range" id="r-bt" min="0" max="8" step="0.1"></label>
+  <label><span class="lv">下辺の反り（幅の%・上へ）<b id="v-bb"></b></span><input type="range" id="r-bb" min="0" max="8" step="0.1"></label>
+  <label><span class="lv">台形・上端の狭まり（幅の%）<b id="v-tp"></b></span><input type="range" id="r-tp" min="0" max="10" step="0.1"></label>
+  <label><span class="lv">隣との角度（度）<b id="v-ang"></b></span><input type="range" id="r-ang" min="12" max="48" step="1"></label>
+  <label><span class="lv">回る速さ（秒／枚）<b id="v-spd"></b></span><input type="range" id="r-spd" min="1.5" max="10" step="0.1"></label>
+  <label><span class="lv">カード幅（px・0で自動）<b id="v-w"></b></span><input type="range" id="r-w" min="0" max="460" step="4"></label>
+  <div class="btns">
+    <button type="button" id="t-reset">既定に戻す</button>
+    <button type="button" class="on" id="t-copy">値をコピー</button>
+  </div>
+  <div class="out" id="t-out"></div>
+</aside>
+
+<script src="imgs.js"></script>
+<script>
+(() => {
+  /* ⚠️ ここの宣言は【つまみの初期化より前】に置く。shape() が ANG / SPEED_MS を
+     書き換えるので、後ろで let 宣言すると初期化前アクセスで落ちる。 */
+  var ready = false;          // ⚠️ var。つまみの初期化は輪より前に走るので TDZ を避ける
+  let SPEED_MS = 9000;        // 1枚ぶん回るのにかける時間（ミリ秒）
+  let ANG = 36;               // 隣との角度
+  let RATIO = 1.64;           // 半径 ÷ カード幅（小さいほど隣が近づく）
+  /* ⭐ 393pt 実測（台形 tp=0 のとき）：1.70→すき間 25px ／ 1.66→17.5px ／ 1.64→12px ／ 1.60→0px。
+     ⚠️ 台形をやめた分カードが左右に 1.6% ずつ広がるので、同じすき間には半径を上げる必要がある
+        （台形ありの 1.60 と、台形なしの 1.64 がほぼ同じすき間）。 */
+  window.__setRatio = v => { RATIO = v; if (ready) rebuild(); };   // 計測用
+  let Rpx = 0, cardWpx = 0;   // Rpx = 0 は「測り直す」の合図
+  const root = document.documentElement;
+
+  /* ---------- 面の切り替え ---------- */
+  const SUN  = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6L17 17M7 7L5.4 5.4"/>';
+  const MOON = '<path d="M20 13.6A8.2 8.2 0 1 1 10.4 4a6.6 6.6 0 0 0 9.6 9.6Z"/>';
+  const btn = document.getElementById('theme'), icon = document.getElementById('theme-i');
+  const sysDark = matchMedia('(prefers-color-scheme: dark)');
+  const now = () => root.dataset.theme || (sysDark.matches ? 'dark' : 'light');
+  function paint() {
+    const dark = now() === 'dark';
+    icon.innerHTML = dark ? MOON : SUN;
+    btn.setAttribute('aria-label', dark ? 'ライトモードにする' : 'ダークモードにする');
+  }
+  btn.addEventListener('click', () => {
+    const next = now() === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('cgs-kv-theme', next); } catch (e) {}
+    paint();
+  });
+  sysDark.addEventListener('change', paint);   // 指定なしの人は OS に追従する
+  paint();
+
+  /* ---------- 形のつまみ（モック用） ----------
+     ⭐ clip-path の d を毎回組み直す。⚠️ 角丸と反りは別物。別々に動かせるようにする
+        （最初の版はこの2つを取り違えて、角丸で出すべき丸みを反りで出していた）。 */
+  /* 🚨 台形（tp）は 0 にした。上へ向かって狭くなる形にすると、隣り合う2枚の
+     向かい合う辺が互いに内側へ寄るので、すき間が上で広く下で狭い楔になる。
+     実測（393pt・上から15%→90%）: tp=3.2→17〜11px（差6.0）／2.0→差5.0／1.0→差2.0／0→差0。
+     見本のすき間は上から下までほぼ一定（実測 30→33px／高さ960px）なので 0 に合わせた。 */
+  /* 🚨 下辺の反り（bb）も 0 にした。中央が少しでも上へ反ると、その反ったぶんと箱の下端の
+     あいだにページの地が残り、下辺に白い帯が出る（実測：中央で 2px、端で 0.5px）。
+     影は箱の【外】に描かれるので、この内側のすき間は埋まらない。 */
+  const DEF = { asp:0.99, r:11.5, bt:1.63, bb:0, tp:0, ang:36, spd:9.0, w:0 };   // w:0 = 画面幅に追従
+  const T = { ...DEF };
+  const KEYS = ['asp','r','bt','bb','tp','ang','spd','w'];
+  const pathEl = document.querySelector('#pillow path');
+  const OUT = {}, IN = {};
+  for (const k of KEYS) { OUT[k] = document.getElementById('v-' + k); IN[k] = document.getElementById('r-' + k); }
+  const f = n => String(Math.round(n * 10000) / 10000);
+
+  function shape() {
+    // ⚠️ つまみは【幅に対する%】で持つ（実測と同じ単位）。objectBoundingBox の y は
+    //    高さに対する割合なので、縦方向は比率を掛けて px を揃える。
+    const rx = T.r / 100, ry = T.r / 100 * T.asp;      // 角は真円に
+    const bt = T.bt / 100 * T.asp;                     // 上辺の反り（上へ）
+    const bb = T.bb / 100 * T.asp;                     // 下辺の反り（上へ）
+    // ⭐ 左右は【反らせない】。下から上へ向かってまっすぐ狭くなる台形にする。
+    //    実測：直線からのずれは幅 1000px に対して 0〜2.5px＝ほぼ直線。
+    //    上端は下端より 2.6〜2.9% 狭い（少し下から見上げた遠近そのもの）。
+    const tp = T.tp / 200;                             // 片側ぶん
+    const t = bt, g = 1 - tp;                          // 下辺の基準線は 1（角がいちばん下・外）
+    pathEl.setAttribute('d',
+      `M${f(tp)} ${f(t + ry)} Q${f(tp)} ${f(t)} ${f(tp + rx)} ${f(t)}` +
+      ` Q.5 ${f(t - 2 * bt)} ${f(g - rx)} ${f(t)}` +        // 上辺：中央が上
+      ` Q${f(g)} ${f(t)} ${f(g)} ${f(t + ry)}` +
+      ` L1 ${f(1 - ry)}` +                                  // 右辺：直線
+      ` Q1 1 ${f(1 - rx)} 1` +
+      ` Q.5 ${f(1 - 2 * bb)} ${f(rx)} 1` +                  // 下辺：中央も【上】
+      ` Q0 1 0 ${f(1 - ry)}` +
+      ` L${f(tp)} ${f(t + ry)} Z`);                         // 左辺：直線
+    root.style.setProperty('--cardAsp', T.asp);
+    ANG = T.ang;                                   // ⚠️ CSS 変数ではなく JS 側を動かす
+    SPEED_MS = T.spd * 1000;                       // 1枚ぶん回るのにかける時間
+    if (ready) rebuild();                          // 角度・速さ・幅が変わったら作り直す
+    if (T.w) root.style.setProperty('--cardW', T.w + 'px'); else root.style.removeProperty('--cardW');
+    OUT.asp.textContent = T.asp.toFixed(2);
+    OUT.r.textContent = T.r.toFixed(1) + '%';
+    OUT.bt.textContent = T.bt.toFixed(1) + '%';
+    OUT.bb.textContent = T.bb.toFixed(1) + '%';
+    OUT.tp.textContent = T.tp.toFixed(1) + '%';
+    OUT.ang.textContent = T.ang + '°';
+    OUT.spd.textContent = T.spd.toFixed(1) + '秒/枚';
+    OUT.w.textContent = T.w ? T.w + 'px' : '自動';
+    document.getElementById('t-out').textContent =
+      `比率 ${T.asp.toFixed(2)} / 角丸 ${T.r.toFixed(1)}% / 上辺 ${T.bt.toFixed(1)}% / 下辺 ${T.bb.toFixed(1)}% / ` +
+      `台形 ${T.tp.toFixed(1)}% / 角度 ${T.ang}° / 速さ ${T.spd.toFixed(1)}秒 / 幅 ${T.w ? T.w + 'px' : '自動'}`;
+  }
+  function sync() { for (const k of KEYS) IN[k].value = T[k]; shape(); }
+  for (const k of KEYS) IN[k].addEventListener('input', e => { T[k] = +e.target.value; shape(); });
+  document.getElementById('t-reset').addEventListener('click', () => { Object.assign(T, DEF); sync(); });
+  document.getElementById('t-copy').addEventListener('click', async () => {
+    const btn = document.getElementById('t-copy'), was = btn.textContent;
+    try { await navigator.clipboard.writeText(document.getElementById('t-out').textContent); } catch (e) {}
+    btn.textContent = 'コピーしました'; setTimeout(() => { btn.textContent = was; }, 1400);
+  });
+  const openBtn = document.getElementById('tune-open'), panel = document.getElementById('tune');
+  openBtn.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    openBtn.setAttribute('aria-expanded', String(!panel.hidden));
+    openBtn.textContent = panel.hidden ? '形を調整' : '閉じる';
+  });
+  sync();
+
+  /* ---------- 横送り ---------- */
+  const stage = document.getElementById('stage');
+  const base = [...stage.querySelectorAll('.slot')];
+  const SCENES = base.length;                 // 場面の数（5）
+  // ⭐ 輪を閉じるために2周ぶん複製する。見えているのは常に連続した5枠＝5場面すべて。
+  for (const el of base) {
+    const c = el.cloneNode(true);
+    c.dataset.i = String(+el.dataset.i + SCENES);
+    stage.appendChild(c);
+  }
+  const slots = [...stage.querySelectorAll('.slot')];
+  const tagbar = document.getElementById('tags');
+  const N = slots.length;                     // 10
+  const FADE = [1, 1, .42, .14, .07, 0];      // 奥に行くほど薄く＝球が透けて見える
+
+  // 索引：カードと同じ順・同じ数。カードを足したらここも増える
+  const ITEMS = [
+    ['周年記念',        'M12 3.2 14.3 8l5.3.8-3.8 3.7.9 5.3-4.7-2.5-4.7 2.5.9-5.3L4.4 8.8 9.7 8Z M9 17.6 7.6 22l4.4-2 4.4 2-1.4-4.4'],
+    ['誕生日',          'M4.5 12.5h15V20h-15z M4.5 20h15 M8 12.5V9 M12 12.5V8 M16 12.5V9 M8 6.6s0-1.4 0-1.6M12 5.2V3.6M16 6.6V5'],
+    ['社内表彰',        'M8 3.5h8v4a4 4 0 0 1-8 0Z M8 4.6H5.4v1.6A3 3 0 0 0 8 9.1 M16 4.6h2.6v1.6A3 3 0 0 1 16 9.1 M12 11.5v4 M9 20.4h6 M10 15.5h4v4.9h-4z'],
+    ['クライアントギフト','M3.6 9.6h16.8v3H3.6z M5.2 12.6h13.6v7.8H5.2z M12 9.6v10.8 M12 9.6C10.4 7 8.8 6 7.6 6.6c-1.4.7-1 3 4.4 3Z M12 9.6c1.6-2.6 3.2-3.6 4.4-3 1.4.7 1 3-4.4 3Z'],
+    ['株主優待',        'M5 20.4V4.4h9.2L19 9v11.4z M14 4.4V9h5 M8 17.6l2.4-3 2 2 3.2-4.4'],
+  ];
+
+  const IMGS = window.CGS_IMGS || {};
+  for (const el of document.querySelectorAll('[data-img]')) {
+    const rec = IMGS[el.dataset.img];
+    if (!rec) continue;
+    if (el.tagName === 'IMG') {            // 地に敷く写真。意味は見出しが持つので読み上げからは外す
+      el.src = rec.d;
+    } else {
+      el.style.backgroundImage = `url("${rec.d}")`;
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', rec.n);
+    }
+  }
+  for (const el of document.querySelectorAll('[data-bg]')) {
+    const rec = IMGS[el.dataset.bg];
+    if (rec) el.style.backgroundImage = `url("${rec.d}")`;
+  }
+
+  tagbar.innerHTML = ITEMS.map(([label, d], i) => `
+    <button class="tag" type="button" data-go="${i}" aria-current="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>
+      <span>${label}</span>
+    </button>`).join('');
+  const tags = [...tagbar.querySelectorAll('.tag')];
+  const icons = tags.map(t => t.querySelector('svg'));     // 毎フレーム querySelector しない
+  let curTag = -1;
+  /* ⭐ 進みのバーはやめて、その場面が正面に来た瞬間にアイコンが【ぴょんと跳ねる】。
+     ⚠️ Web Animations で鳴らす。class の付け外し＋offsetWidth で鳴らし直す手は、
+        そのたびにレイアウトを強制するので、回り続けているこの画面では使わない。 */
+  const hop = el => el.animate([
+    { transform:'translateY(0) scale(1)' },
+    { transform:'translateY(-7px) scale(1.14)', offset:.34 },
+    { transform:'translateY(0) scale(.94)',     offset:.60 },
+    { transform:'translateY(-2px) scale(1.03)', offset:.80 },
+    { transform:'translateY(0) scale(1)' },
+  ], { duration:820, easing:'cubic-bezier(.22,1,.36,1)' });   // ⚠️ 速いと気づけない。--anim-xslow(.9s) に寄せた
+
+  /* ⭐ 【合成スレッドに任せる】。以前は requestAnimationFrame で毎フレーム transform を
+     書いていた。それだとメインスレッドが1回でも詰まると、そのままコマ落ちになる。
+     ここでは板ごとに Web Animations を1本ずつ渡す。動かすのは transform と opacity だけなので
+     合成スレッドで回り、メイン側が何をしていても止まらない。
+     ⚠️ 輪（preserve-3d の器）を回す作りも試したが、Chrome が左隣の板を描かなくなったのでやめた。
+        板それぞれに角度を持たせる、前と同じ組み立てのまま合成に載せている。 */
+  function readGeom() {
+    cardWpx = slots[0].offsetWidth;
+    Rpx = cardWpx * RATIO;
+  }
+
+  let anims = [], dragging = false;
+  const PERIOD = () => SPEED_MS * N;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function fade(a) {                               // 小数の距離でも滑らかに薄くする
+    const i = Math.min(Math.floor(a), FADE.length - 2);
+    return lerp(FADE[i], FADE[i + 1], Math.min(1, a - i));
+  }
+  const wrap = v => { let o = ((v % N) + N) % N; return o > N / 2 ? o - N : o; };
+
+  function keysFor(i) {
+    const ks = [], STEP = 4;
+    for (let k = 0; k <= N * STEP; k++) {
+      const t = k / STEP, lin = i - t;              // ⚠️ 角度は畳まない。畳むと 180°→-180° で逆回転する
+      ks.push({ offset: k / (N * STEP),
+                transform: `translateZ(${-Rpx}px) rotateY(${(lin * ANG).toFixed(3)}deg) translateZ(${Rpx}px)`,
+                opacity: fade(Math.abs(wrap(lin))) });
+    }
+    return ks;
+  }
+  function seek(t) {
+    const P = PERIOD(), v = ((t % P) + P) % P;
+    for (const a of anims) a.currentTime = v;
+  }
+  function phase() { return (anims.length ? (anims[0].currentTime || 0) : 0) / SPEED_MS; }   // = 旧 at
+
+  function rebuild() {
+    const keep = anims.length ? phase() * SPEED_MS : 0;
+    for (const a of anims) a.cancel();
+    anims = [];
+    readGeom();
+    const P = PERIOD();
+    for (const el of slots) {
+      anims.push(el.animate(keysFor(+el.dataset.i), { duration: P, iterations: Infinity, easing: 'linear' }));
+    }
+    seek(keep);
+    if (dragging) for (const a of anims) a.pause();
+  }
+  addEventListener('resize', rebuild);
+  window.__setAt = v => { for (const a of anims) a.pause(); seek(v * SPEED_MS); };   // 計測用
+  window.__at = () => phase();                                                     // 計測用
+
+  /* 索引の面倒だけメインスレッドで見る。currentTime を読むだけなのでレイアウトは起きない。
+     書き込むのは【場面が変わった時だけ】。 */
+  let here = -1;
+  function tick() {
+    const at = phase();
+    for (const el of slots) {                      // 重なり順。整数なので書き込みは滅多に起きない
+      const z = Math.round(20 - Math.abs(wrap(+el.dataset.i - at)));
+      if (el._z !== z) { el.style.zIndex = z; el._z = z; }
+    }
+    const k = Math.round(at), idx = ((k % SCENES) + SCENES) % SCENES;
+    if (idx !== curTag) {
+      if (curTag >= 0) tags[curTag].setAttribute('aria-current', 'false');
+      tags[idx].setAttribute('aria-current', 'true');
+      hop(icons[idx]);                           // 正面に来た合図。指で送っている時も鳴らす
+      curTag = idx;
+    }
+    const h = ((k % N) + N) % N;
+    if (h !== here) {
+      if (here >= 0) slots.find(e => +e.dataset.i === here).removeAttribute('data-here');
+      slots.find(e => +e.dataset.i === h).setAttribute('data-here', '');
+      here = h;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function glide(targetAt) {                       // いま近いほうへ回す（遠回りさせない）
+    const P = PERIOD(), from = (anims[0].currentTime || 0);
+    let d = ((targetAt * SPEED_MS - from) % P + P) % P;
+    if (d > P / 2) d -= P;
+    for (const a of anims) a.pause();
+    const t0 = performance.now();
+    (function step(now) {
+      const e = Math.min(1, (now - t0) / 700), k = 1 - Math.pow(1 - e, 3);   // ease-out
+      seek(from + d * k);
+      if (e < 1) requestAnimationFrame(step);
+      else if (!dragging) for (const a of anims) a.play();
+    })(t0);
+  }
+
+  tagbar.addEventListener('click', e => {
+    const b = e.target.closest('[data-go]');
+    if (!b) return;
+    const k = +b.dataset.go, at = phase();         // 同じ場面の枠は輪に2つある
+    const dist = v => { let d = ((v - at) % N + N) % N; return Math.min(d, N - d); };
+    glide(dist(k) <= dist(k + SCENES) ? k : k + SCENES);
+  });
+  stage.addEventListener('click', e => {
+    const el = e.target.closest('.slot');
+    if (el && !el.hasAttribute('data-here')) glide(+el.dataset.i);
+  });
+  stage.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { glide(Math.round(phase()) + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { glide(Math.round(phase()) - 1); e.preventDefault(); }
+  });
+
+  /* 指で送る。⚠️ 掴んでいる間だけ止める。離したらそのまま回り続ける
+     🚨 1枚ぶんの移動量は【触り始めに一度だけ】測る。pointermove のたびに
+        getBoundingClientRect を呼ぶと、毎秒60〜120回ページ全体のレイアウトが走る。 */
+  let x0 = null, y0 = 0, t0 = 0, step = 1, axis = null;
+  let vx = 0, vt = 0, vlast = 0;                   // 離したあとの惰性のために速さを覚えておく
+  const SENS = .24;                                // 1枚ぶんに相当する指の移動量（舞台幅に対する比）
+  const measureStep = () => { step = stage.getBoundingClientRect().width * SENS; };
+
+  function grab(e) {
+    x0 = e.clientX; y0 = e.clientY; axis = null; dragging = true; measureStep();
+    for (const a of anims) a.pause();
+    t0 = anims[0].currentTime || 0;
+    vx = 0; vlast = t0; vt = performance.now();
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+  function move(e) {
+    if (x0 === null) return;
+    const t = t0 - (e.clientX - x0) / step * SPEED_MS;
+    const now = performance.now(), dt = now - vt;
+    if (dt > 8) { vx = (t - vlast) / dt; vt = now; vlast = t; }   // アニメ時間 ÷ 実時間
+    seek(t);
+  }
+  /* ⭐ 離したら、指の速さのまま流して、ゆっくり通常の速さへ戻す
+        （急に等速へ戻すと、そこで引っかかって見える） */
+  function fling() {
+    let v = Math.max(-14, Math.min(14, vx || 1)), last = performance.now();
+    (function glideOn(now) {
+      if (dragging) return;                        // また掴まれたら中断
+      const dt = Math.min(48, now - last); last = now;
+      v = 1 + (v - 1) * Math.pow(.90, dt / 16.7);  // 1（＝通常の速さ）へ寄せる
+      seek((anims[0].currentTime || 0) + v * dt);
+      if (Math.abs(v - 1) > .06) requestAnimationFrame(glideOn);
+      else for (const a of anims) a.play();
+    })(last);
+  }
+  stage.addEventListener('pointerdown', grab);
+  stage.addEventListener('pointermove', move);
+  const release = e => {
+    if (x0 === null) return;
+    x0 = null; dragging = false;
+    if (e && e.pointerId != null) { try { stage.releasePointerCapture(e.pointerId); } catch (_) {} }
+    fling();
+  };
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+  stage.addEventListener('lostpointercapture', release);
+
+  /* 🚨 【斜めに動かすとカクついた原因】舞台は touch-action:pan-y なので、指がすこしでも
+     縦に動くとブラウザがページの縦スクロールを始めてしまい、こちらの指送りが
+     途中で打ち切られる（pointercancel）。
+     ⭐ 最初のひと動きで向きを決めて、横なら touchmove を preventDefault して
+        縦スクロールに取られないようにする。縦ならこちらが手を引いてページに譲る。
+     ⚠️ preventDefault が効くのは【スクロールが始まる前】だけ。だから1回目の移動で決める。 */
+  stage.addEventListener('touchmove', e => {
+    if (x0 === null || !e.touches.length) return;
+    const t = e.touches[0];
+    if (axis === null) {
+      const dx = Math.abs(t.clientX - x0), dy = Math.abs(t.clientY - y0);
+      if (dx < 4 && dy < 4) return;
+      axis = dx >= dy ? 'x' : 'y';
+      if (axis === 'y') { x0 = null; dragging = false; for (const a of anims) a.play(); return; }
+    }
+    if (axis === 'x') e.preventDefault();
+  }, { passive: false });
+
+  ready = true;
+  rebuild();
+  requestAnimationFrame(tick);
+})();
+</script>
