@@ -162,9 +162,8 @@ body{
      まるごと描き直される。毎フレーム回しているので、そのたび再ラスタライズが走って
      写真の画素がにじみ、カードが小刻みに震えて見えていた。
      ⭐ transform と opacity だけなら GPU の合成で済む＝描き直しが起きない。
-     ⚠️ 影は drop-shadow（filter）をやめて box-shadow にする。こちらは層と一緒に
-        一度だけ焼かれるので、動かしても描き直されない。
-     ⚠️ 影は slot の箱そのものではなく ::before に付ける（すぐ下を見よ）。 */
+     ⚠️ 影を足すことになっても drop-shadow（filter）は使わない。box-shadow なら層と
+        一緒に一度だけ焼かれるので、動かしても描き直されない。 */
   transform-origin:50% 50%;
   /* ⭐ 裏を向いた板も描く。これが「透けて見える球」の見え方そのもの。
      ⚠️ backface-visibility:hidden にすると 90°を超えた板が丸ごと消えるので、
@@ -174,20 +173,16 @@ body{
   cursor:pointer;
   /* ⚠️ transform / opacity に transition は付けない（毎フレーム JS が書き換えるため） */
 }
-/* 🚨 影は slot 本体ではなく ::before に持たせる（形と影のきわを合わせるため）。
-   ⚠️ 台形（tp）を 0 にしたので左右は箱いっぱい。台形を戻すときは、上端の狭まりぶんだけ
-      ここを inset:0 <tp/2>% に縮めること。縮めないと、形と箱のすき間にページの地が残って
-      白い縁に見える（生成りの地にしたときに実際そうなった）。
+/* ⭐ カードに影は落とさない（2026-09-11 そういう指示）。
+   ⚠️ 影を戻すときは slot 本体ではなく ::before に持たせること。形（clip-path）と
+      slot の四角にすき間があると、影は四角の【外】にしか描かれないので、
+      すき間にページの地が残って「縁の白い余白」に見える。
+      台形（tp）や下辺の反り（bb）を戻す場合は、その逃げぶんだけ ::before を縮める。
    ⚠️ filter:drop-shadow は使わない（毎フレーム描き直しになり、震えが戻る）。 */
-.slot::before{
-  content:""; position:absolute; inset:0;
-  border-radius:11.5%;
-  box-shadow:0 18px 26px var(--c-shadow), 0 2px 5px var(--c-shadow-2);
-}
 .slot[data-here]{cursor:default}
 
 /* ⭐ 湾曲は clip-path（objectBoundingBox）で作る。上辺が上に、下辺が下に膨らむ「枕型」。
-   ⚠️ clip-path は box-shadow を落とすので、影は親の drop-shadow で出している。 */
+   ⚠️ clip-path は box-shadow を落とす。影が要るときは親側に付けること。 */
 .card{position:absolute; inset:0; clip-path:url(#pillow); display:grid; place-items:center; overflow:hidden}
 .card::after{ /* 上ほど明るく：湾曲した面に当たる光 */
   content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
