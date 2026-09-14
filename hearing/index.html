@@ -231,6 +231,9 @@ function showLoadError(msg) {
 
 function showForm(data) {
   FD = data;
+  // 販売中止のタイプはランクが持つタイプからも外す。外さないと、ランクで絞ったあとの選択肢や
+  // 「1タイプしか無いランクは自動で入れる」処理（submitForm）から選ばれてしまう
+  (FD.products || []).forEach(function(p) { if (p._catTypes) p._catTypes = p._catTypes.filter(isCatalogTypeOpen); });
   init();
   document.getElementById('loading-area').classList.add('hidden');
   document.getElementById('form-area').classList.remove('hidden');
@@ -247,7 +250,12 @@ var cardDesigns = {
 };
 // 「オーダーメイド」は onCatTypeChange/onRankChange で常に表示する特別扱いなので、必ず末尾に置く。
 // 実際に選べるかは商品マスタのカタログURL（JSONのキー＝_catTypes）で絞られる。ここに足しただけでは出ない。
-var allCatalogTypes = ['人気商品盛りだくさんA','人気商品盛りだくさんB','グルメ中心','男性向け','女性向け','和牛セレブ','オーダーメイド'];
+// 🚨 販売を中止したカタログタイプ（2026-09-14 saito・全ランク）。お客様には選ばせない。
+//    商品マスタのカタログURLには残してある＝販売自体はできる。要望があれば社内のCRMから個別に入れる
+//    （CRM の catalogTypes は意図して消していない）。ご案内ページ（guide/index.html）にも同じ一覧がある。
+var HIDDEN_CATALOG_TYPES = ['グルメ中心','男性向け','女性向け'];
+function isCatalogTypeOpen(t) { return HIDDEN_CATALOG_TYPES.indexOf(t) < 0; }
+var allCatalogTypes = ['人気商品盛りだくさんA','人気商品盛りだくさんB','グルメ中心','男性向け','女性向け','和牛セレブ','オーダーメイド'].filter(isCatalogTypeOpen);
 var targets = ['ご親族','ご友人','会社の上司・同僚','その他'];
 
 function init() {

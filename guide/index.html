@@ -141,6 +141,20 @@ a:hover{text-decoration:underline}
 <script>
 var GAS_API = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（いまは使わない・戻すとき用に残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
+
+// 🚨 販売を中止したカタログタイプ（2026-09-14 saito・全ランク）。ランクの下のカタログのリンクから外す。
+//    中身（商品マスタのカタログURL）はGAS側に残してある＝販売自体はできる。要望があれば個別対応。
+//    ヒアリングフォーム（hearing/index.html）にも同じ一覧がある。
+var HIDDEN_CATALOG_TYPES = ['グルメ中心','男性向け','女性向け'];
+function hideClosedCatalogLinks(html) {
+  if (!html || html.indexOf('product-links') < 0) return html;
+  var box = document.createElement('div');
+  box.innerHTML = html;
+  Array.prototype.forEach.call(box.querySelectorAll('.product-links a'), function(a) {
+    if (HIDDEN_CATALOG_TYPES.indexOf(a.textContent.trim()) >= 0) a.parentNode.removeChild(a);
+  });
+  return box.innerHTML;
+}
 var CACHE_TTL = 24 * 60 * 60 * 1000; // 24時間
 
 (function() {
@@ -324,7 +338,7 @@ function render(data) {
         + '<p class="section-number">' + num + '</p>'
         + '<h2>' + s.name + '</h2>'
         + '<div class="section-line"></div>'
-        + '<div class="body">' + s.html + '</div>'
+        + '<div class="body">' + hideClosedCatalogLinks(s.html) + '</div>'
         + '</section>';
     }).join('');
     var imgHtml = p.tabImg ? '<div class="tab-hero" style="background-image:url(' + p.tabImg + ');"></div>' : '';
