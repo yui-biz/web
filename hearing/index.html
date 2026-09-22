@@ -48,6 +48,13 @@ textarea{resize:vertical;min-height:60px}
 .success{text-align:center;padding:60px 20px}
 .success h2{font-family:var(--serif);color:var(--accent);font-size:1.1rem;font-weight:300;margin-bottom:1rem;letter-spacing:.1em}
 .hidden{display:none!important}
+.cf-lead{text-align:center;font-size:.78rem;color:var(--text-light);margin-bottom:14px}
+.cf-row{display:grid;grid-template-columns:7.5em 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:.8rem}
+.cf-row:last-child{border-bottom:none}
+.cf-row dt{color:var(--text-muted);font-size:.72rem}
+.cf-row dd{margin:0;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.cf-empty{color:var(--text-muted)}
+.btn-back{width:100%;padding:12px;background:var(--surface);color:var(--accent);border:1px solid var(--accent-light);border-radius:20px;font-size:.82rem;cursor:pointer;font-family:var(--serif);letter-spacing:.15em;margin-bottom:10px}
 .req{display:inline-block;font-size:.6rem;color:#fff;background:var(--accent-light);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px;letter-spacing:.05em}
 .loading{text-align:center;padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:0}
 .loading-spinner{width:32px;height:32px;border:1.5px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
@@ -141,7 +148,15 @@ textarea{resize:vertical;min-height:60px}
       <div class="field"><textarea id="f-notes" rows="3" placeholder="ご質問やご要望がございましたらご記入ください"></textarea></div>
     </div>
 
-    <button class="btn-submit" id="btn-submit" onclick="submitForm()">回答を送信</button>
+    <button class="btn-submit" id="btn-submit" onclick="submitForm()">入力内容を確認する</button>
+  </div>
+
+  <!-- 送信前の確認（saito 2026-09-22）。入力欄は form-area に残したままなので、戻っても消えない -->
+  <div id="confirm-area" class="hidden">
+    <p class="cf-lead">ご入力内容をご確認ください</p>
+    <div id="confirm-body"></div>
+    <button class="btn-back" id="btn-back" onclick="backToForm()">修正する</button>
+    <button class="btn-submit" id="btn-send" onclick="sendPayload()">この内容で送信</button>
   </div>
 
   <div id="success-area" class="success hidden">
@@ -611,7 +626,6 @@ function onCatTypeChange(g) {
 
 function submitForm() {
   if (formSubmitted) return;
-  var btn = document.getElementById('btn-submit');
 
   var count = parseInt(document.getElementById('f-groupCount').value) || 1;
   var groups = [];
@@ -641,10 +655,6 @@ function submitForm() {
   var miss = missingRequired(groups);
   if (miss.length) { alert('次の項目を選んでください。\n\n' + miss.join('\n')); return; }
 
-  formSubmitted = true;
-  btn.disabled = true;
-  btn.textContent = '送信中...';
-
   var items = [];
   groups.forEach(function(gr) {
     if (!gr.rank || !gr.qty) return;
@@ -667,6 +677,69 @@ function submitForm() {
     },
     notes: document.getElementById('f-notes').value
   };
+  pendingPayload = payload;
+  renderConfirm(payload);
+  document.getElementById('form-area').classList.add('hidden');
+  document.getElementById('confirm-area').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+var pendingPayload = null;
+function backToForm() {
+  document.getElementById('confirm-area').classList.add('hidden');
+  document.getElementById('form-area').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+// 確認画面：送る内容をそのまま並べる（画面で見えていない項目＝式場が決めている項目は出さない）
+function renderConfirm(payload) {
+  var labels = ['A','B','C','D','E'];
+  var esc = function(t) { return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var shown = function(id) { var el = document.getElementById(id); return el && !el.closest('.hidden'); };
+  var prodName = function(id) {
+    var p = (FD.products || []).find(function(x) { return x['\u5546\u54C1ID'] === id; });
+    return p ? p['\u5546\u54C1\u540D'] + '（税込' + (parseInt(p['\u7A0E\u8FBC\u4FA1\u683C']) || 0).toLocaleString() + '円）' : id;
+  };
+  var delivLabel = function(v) { var d = SWEET_DELIVERY.find(function(x) { return x.value === v; }); return d ? d.label : v; };
+  var row = function(k, v) { return '<div class="cf-row"><dt>' + esc(k) + '</dt><dd>' + (v ? esc(v) : '<span class="cf-empty">未入力</span>') + '</dd></div>'; };
+  var h = '';
+  var basic = '';
+  if (shown('f-kikkake')) basic += row('きっかけ', payload.kikkake);
+  if (shown('f-venue')) basic += row('式場・会場名', payload.venue);
+  if (shown('f-delivDate')) basic += row('納品日', payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '');
+  if (shown('f-delivTime')) basic += row('納品時間', payload.delivery.time);
+  if (shown('f-delivPlace')) basic += row('納品場所', payload.delivery.place);
+  if (basic) h += '<div class="card"><div class="card-title">ご注文者・納品</div><dl style="margin:0">' + basic + '</dl></div>';
+  payload.groups.forEach(function(g, i) {
+    var sw = function(want, id, del) { return want === '希望' ? prodName(id) + '／' + delivLabel(del) : want === '不要' ? '不要' : ''; };
+    h += '<div class="card"><div class="card-title">贈り分け ' + labels[i] + '</div><dl style="margin:0">'
+      + row('対象ゲスト', (g.targets || []).join('、'))
+      + row('引き出物', prodName(g.rank))
+      + row('カタログタイプ', g.catalogType)
+      + row('冊数', g.qty ? g.qty + '冊' : '')
+      + (document.getElementById('swd_sweet_' + i) ? row('引き菓子', sw(g.sweetWant, g.sweetId, g.sweetDelivery)) : '')
+      + (document.getElementById('swd_engi_' + i) ? row('縁起物', sw(g.engiWant, g.engiId, g.engiDelivery)) : '')
+      + row('カード', (g.design || '') + (g.pattern ? '・' + g.pattern : ''))
+      + '</dl></div>';
+  });
+  h += '<div class="card"><div class="card-title">その他ご要望</div><dl style="margin:0">' + row('内容', payload.notes) + '</dl></div>';
+  document.getElementById('confirm-body').innerHTML = h;
+}
+
+function sendPayload() {
+  if (formSubmitted || !pendingPayload) return;
+  var payload = pendingPayload;
+  var btn = document.getElementById('btn-send');
+  formSubmitted = true;
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+  document.getElementById('btn-back').disabled = true;
+  var restore = function() {
+    formSubmitted = false;
+    btn.disabled = false;
+    btn.textContent = 'この内容で送信';
+    document.getElementById('btn-back').disabled = false;
+  };
 
   // GAS Web AppにPOST送信
   fetch(GAS_URL, {
@@ -677,19 +750,15 @@ function submitForm() {
   .then(function(res) { return res.json(); })
   .then(function(result) {
     if (result.error) {
-      formSubmitted = false;
-      btn.disabled = false;
-      btn.textContent = '回答を送信';
+      restore();
       alert(result.error);
       return;
     }
-    document.getElementById('form-area').classList.add('hidden');
+    document.getElementById('confirm-area').classList.add('hidden');
     document.getElementById('success-area').classList.remove('hidden');
   })
   .catch(function() {
-    formSubmitted = false;
-    btn.disabled = false;
-    btn.textContent = '回答を送信';
+    restore();
     alert('送信に失敗しました。もう一度お試しください。');
   });
 }
