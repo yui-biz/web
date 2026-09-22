@@ -48,6 +48,7 @@ textarea{resize:vertical;min-height:60px}
 .success{text-align:center;padding:60px 20px}
 .success h2{font-family:var(--serif);color:var(--accent);font-size:1.1rem;font-weight:300;margin-bottom:1rem;letter-spacing:.1em}
 .hidden{display:none!important}
+.req{display:inline-block;font-size:.6rem;color:#fff;background:var(--accent-light);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px;letter-spacing:.05em}
 .loading{text-align:center;padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:0}
 .loading-spinner{width:32px;height:32px;border:1.5px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -306,7 +307,7 @@ function renderGroups() {
       html += '<label class="check-opt"><input type="checkbox" name="target_' + g + '" value="' + t + '"><span>' + t + '</span></label>';
     });
     html += '</div>';
-    html += '<label>引き出物のランク</label><div class="radio-group" id="rank-group-' + g + '">';
+    html += '<label>引き出物のランク<span class="req">必須</span></label><div class="radio-group" id="rank-group-' + g + '">';
     hdProducts.forEach(function(p) {
       var price = parseInt(p['\u7A0E\u8FBC\u4FA1\u683C']) || 0;
       var types = (p._catTypes || []).join(',');
@@ -314,7 +315,7 @@ function renderGroups() {
       html += '<span>' + p['\u5546\u54C1\u540D'] + '（税込' + price.toLocaleString() + '\u5186）</span></label>';
     });
     html += '</div>';
-    html += '<div id="cattype-area-' + g + '"><label>カタログタイプ</label><div class="radio-group" id="cattype-group-' + g + '">';
+    html += '<div id="cattype-area-' + g + '"><label>カタログタイプ<span class="req">必須</span></label><div class="radio-group" id="cattype-group-' + g + '">';
     allCatalogTypes.forEach(function(t) {
       html += '<label class="radio-opt"><input type="radio" name="cattype_' + g + '" value="' + t + '" onchange="onCatTypeChange(' + g + ')"><span>' + t + '</span></label>';
     });
@@ -439,6 +440,18 @@ function readSweets(g) {
 }
 
 // 希望なのに価格・受け取り方が選ばれていないものを並べる
+// 必須（saito 2026-09-22）：贈り分けごとのランク・カタログタイプ・柄、全体のカードデザイン（オリジナルカードの式場は聞かない）
+function missingRequired(groups) {
+  var labels = ['A','B','C','D','E'], miss = [];
+  if (!FD.originalCard && !(document.querySelector('input[name=design]:checked') || {}).value) miss.push('カードデザイン（和風／洋風）');
+  groups.forEach(function(gr, g) {
+    if (!gr.rank) miss.push('贈り分け' + labels[g] + '：引き出物のランク');
+    if (!gr.catalogType) miss.push('贈り分け' + labels[g] + '：カタログタイプ');
+    if (!gr.pattern) miss.push('贈り分け' + labels[g] + '：カードの柄');
+  });
+  return miss.concat(missingSweets(groups));
+}
+
 function missingSweets(groups) {
   var labels = ['A','B','C','D','E'], miss = [];
   groups.forEach(function(gr, g) {
@@ -460,7 +473,7 @@ function renderCardDesignSection(count) {
     var origDesign = FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風';
     designHtml = '<p style="font-size:.8rem;color:var(--text-light);">オリジナルカードのため、カードデザインの選択は不要です。</p>';
     var imgUrl = patternImages[origDesign] || '';
-    patternHtml = '<label>カード柄（' + origDesign + '）</label>';
+    patternHtml = '<label>カード柄（' + origDesign + '）<span class="req">必須</span></label>';
     if (imgUrl) patternHtml += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="' + imgUrl + '" alt="柄イメージ" style="width:100%;display:block;"></div>';
     patternHtml += '<p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">贈り分けごとに異なる柄をお選びください</p>';
     var patterns = cardDesigns[origDesign] || [];
@@ -472,7 +485,7 @@ function renderCardDesignSection(count) {
       patternHtml += '</div></div>';
     }
   } else {
-    designHtml = '<label>カードデザイン</label>';
+    designHtml = '<label>カードデザイン<span class="req">必須</span></label>';
     designHtml += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468336/card_d3yaov.png" alt="カードデザイン" style="width:100%;display:block;"></div>';
     designHtml += '<div class="radio-group">';
     designHtml += '<label class="radio-opt"><input type="radio" name="design" value="洋風" onchange="showPatternSection()"><span>洋風（左）</span></label>';
@@ -490,12 +503,15 @@ function showPatternSection() {
 }
 
 function renderPatternChoices(design) {
+  // デザインの選択を外したときは柄の欄ごと消す（「カード柄（）」だけが残らないように）
+  if (!design) { document.getElementById('f-pattern-section').innerHTML = ''; return; }
   var patterns = cardDesigns[design] || [];
   var count = parseInt(document.getElementById('f-groupCount').value) || 1;
   var labels = ['A','B','C','D','E'];
   var imgUrl = patternImages[design] || '';
   var h = '';
   if (imgUrl) h += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="' + imgUrl + '" alt="' + design + '柄イメージ" style="width:100%;display:block;"></div>';
+  h = '<label>カード柄（' + design + '）<span class="req">必須</span></label>' + h;
   h += '<p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">贈り分けごとに異なる柄をお選びください</p>';
   for (var g = 0; g < count; g++) {
     h += '<div style="margin-bottom:8px;"><label style="font-weight:500;">贈り分け ' + labels[g] + '</label><div class="radio-group">';
@@ -622,7 +638,7 @@ function submitForm() {
       engiWant: sw.engiWant, engiId: sw.engiId, engiDelivery: sw.engiDelivery });
   }
   // 引き菓子・縁起物を「希望する」にしたら、価格と受け取り方まで必須
-  var miss = missingSweets(groups);
+  var miss = missingRequired(groups);
   if (miss.length) { alert('次の項目を選んでください。\n\n' + miss.join('\n')); return; }
 
   formSubmitted = true;
