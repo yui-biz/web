@@ -320,22 +320,135 @@ function renderGroups() {
     });
     html += '</div></div>';
     html += '<div class="qty-row"><label>冊数</label><input type="number" class="qty-input" min="0" value="" placeholder="0" id="qty_' + g + '"></div>';
-    html += '<div style="margin-top:12px;"><label>引き菓子・縁起物</label><div class="radio-group">';
-    if (FD.sweetType === 'セットのみ') {
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子＋縁起物"><span>引き菓子＋縁起物</span></label>';
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="不要"><span>不要</span></label>';
-    } else {
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子＋縁起物"><span>引き菓子＋縁起物</span></label>';
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="引き菓子のみ"><span>引き菓子のみ</span></label>';
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="縁起物のみ"><span>縁起物のみ</span></label>';
-      html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="不要"><span>不要</span></label>';
-    }
-    html += '<label class="radio-opt"><input type="radio" name="sweets_' + g + '" value="検討中"><span>検討中</span></label>';
-    html += '</div></div>';
+    html += sweetsHtml(g);
     html += '</div>';
   }
   document.getElementById('f-groups').innerHTML = html;
   renderCardDesignSection(count);
+}
+
+// ===== 引き菓子・縁起物（2026-09-22 saito）=====
+// 「希望／不要」を選び、希望なら価格（コース）と受け取り方まで選ぶ。「検討中」はなくした。
+// 選べるコースは式場の契約で絞られた FD.products（サーバの buildFormData_）。
+// 受け取り方は商品マスタのカタログURLのキー（_catTypes）＝「配送ギフト」「eGift」で絞る。
+//   🚨 引き菓子・縁起物では、このキーはカタログタイプではなく受け取り方を表す（CRM の catTypesOfProduct_ の注記）
+// 送る値は CRM の贈り分けの選択肢と同じ（配送のみ／eGiftのみ／配送+eGift）。画面の言い方だけ変える
+var SWEET_KINDS = [
+  { key: 'sweet', name: '引き菓子', cat: '引き菓子' },
+  { key: 'engi',  name: '縁起物',   cat: '縁起物' }
+];
+var SWEET_DELIVERY = [
+  { value: '配送のみ',   label: '配送',         needs: ['配送ギフト'] },
+  { value: 'eGiftのみ',  label: 'eギフト',      needs: ['eGift'] },
+  { value: '配送+eGift', label: 'eギフト＋配送', needs: ['配送ギフト', 'eGift'] }
+];
+function sweetProducts(kind) {
+  return (FD.products || []).filter(function(p) { return p['\u30AB\u30C6\u30B4\u30EA'] === kind.cat; });
+}
+function isSweetSet() { return FD.sweetType === 'セットのみ'; }
+
+function sweetsHtml(g) {
+  var kinds = SWEET_KINDS.filter(function(k) { return sweetProducts(k).length; });
+  if (!kinds.length) return '';                                      // 契約に引き菓子・縁起物が無い式場
+  var h = '<div style="margin-top:12px;">';
+  var wantRadios = function(name, onchange) {
+    return '<div class="radio-group">'
+      + '<label class="radio-opt"><input type="radio" name="' + name + '" value="希望" onchange="' + onchange + '"><span>希望する</span></label>'
+      + '<label class="radio-opt"><input type="radio" name="' + name + '" value="不要" onchange="' + onchange + '"><span>不要</span></label></div>';
+  };
+  if (isSweetSet()) {
+    // セットでしか頼めない式場：希望／不要は1つで聞き、希望なら両方の価格・受け取り方を聞く
+    h += '<label>' + kinds.map(function(k) { return k.name; }).join('・') + '（セット）</label>';
+    h += wantRadios('sw_set_' + g, 'onSweetChange(' + g + ')');
+    kinds.forEach(function(k) { h += sweetDetailHtml(g, k); });
+  } else {
+    kinds.forEach(function(k) {
+      h += '<label>' + k.name + '</label>' + wantRadios('sw_' + k.key + '_' + g, 'onSweetChange(' + g + ')');
+      h += sweetDetailHtml(g, k);
+    });
+  }
+  return h + '</div>';
+}
+
+function sweetDetailHtml(g, k) {
+  var h = '<div id="swd_' + k.key + '_' + g + '" class="hidden" style="margin:-4px 0 10px;padding-left:12px;border-left:2px solid var(--border-light);">';
+  h += '<label>' + k.name + 'の価格</label><div class="radio-group">';
+  sweetProducts(k).forEach(function(p) {
+    var price = parseInt(p['\u7A0E\u8FBC\u4FA1\u683C']) || 0;
+    h += '<label class="radio-opt" data-types="' + (p._catTypes || []).join(',') + '"><input type="radio" name="swp_' + k.key + '_' + g + '" value="' + p['\u5546\u54C1ID'] + '" onchange="onSweetChange(' + g + ')">'
+      + '<span>' + p['\u5546\u54C1\u540D'] + '（税込' + price.toLocaleString() + '円）</span></label>';
+  });
+  h += '</div><label>' + k.name + 'の受け取り方</label><div class="radio-group" id="swt_' + k.key + '_' + g + '">';
+  SWEET_DELIVERY.forEach(function(d) {
+    h += '<label class="radio-opt" data-value="' + d.value + '"><input type="radio" name="swt_' + k.key + '_' + g + '" value="' + d.value + '" onchange="onSweetTypePick(this, ' + g + ')"><span>' + d.label + '</span></label>';
+  });
+  return h + '</div></div>';
+}
+
+// 希望／不要・価格の選択に合わせて、詳細の出し入れと受け取り方の絞り込みをやり直す（選択の解除にも使う）
+function sweetWant(g, k) {
+  var name = isSweetSet() ? 'sw_set_' + g : 'sw_' + k.key + '_' + g;
+  return (document.querySelector('input[name=' + name + ']:checked') || {}).value || '';
+}
+function onSweetChange(g) {
+  SWEET_KINDS.forEach(function(k) {
+    var box = document.getElementById('swd_' + k.key + '_' + g);
+    if (!box) return;
+    var want = sweetWant(g, k) === '希望';
+    box.classList.toggle('hidden', !want);
+    var picked = document.querySelector('input[name=swp_' + k.key + '_' + g + ']:checked');
+    // 価格を選ぶまでは受け取り方を全部見せない（どれが選べるかは価格で決まる）
+    var types = picked ? (picked.closest('.radio-opt').getAttribute('data-types') || '').split(',').filter(Boolean) : null;
+    var shown = [];
+    // 🚨 自動で入れた受け取り方は、価格を変えたら外す。残すと、1,000円（eGiftのみ）→1,500円に変えたとき
+    //    お客様が選んでいない「eギフト」のまま送れてしまう（2026-09-22 ブラウザで操作して見つけた）
+    var cur = document.querySelector('input[name=swt_' + k.key + '_' + g + ']:checked');
+    if (cur && cur.getAttribute('data-auto')) { cur.checked = false; cur.removeAttribute('data-auto'); }
+    document.querySelectorAll('#swt_' + k.key + '_' + g + ' .radio-opt').forEach(function(opt) {
+      var d = SWEET_DELIVERY.find(function(x) { return x.value === opt.getAttribute('data-value'); });
+      var ok = !!types && d.needs.every(function(n) { return types.indexOf(n) >= 0; });
+      opt.style.display = ok ? '' : 'none';
+      var input = opt.querySelector('input');
+      if (!ok) input.checked = false; else shown.push(input);
+    });
+    // 選べる受け取り方が1つだけなら、それを入れておく（例：eGift だけの1,000円コース）
+    if (shown.length === 1 && !shown[0].checked) { shown[0].checked = true; shown[0].setAttribute('data-auto', '1'); }
+  });
+}
+// お客様が受け取り方を選んだ＝自動で入れた印を消す
+function onSweetTypePick(input, g) {
+  document.querySelectorAll('input[name=' + input.name + ']').forEach(function(i) { i.removeAttribute('data-auto'); });
+  onSweetChange(g);
+}
+
+// 送る値。want は 希望／不要／''（未回答）。希望でも価格・受け取り方が未選択なら '' のまま（送信前の確認で止める）
+function readSweets(g) {
+  var out = {};
+  SWEET_KINDS.forEach(function(k) {
+    var hasKind = !!document.getElementById('swd_' + k.key + '_' + g);
+    var want = hasKind ? sweetWant(g, k) : '';
+    out[k.key + 'Want'] = want;
+    out[k.key + 'Id'] = want === '希望' ? ((document.querySelector('input[name=swp_' + k.key + '_' + g + ']:checked') || {}).value || '') : '';
+    out[k.key + 'Delivery'] = want === '希望' ? ((document.querySelector('input[name=swt_' + k.key + '_' + g + ']:checked') || {}).value || '') : '';
+  });
+  // 以前の形（CRM のヒアリング表示・Slack 通知が読む文字列）も付けておく
+  var s = out.sweetWant === '希望', e = out.engiWant === '希望';
+  out.sweets = s && e ? '引き菓子＋縁起物' : s ? '引き菓子のみ' : e ? '縁起物のみ'
+    : (out.sweetWant === '不要' || out.engiWant === '不要') ? '不要' : '';
+  return out;
+}
+
+// 希望なのに価格・受け取り方が選ばれていないものを並べる
+function missingSweets(groups) {
+  var labels = ['A','B','C','D','E'], miss = [];
+  groups.forEach(function(gr, g) {
+    SWEET_KINDS.forEach(function(k) {
+      if (gr[k.key + 'Want'] !== '希望') return;
+      if (!gr[k.key + 'Id']) miss.push('贈り分け' + labels[g] + '：' + k.name + 'の価格');
+      else if (!gr[k.key + 'Delivery']) miss.push('贈り分け' + labels[g] + '：' + k.name + 'の受け取り方');
+    });
+  });
+  return miss;
 }
 
 function renderCardDesignSection(count) {
@@ -482,10 +595,7 @@ function onCatTypeChange(g) {
 
 function submitForm() {
   if (formSubmitted) return;
-  formSubmitted = true;
   var btn = document.getElementById('btn-submit');
-  btn.disabled = true;
-  btn.textContent = '送信中...';
 
   var count = parseInt(document.getElementById('f-groupCount').value) || 1;
   var groups = [];
@@ -504,11 +614,20 @@ function submitForm() {
     }
     var design = FD.originalCard ? (FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風') : (document.querySelector('input[name=design]:checked') || {}).value || '';
     var pattern = (document.querySelector('input[name=pattern_' + g + ']:checked') || {}).value || '';
-    var sweets = (document.querySelector('input[name=sweets_' + g + ']:checked') || {}).value || '';
+    var sw = readSweets(g);
     var qty = parseInt(document.getElementById('qty_' + g).value) || 0;
     totalQty += qty;
-    groups.push({ targets: tgts, rank: rank, catalogType: cattype, design: design, pattern: pattern, sweets: sweets, qty: qty });
+    groups.push({ targets: tgts, rank: rank, catalogType: cattype, design: design, pattern: pattern, qty: qty,
+      sweets: sw.sweets, sweetWant: sw.sweetWant, sweetId: sw.sweetId, sweetDelivery: sw.sweetDelivery,
+      engiWant: sw.engiWant, engiId: sw.engiId, engiDelivery: sw.engiDelivery });
   }
+  // 引き菓子・縁起物を「希望する」にしたら、価格と受け取り方まで必須
+  var miss = missingSweets(groups);
+  if (miss.length) { alert('次の項目を選んでください。\n\n' + miss.join('\n')); return; }
+
+  formSubmitted = true;
+  btn.disabled = true;
+  btn.textContent = '送信中...';
 
   var items = [];
   groups.forEach(function(gr) {
