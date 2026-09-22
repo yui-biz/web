@@ -666,6 +666,8 @@ function submitForm() {
   var payload = {
     customerId: FD.customerId,
     venue: document.getElementById('f-venue').value,
+    // 式場のご担当者。2026-09-22 まで送っておらず、入力してもどこにも残っていなかった（CRM は顧客DB「式場担当者」へ）
+    venueStaff: document.getElementById('f-staff').value,
     kikkake: kikkakeEl ? kikkakeEl.value : '',
     groups: groups,
     items: items,
@@ -706,6 +708,7 @@ function renderConfirm(payload) {
   var basic = '';
   if (shown('f-kikkake')) basic += row('きっかけ', payload.kikkake);
   if (shown('f-venue')) basic += row('式場・会場名', payload.venue);
+  if (shown('f-staff')) basic += row('ご担当者様', payload.venueStaff);
   if (shown('f-delivDate')) basic += row('納品日', payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '');
   if (shown('f-delivTime')) basic += row('納品時間', payload.delivery.time);
   if (shown('f-delivPlace')) basic += row('納品場所', payload.delivery.place);
