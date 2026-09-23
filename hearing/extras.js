@@ -80,6 +80,15 @@ function hxInit() {
 // 贈り分けの数が変わったら、タブを作り直す（renderGroups から呼ぶ）
 function hxOnGroupsChanged() {
   if (!FD || !hx$('hx-msg')) return;
+  // 「贈り分けごと」で回答済みの写真・メッセージは、贈り分けが前回より増えたら入力欄を開く
+  // （開かないと、増えた贈り分けの分が空のまま前回の回答として送られる）
+  ['photo', 'message'].forEach(function (k) {
+    var x = FD.prev && FD.prev.extras && FD.prev.extras[k];
+    if (HX[k].mode !== 'done' || !x || !x.split) return;
+    if (hxGroupCount() <= (x.items || []).length) return;
+    var btn = document.querySelector('[data-item=' + k + '] .done-row .sbtn');
+    if (btn) setTimeout(function () { btn.click(); }, 0);
+  });
   ['photo', 'message'].forEach(function (k) {
     var keys = hxKeys(k);
     if (keys.indexOf(HX[k].cur) < 0) HX[k].cur = keys[0];
@@ -409,24 +418,32 @@ function hxPrefillExisting(prev) {
     var d = prev.delivery || {};
     hx$('f-delivDate').value = d.date || ''; hx$('f-delivTime').value = d.time || ''; hx$('f-delivPlace').value = d.place || '';
     hx$('f-notes').value = prev.notes || '';
-    var design = ((prev.groups || [])[0] || {}).design;
-    if (!FD.originalCard && design && setRadio('design', design)) renderPatternChoices(design);
-    (prev.groups || []).slice(0, 5).forEach(function (g, i) {
-      (g.targets || []).forEach(function (t) { setCheck('target_' + i, t); });
-      if (setRadio('rank_' + i, g.rank)) onRankChange(i);
-      if (setRadio('cattype_' + i, g.catalogType)) onCatTypeChange(i);
-      hx$('qty_' + i).value = g.qty || '';
-      if (isSweetSet()) setRadio('sw_set_' + i, (g.sweetWant === '希望' || g.engiWant === '希望') ? '希望' : (g.sweetWant || g.engiWant));
-      else { setRadio('sw_sweet_' + i, g.sweetWant); setRadio('sw_engi_' + i, g.engiWant); }
-      onSweetChange(i);
-      if (setRadio('swp_sweet_' + i, g.sweetId)) onSweetChange(i);
-      if (setRadio('swp_engi_' + i, g.engiId)) onSweetChange(i);
-      setRadio('swt_sweet_' + i, g.sweetDelivery); setRadio('swt_engi_' + i, g.engiDelivery);
-      setRadio('pattern_' + i, g.pattern);
-    });
-    updatePatternAvail();
-    function setCheck(name, v) { var el = document.querySelector('input[name="' + name + '"][value="' + q(v) + '"]'); if (el) el.checked = true; }
+    hxApplyGroups(prev.groups || []);
   } catch (e) { if (window.console) console.warn('[form] 前回の回答を入力欄に戻せませんでした', e); }
+}
+
+// 贈り分け・カードデザイン・柄を入力欄に入れる（前回の回答を戻すとき／贈り分けの数を変えたとき）
+function hxApplyGroups(groups) {
+  var q = function (v) { return String(v).replace(/["\\]/g, '\\$&'); };
+  var setRadio = function (name, v) { var el = v && document.querySelector('input[name="' + name + '"][value="' + q(v) + '"]'); if (el) el.checked = true; return !!el; };
+  var setCheck = function (name, v) { var el = document.querySelector('input[name="' + name + '"][value="' + q(v) + '"]'); if (el) el.checked = true; };
+  var design = ((groups || [])[0] || {}).design;
+  if (!FD.originalCard && design && setRadio('design', design)) renderPatternChoices(design);
+  (groups || []).slice(0, 5).forEach(function (g, i) {
+    if (!hx$('qty_' + i)) return;   // 減らした分は入れない
+    (g.targets || []).forEach(function (t) { setCheck('target_' + i, t); });
+    if (setRadio('rank_' + i, g.rank)) onRankChange(i);
+    if (setRadio('cattype_' + i, g.catalogType)) onCatTypeChange(i);
+    hx$('qty_' + i).value = g.qty || '';
+    if (isSweetSet()) setRadio('sw_set_' + i, (g.sweetWant === '希望' || g.engiWant === '希望') ? '希望' : (g.sweetWant || g.engiWant));
+    else { setRadio('sw_sweet_' + i, g.sweetWant); setRadio('sw_engi_' + i, g.engiWant); }
+    onSweetChange(i);
+    if (setRadio('swp_sweet_' + i, g.sweetId)) onSweetChange(i);
+    if (setRadio('swp_engi_' + i, g.engiId)) onSweetChange(i);
+    setRadio('swt_sweet_' + i, g.sweetDelivery); setRadio('swt_engi_' + i, g.engiDelivery);
+    setRadio('pattern_' + i, g.pattern);
+  });
+  updatePatternAvail();
 }
 function openExistingEdit() {
   HX.existingEdited = true;
@@ -548,7 +565,8 @@ function hxApplyDeliveryPending() {
   hx$('deliv-pending-note').classList.toggle('hidden', !on);
 }
 function hxDeliveryState() {
-  if (!HX.delivAsked) return 'answered';          // 式場が決めている＝聞いていない（サーバーが式場の値を補う）
+  // 式場が決めている＝聞いていない。初回は answered（サーバーが式場の値を補う）、2回目で今ある項目を開いていなければ前回のまま
+  if (!HX.delivAsked) return HX.existingEdited ? 'answered' : 'keep';
   if (HX.delivKeep) return 'keep';                // 2回目で前回のまま
   return hx$('pend-delivery').checked ? 'pending' : 'answered';
 }
@@ -588,7 +606,7 @@ function hxPrevHtml(prev) {
   };
   var delivLabel = function (v) { var d = (typeof SWEET_DELIVERY !== 'undefined' ? SWEET_DELIVERY : []).find(function (x) { return x.value === v; }); return d ? d.label : (v || ''); };
   var sw = function (want, id, del) { return want === '希望' ? prod(id) + '／' + delivLabel(del) : want === '不要' ? '不要' : ''; };
-  var h = '<div class="prev-sub">ご注文者・納品</div><dl style="margin:0">';
+  var h = '<div class="prev-sub">' + (HX.delivAsked !== false ? '式場・納品' : '式場') + '</div><dl style="margin:0">';
   if (!FD.isPartner) { h += row('きっかけ', prev.kikkake); h += row('式場・会場名', prev.venue); }
   h += row('ご担当者様', prev.venueStaff);
   var d = prev.delivery || {};

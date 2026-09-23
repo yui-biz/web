@@ -341,7 +341,7 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
-<script src="extras.js?v=20260923e"></script>
+<script src="extras.js?v=20260923h"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -494,7 +494,26 @@ var patternImages = {
   '洋風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468338/yofu_lokobr.jpg'
 };
 
+// 今の贈り分けの入力を読む（数を変えたときに入れ直すため・2026-09-23）。
+// 🚨 以前は数を変えると贈り分けの欄を作り直して、入れていたランク・冊数・カードまで全部消えていた
+function readGroupsFromDom() {
+  var out = [];
+  var n = document.querySelectorAll('#f-groups .group-card').length;
+  var design = (document.querySelector('input[name=design]:checked') || {}).value || '';
+  for (var g = 0; g < n; g++) {
+    var tg = []; document.querySelectorAll('input[name=target_' + g + ']:checked').forEach(function (c) { tg.push(c.value); });
+    var sw = readSweets(g);
+    out.push({ targets: tg, rank: (document.querySelector('input[name=rank_' + g + ']:checked') || {}).value || '',
+      catalogType: (document.querySelector('input[name=cattype_' + g + ']:checked') || {}).value || '',
+      qty: (document.getElementById('qty_' + g) || {}).value || '', design: design,
+      pattern: (document.querySelector('input[name=pattern_' + g + ']:checked') || {}).value || '',
+      sweetWant: sw.sweetWant, sweetId: sw.sweetId, sweetDelivery: sw.sweetDelivery, engiWant: sw.engiWant, engiId: sw.engiId, engiDelivery: sw.engiDelivery });
+  }
+  return out;
+}
+
 function renderGroups() {
+  var kept = FD && document.getElementById('qty_0') ? readGroupsFromDom() : null;
   var count = parseInt(document.getElementById('f-groupCount').value) || 1;
   var labels = ['A','B','C','D','E'];
   var hdProducts = FD.products.filter(function(p) { return p['\u30AB\u30C6\u30B4\u30EA'] === '\u5F15\u304D\u51FA\u7269'; });
@@ -525,6 +544,7 @@ function renderGroups() {
   }
   document.getElementById('f-groups').innerHTML = html;
   renderCardDesignSection(count);
+  if (kept && kept.length && typeof hxApplyGroups === 'function') hxApplyGroups(kept);   // 入れていた内容を戻す
   if (typeof hxOnGroupsChanged === 'function') hxOnGroupsChanged();   // 写真・メッセージの「贈り分けごと」のタブ
 }
 
