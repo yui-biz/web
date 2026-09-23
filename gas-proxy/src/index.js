@@ -19,7 +19,9 @@ const GAS_EXEC = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3
 
 // 中継してよい操作だけを並べる。ここに無いものは通さない
 // （何でも中継すると、CRMの他の機能を外から叩ける口になってしまう）
-const ALLOWED_ACTIONS = new Set(['guideData', 'formData']);
+// hearingKey＝ヒアリングの送信の印だけ（フォームが答えを受け取り損ねたとき「届いたか」確かめる・2026-09-23）。覚えない
+const ALLOWED_ACTIONS = new Set(['guideData', 'formData', 'hearingKey']);
+const NO_CACHE_ACTIONS = new Set(['hearingKey']);
 
 // 取ってよい呼び出し元。ご案内ページとフォームは GitHub Pages にある
 const ALLOWED_ORIGINS = new Set([
@@ -71,7 +73,7 @@ export default {
     // fresh=1 ＝覚えているものを使わず取り直し、覚え直す（2026-09-23）。
     //   ヒアリングフォームは送信のあと前回の回答を出すので、30分前の控えだと「まだ答えていない」画面に戻ってしまう。
     //   フォームが送信の直後と、送信から35分以内に開き直したときに付ける
-    const fresh = url.searchParams.get('fresh') === '1';
+    const fresh = url.searchParams.get('fresh') === '1' || NO_CACHE_ACTIONS.has(action);
     const hit = fresh ? null : await cache.match(cacheKey);
     if (hit) {
       const t = await hit.text();
@@ -79,7 +81,7 @@ export default {
     }
 
     // 🚨 お客様が画面を閉じても、取り直し（と覚え直し）は最後まで続ける（waitUntil）
-    const work = fetchAndCache(target, cache, cacheKey);
+    const work = fetchAndCache(target, NO_CACHE_ACTIONS.has(action) ? null : cache, cacheKey);
     if (ctx && ctx.waitUntil) ctx.waitUntil(work.catch(() => {}));
     const out = await work;
     return new Response(out.body, { status: out.status, headers: corsHeaders(origin) });
@@ -104,7 +106,7 @@ async function fetchAndCache(target, cache, cacheKey) {
         }
         // 「見つからない」は覚えない（IDの打ち間違いを30分引きずらない）
         try {
-          if (!JSON.parse(text).error) {
+          if (cache && !JSON.parse(text).error) {
             await cache.put(cacheKey, new Response(text, {
               headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=1800' },
             }));

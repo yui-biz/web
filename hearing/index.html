@@ -61,6 +61,11 @@ textarea{resize:vertical;min-height:60px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading p{font-family:var(--serif);color:var(--text-muted);font-size:.7rem;letter-spacing:.18em;margin-top:20px}
 .error{text-align:center;padding:60px 20px}
+/* 送信中のぐるぐる（2026-09-23 saito「動きがないとフリーズしたように見える」）。押し直しも防ぐ */
+.send-overlay{position:fixed;inset:0;z-index:50;background:rgba(250,249,247,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+.send-overlay .loading-spinner{width:40px;height:40px;border-width:2px}
+.send-overlay p{font-family:var(--serif);color:var(--text-light);font-size:.82rem;letter-spacing:.12em;line-height:1.9}
+.send-overlay small{display:block;font-family:var(--sans);font-size:.7rem;color:var(--text-muted);letter-spacing:.03em}
 .error h2{font-family:var(--serif);color:#DC2626;font-size:1.1rem;font-weight:300;margin-bottom:1rem}
 /* ===== ヘッダーのお写真・メッセージ・印字氏名（2026-09-23・画面見本 v12 のとおり）===== */
 .hx-title{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -322,6 +327,11 @@ textarea{resize:vertical;min-height:60px}
     <div id="confirm-body"></div>
     <button class="btn-back" id="btn-back" onclick="backToForm()">修正する</button>
     <button class="btn-submit" id="btn-send" onclick="sendPayload()">この内容で送信</button>
+  </div>
+
+  <div id="send-overlay" class="send-overlay hidden" role="status" aria-live="polite">
+    <div class="loading-spinner"></div>
+    <p id="send-overlay-msg">送信中です</p>
   </div>
 
   <div id="success-area" class="success hidden">
@@ -935,7 +945,10 @@ function sendPayload() {
   btn.disabled = true;
   btn.textContent = '送信中...';
   document.getElementById('btn-back').disabled = true;
+  var hasPhoto = !!(payload.extras && payload.extras.photo && (payload.extras.photo.items || []).some(function (i) { return i.source === 'upload'; }));
+  showSending('送信中です' + (hasPhoto ? '<small>お写真があるため、少しお時間がかかります</small>' : ''));
   var restore = function() {
+    hideSending();
     formSubmitted = false;
     btn.disabled = false;
     btn.textContent = 'この内容で送信';
@@ -944,6 +957,7 @@ function sendPayload() {
   var finished = false;
   var done = function() {
     if (finished) return; finished = true;
+    hideSending();
     // 開き直したときに前回の回答（今送ったもの）が出るよう、読み込みの控えを捨てる
     try { localStorage.removeItem('form_' + FD.customerId); localStorage.setItem('sent_' + FD.customerId, String(Date.now())); } catch (e) {}
     // 中継の控え（30分）も今の回答で取り直しておく（別の端末から開いても前回の回答が出るように）。答えは待たない
@@ -974,20 +988,28 @@ function sendPayload() {
   .catch(function() {
     clearTimeout(timer);
     btn.textContent = '送信を確認しています...';
+    showSending('送信を確認しています<small>このままお待ちください</small>');
     confirmDelivered(payload.submitKey, 0, done, restore);
   });
 }
 
-// 送信が届いたかを中継で読んで確かめる（控えを使わず取り直す）。3回見て無ければ、届いていないと判定
+function showSending(html) {
+  document.getElementById('send-overlay-msg').innerHTML = html;
+  document.getElementById('send-overlay').classList.remove('hidden');
+}
+function hideSending() { document.getElementById('send-overlay').classList.add('hidden'); }
+
+// 送信が届いたかを中継で読んで確かめる。送信の印だけを返す軽い口（hearingKey・覚えない）を使う
+// （以前は formData を丸ごと取り直していて1回10〜40秒かかった）。4回見て無ければ、届いていないと判定
 function confirmDelivered(key, attempt, done, restore) {
-  fetch(GAS_PROXY + '?action=formData&customer=' + encodeURIComponent(FD.customerId) + '&fresh=1')
+  fetch(GAS_PROXY + '?action=hearingKey&customer=' + encodeURIComponent(FD.customerId))
     .then(function(res) { return res.json(); })
     .then(function(d) {
-      if (d && d.prev && d.prev.submitKey === key) { done(); return; }
+      if (d && d.submitKey === key) { done(); return; }
       throw new Error('まだ無い');
     })
     .catch(function() {
-      if (attempt < 2) { setTimeout(function() { confirmDelivered(key, attempt + 1, done, restore); }, 5000); return; }
+      if (attempt < 3) { setTimeout(function() { confirmDelivered(key, attempt + 1, done, restore); }, 3000); return; }
       restore();
       alert('送信を確認できませんでした。お手数ですが、もう一度「この内容で送信」を押してください。');
     });
