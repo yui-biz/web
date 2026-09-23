@@ -380,10 +380,14 @@ function hxRenderNames() {
     if (p.maiden) { var m = document.createElement('span'); m.className = 'maiden'; m.textContent = '（旧姓：' + p.maiden + '）'; line.appendChild(m); }
     names.appendChild(line);
   });
-  face.appendChild(msg); face.appendChild(names);
+  // QRコード・URL・有効期限は見本（画面見本 v12 と同じ）。QRは読み取れない飾り
+  var qr = document.createElement('canvas'); qr.className = 'gcard-qr'; qr.width = 25; qr.height = 25; hxDrawFakeQr(qr);
+  var url = document.createElement('div'); url.className = 'gcard-url'; url.textContent = 'https://sample.yui.gift/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+  var exp = document.createElement('div'); exp.className = 'gcard-exp'; exp.textContent = '有効期限　○○/○○/○○まで';
+  [msg, names, qr, url, exp].forEach(function (el) { face.appendChild(el); });
   card.appendChild(face); box.appendChild(card);
   var note = document.createElement('span'); note.className = 'gcard-note';
-  note.textContent = 'メッセージは見本です。お名前の部分だけ、入力に合わせて変わります（QRコード・URL・有効期限は省いています）';
+  note.textContent = 'メッセージ・QRコード・URL・有効期限は見本です。お名前の部分だけ、入力に合わせて変わります';
   box.appendChild(note);
   // サンプル⑤を使っていればお名前を差し込み直す
   var st = HX.message;
@@ -582,4 +586,18 @@ function hxDeliveryMissing() {
     if (!String(el.value || '').trim()) miss.push('ご希望の' + x[1] + '　※ 未定なら納品情報の「まだ決まっていない」に');
   });
   return miss;
+}
+
+// 見本のQRコード（読み取れない飾り。位置合わせの四角だけ本物と同じ形）
+function hxDrawFakeQr(c) {
+  var x = c.getContext('2d'), n = 25, seed = 7;
+  var rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  x.fillStyle = '#fff'; x.fillRect(0, 0, n, n); x.fillStyle = '#111';
+  for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) if (rnd() < .48) x.fillRect(i, j, 1, 1);
+  [[0, 0], [n - 7, 0], [0, n - 7]].forEach(function (p) {
+    x.fillStyle = '#fff'; x.fillRect(p[0] - (p[0] ? 1 : 0), p[1] - (p[1] ? 1 : 0), 8, 8);
+    x.fillStyle = '#111'; x.fillRect(p[0], p[1], 7, 7);
+    x.fillStyle = '#fff'; x.fillRect(p[0] + 1, p[1] + 1, 5, 5);
+    x.fillStyle = '#111'; x.fillRect(p[0] + 2, p[1] + 2, 3, 3);
+  });
 }
