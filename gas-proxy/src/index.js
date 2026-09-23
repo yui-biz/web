@@ -37,7 +37,7 @@ function corsHeaders(origin) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
 
@@ -68,12 +68,25 @@ export default {
     //    ⚠️ ご案内ページの文面を直したら最大30分ぶん古いものが出る。
     const cache = caches.default;
     const cacheKey = new Request(target, { method: 'GET' });
-    const hit = await cache.match(cacheKey);
+    // fresh=1 ＝覚えているものを使わず取り直し、覚え直す（2026-09-23）。
+    //   ヒアリングフォームは送信のあと前回の回答を出すので、30分前の控えだと「まだ答えていない」画面に戻ってしまう。
+    //   フォームが送信の直後と、送信から35分以内に開き直したときに付ける
+    const fresh = url.searchParams.get('fresh') === '1';
+    const hit = fresh ? null : await cache.match(cacheKey);
     if (hit) {
       const t = await hit.text();
       return new Response(t, { status: 200, headers: corsHeaders(origin) });
     }
 
+    // 🚨 お客様が画面を閉じても、取り直し（と覚え直し）は最後まで続ける（waitUntil）
+    const work = fetchAndCache(target, cache, cacheKey);
+    if (ctx && ctx.waitUntil) ctx.waitUntil(work.catch(() => {}));
+    const out = await work;
+    return new Response(out.body, { status: out.status, headers: corsHeaders(origin) });
+  },
+};
+
+async function fetchAndCache(target, cache, cacheKey) {
     // 🚨 GAS は同じ呼び出しでも404を返すことがある。ここで数回試す。
     //    ブラウザではなくサーバ同士のやり取りなので、利用者を待たせるのは1回ぶんだけ。
     let lastReason = 'unknown';
@@ -97,12 +110,10 @@ export default {
             }));
           }
         } catch (e) {}
-        return new Response(text, { status: 200, headers: corsHeaders(origin) });
+        return { status: 200, body: text };
       } catch (e) {
         lastReason = String(e && e.message ? e.message : e);
       }
     }
-    return new Response(JSON.stringify({ error: 'upstream_failed', reason: lastReason }),
-      { status: 502, headers: corsHeaders(origin) });
-  },
-};
+    return { status: 502, body: JSON.stringify({ error: 'upstream_failed', reason: lastReason }) };
+}
