@@ -369,9 +369,9 @@ function hxRenderNames() {
     // 未入力のあいだは実物のカードと同じ例（新郎 太郎／新婦 花子）を出す
     var ln = any ? p.last : x[1], fn = any ? p.first : x[2];
     var line = document.createElement('div');
-    if (ln) { line.appendChild(document.createTextNode(ln)); if (fn) { var g = document.createElement('span'); g.className = 'gap'; line.appendChild(g); } }
-    if (fn) line.appendChild(document.createTextNode(fn));
-    if (p.maiden) line.appendChild(document.createTextNode('（旧姓：' + p.maiden + '）'));
+    // 姓と名の間は半角スペース（saito 2026-09-23）
+    line.appendChild(document.createTextNode([ln, fn].filter(Boolean).join(' ')));
+    if (p.maiden) { var m = document.createElement('span'); m.className = 'maiden'; m.textContent = '（旧姓：' + p.maiden + '）'; line.appendChild(m); }
     names.appendChild(line);
   });
   face.appendChild(msg); face.appendChild(names);
