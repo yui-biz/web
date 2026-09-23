@@ -62,6 +62,65 @@ textarea{resize:vertical;min-height:60px}
 .loading p{font-family:var(--serif);color:var(--text-muted);font-size:.7rem;letter-spacing:.18em;margin-top:20px}
 .error{text-align:center;padding:60px 20px}
 .error h2{font-family:var(--serif);color:#DC2626;font-size:1.1rem;font-weight:300;margin-bottom:1rem}
+/* ===== ヘッダーのお写真・メッセージ・印字氏名（2026-09-23・画面見本 v12 のとおり）===== */
+.hx-title{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pend{display:flex;align-items:center;gap:6px;font-family:var(--sans);font-size:.72rem;color:var(--text-light);cursor:pointer;white-space:nowrap;letter-spacing:0;margin:0}
+.pend input{accent-color:var(--accent);width:15px;height:15px;margin:0}
+.pending-note{font-size:.74rem;color:var(--text-muted);background:var(--accent-bg);border-radius:8px;padding:10px 12px}
+.hint{font-size:.7rem;color:var(--text-muted);line-height:1.7;margin-top:4px}
+.chip{display:inline-block;padding:6px 13px;border:1px solid var(--border);border-radius:20px;font-size:.74rem;cursor:pointer;color:var(--text-light);background:var(--surface);font-family:inherit}
+.chip[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sbtn{font-family:inherit;font-size:.72rem;padding:5px 12px;border-radius:16px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);cursor:pointer}
+.sbtn.solid{background:var(--accent);color:#fff}
+.tabs{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.tab{font-family:var(--serif);font-size:.76rem;padding:4px 14px;border-radius:6px 6px 0 0;border:1px solid var(--border-light);border-bottom:none;background:var(--bg);cursor:pointer;color:var(--text-light)}
+.tab[aria-selected=true]{background:var(--surface);color:var(--accent);border-color:var(--accent-light)}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px dashed var(--accent-light);border-radius:10px;padding:26px 12px;text-align:center;cursor:pointer;background:var(--accent-bg);color:var(--text-light);font-size:.78rem;margin:0}
+.drop input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.photo-view img{width:100%;border-radius:8px;display:block;max-height:360px;object-fit:contain;background:#f1eee8}
+.size-line{font-size:.7rem;color:var(--text-muted);font-variant-numeric:tabular-nums;margin:4px 0 6px}
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:6px}
+.tpl{position:relative;padding:0;border:2px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer;background:none;aspect-ratio:3/2}
+.tpl img{width:100%;height:100%;object-fit:cover;display:block}
+.tpl[aria-pressed=true]{border-color:var(--accent)}
+.tpl[aria-pressed=true]::after{content:"選択中";position:absolute;right:4px;bottom:4px;font-size:.6rem;background:var(--accent);color:#fff;border-radius:4px;padding:0 6px}
+.rule{font-size:.7rem;color:var(--text-light);background:var(--accent-bg);border-radius:8px;padding:10px 12px;margin-bottom:10px;line-height:1.8}
+#hx-msg{min-height:180px;line-height:1.9;font-family:var(--serif);font-size:14px}
+.meter{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.issues{display:grid;gap:6px;margin-top:8px}
+.issue{font-size:.72rem;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;line-height:1.6}
+.issue.ng{background:#fef2f2;color:#b91c1c}.issue.warn{background:#fff7ed;color:#b45309}.issue.okay{background:#f7fee7;color:#4d7c0f}
+.issue .sbtn{border-color:currentColor;color:inherit;background:transparent;flex:none}
+.suggest{border:1px solid var(--accent-light);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:.72rem;color:var(--text-light)}
+.suggest pre{font-family:var(--serif);font-size:.74rem;white-space:pre-wrap;margin:6px 0 8px;color:var(--text)}
+.msg-preview{margin-top:12px;border:1px solid var(--border-light);border-radius:8px;padding:16px 10px;text-align:center;font-family:var(--serif);font-size:.86rem;line-height:2.1;letter-spacing:.06em;white-space:pre-wrap;overflow-x:auto}
+.msg-preview .over{background:#fef2f2;color:#b91c1c}
+.msg-preview .cap,.print-preview .cap{display:block;font-family:var(--sans);font-size:.66rem;color:var(--text-muted);letter-spacing:.05em;text-align:left;margin-bottom:6px;white-space:normal}
+.name-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.name-grid .wide{grid-column:1/-1}
+.person{margin-bottom:14px}
+.person-head{font-family:var(--serif);font-size:.8rem;margin-bottom:6px;letter-spacing:.08em}
+.example{font-size:.7rem;color:var(--text-muted);border-left:2px solid var(--border-light);padding:2px 0 2px 10px;margin-top:8px;line-height:1.8}
+.print-preview{display:grid;justify-items:center;gap:6px}
+.print-preview .cap{justify-self:start}
+.gcard{--card-red:#d9442f;width:min(260px,100%);aspect-ratio:62/100;background:var(--card-red);border-radius:3px;padding:5% 5.5% 5% 4%;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.gcard.yofu{--card-red:#bdb8a6}
+.gcard-face{position:relative;height:100%;background:#fdfcf9;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6%;padding:10% 6%;font-family:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;color:#111;text-align:center;overflow:hidden}
+.gcard-face::before,.gcard-face::after{content:"";position:absolute;width:34%;aspect-ratio:1;background:var(--card-red);border-radius:50%}
+.gcard-face::before{top:0;left:0;transform:translate(-50%,-50%)}
+.gcard-face::after{bottom:0;right:0;transform:translate(50%,50%)}
+.gcard-msg{font-size:.44rem;line-height:1.9;letter-spacing:.06em;color:#555;white-space:pre}
+.gcard-names{font-size:.95rem;line-height:1.75;letter-spacing:.08em}
+.gcard-names .gap{display:inline-block;width:.7em}
+.gcard-note{font-size:.64rem;color:var(--text-muted);justify-self:start}
+.done-row{font-size:.76rem;color:var(--text-light);background:var(--accent-bg);border-radius:8px;padding:10px 12px;display:grid;gap:8px}
+.done-head{display:flex;justify-content:space-between;gap:10px;font-size:.7rem;color:var(--text-muted)}
+.done-head b{font-weight:400;color:var(--accent)}
+.done-body{color:var(--text);line-height:1.9;white-space:pre-wrap;word-break:break-word}
+.done-body .msgtxt{font-family:var(--serif);text-align:center;font-size:.8rem}
+.done-body .sub-label{display:block;font-size:.66rem;color:var(--text-muted);margin-top:4px}
+.done-row .sbtn{justify-self:start}
+.prev-list{font-size:.76rem;color:var(--text);line-height:1.8;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -80,8 +139,16 @@ textarea{resize:vertical;min-height:60px}
 
   <div id="form-area" class="hidden">
     <h1>カタログヒアリングフォーム</h1>
-    <div class="sub">所要時間 約3〜5分</div>
+    <div class="sub" id="f-sub">所要時間 約3〜5分</div>
 
+    <!-- 2回目（前回の回答がある）：今ある項目は読むだけで出し、「修正する」で入力欄を開く。2026-09-23 -->
+    <div class="card hidden" id="prev-card">
+      <div class="card-title">前回のご回答</div>
+      <div class="prev-list" id="prev-list"></div>
+      <button type="button" class="sbtn" style="margin-top:10px" onclick="openExistingEdit()">修正する</button>
+    </div>
+
+    <div id="existing-block">
     <!-- 基本情報 -->
     <div class="card">
       <div class="card-title">基本情報</div>
@@ -141,9 +208,93 @@ textarea{resize:vertical;min-height:60px}
       <div id="f-design-section"></div>
       <div id="f-pattern-section" style="margin-top:12px;"></div>
     </div>
+    </div><!-- /existing-block（ご要望は下） -->
+
+    <!-- ヘッダーのお写真 -->
+    <section class="card" id="hx-photo" data-item="photo">
+      <div class="card-title hx-title"><span>ヘッダーのお写真</span><label class="pend"><input type="checkbox" id="pend-photo" onchange="hxApplyPending('photo')"> まだ決まっていない</label></div>
+      <div class="hx-body">
+        <div class="radio-group" id="hx-psplit" role="group" aria-label="お写真を分けるか">
+          <button type="button" class="chip" data-split="0" aria-pressed="true" onclick="hxSetSplit('photo', false)">全員に同じお写真</button>
+          <button type="button" class="chip" data-split="1" aria-pressed="false" onclick="hxSetSplit('photo', true)">贈り分けごとに変える</button>
+        </div>
+        <div class="tabs hidden" id="hx-ptabs" role="tablist"></div>
+        <div class="radio-group" role="group" aria-label="お写真の用意のしかた">
+          <button type="button" class="chip" id="hx-src-upload" aria-pressed="true" onclick="hxSetSource('upload')">お写真を送る</button>
+          <button type="button" class="chip" id="hx-src-tpl" aria-pressed="false" onclick="hxSetSource('tpl')">テンプレ画像から選ぶ</button>
+        </div>
+        <div id="hx-tpl-area" class="hidden">
+          <div class="tpl-grid" id="hx-tpl-grid"></div>
+          <p class="hint">前撮りのお写真が無い場合などにお選びください。</p>
+        </div>
+        <div id="hx-upload-area">
+          <label class="drop" id="hx-drop">
+            <input type="file" id="hx-photo-input" accept="image/*" onchange="hxOnPhoto(this)">
+            <span style="font-family:var(--serif);font-size:.86rem;color:var(--accent)">お写真を選ぶ</span>
+            <span>前撮りのお写真など1枚（横長・縦長どちらでも）</span>
+          </label>
+          <div class="photo-view hidden" id="hx-photo-view">
+            <img id="hx-photo-img" alt="選んだお写真">
+            <div class="size-line" id="hx-photo-size"></div>
+            <button type="button" class="sbtn" onclick="var i=document.getElementById('hx-photo-input');i.value='';i.click();">別のお写真にする</button>
+          </div>
+          <p class="hint">大きなお写真でもそのまま選んでいただけます。送る前にこの画面で自動的に小さくします（長い辺2,400px）。</p>
+        </div>
+      </div>
+      <p class="pending-note hidden">決まりましたら、同じURLからこの項目だけお送りいただけます。</p>
+    </section>
+
+    <!-- ヘッダーのメッセージ（カードのメッセージと同じもの・saito 2026-09-23） -->
+    <section class="card" id="hx-message" data-item="message">
+      <div class="card-title hx-title"><span>メッセージ</span><label class="pend"><input type="checkbox" id="pend-message" onchange="hxApplyPending('message')"> まだ決まっていない</label></div>
+      <div class="hx-body">
+        <p class="rule">カタログのヘッダーとカードに入るメッセージです。<br>最大500文字・1行20文字までです（空白も1文字に数えます）。<br>結婚式でのメッセージは「区切りを付けない」等の意味合いから、句読点をお付けしないことが慣例となっております。<br>絵文字は環境によって文字化けするため使えません。</p>
+        <div class="radio-group" id="hx-msplit" role="group" aria-label="メッセージを分けるか">
+          <button type="button" class="chip" data-split="0" aria-pressed="true" onclick="hxSetSplit('message', false)">全員に同じメッセージ</button>
+          <button type="button" class="chip" data-split="1" aria-pressed="false" onclick="hxSetSplit('message', true)">贈り分けごとに変える</button>
+        </div>
+        <div class="tabs hidden" id="hx-mtabs" role="tablist"></div>
+        <label>文例から選ぶ</label>
+        <div class="radio-group" id="hx-templates" role="group" aria-label="文例"></div>
+        <label for="hx-msg">メッセージ</label>
+        <textarea id="hx-msg" rows="8"></textarea>
+        <p class="hint">1行が20文字になると、自動的に次の行へ移ります</p>
+        <div class="meter"><span id="hx-meter-lines"></span><span id="hx-meter-total"></span></div>
+        <div class="issues" id="hx-issues" aria-live="polite"></div>
+        <div class="suggest hidden" id="hx-suggest"></div>
+        <div class="msg-preview" id="hx-msg-preview"></div>
+      </div>
+      <p class="pending-note hidden">決まりましたら、同じURLからこの項目だけお送りいただけます。</p>
+    </section>
+
+    <!-- 印字氏名 -->
+    <section class="card" id="hx-names" data-item="names">
+      <div class="card-title hx-title"><span>カードに印字するお名前</span><label class="pend"><input type="checkbox" id="pend-names" onchange="hxApplyPending('names')"> まだ決まっていない</label></div>
+      <div class="hx-body">
+        <div class="person">
+          <p class="person-head">お一人目（新郎/新婦）</p>
+          <div class="name-grid">
+            <div><label for="p1-last">姓（入れない場合は空欄）</label><input type="text" id="p1-last" placeholder="例）山田" oninput="hxRenderNames()"></div>
+            <div><label for="p1-first">名</label><input type="text" id="p1-first" placeholder="例）太郎" oninput="hxRenderNames()"></div>
+            <div class="wide"><label for="p1-maiden">旧姓を添える場合（任意）</label><input type="text" id="p1-maiden" placeholder="例）齊藤" oninput="hxRenderNames()"></div>
+          </div>
+        </div>
+        <div class="person">
+          <p class="person-head">お二人目（新郎/新婦）</p>
+          <div class="name-grid">
+            <div><label for="p2-last">姓（入れない場合は空欄）</label><input type="text" id="p2-last" placeholder="例）山田" oninput="hxRenderNames()"></div>
+            <div><label for="p2-first">名</label><input type="text" id="p2-first" placeholder="例）花子" oninput="hxRenderNames()"></div>
+            <div class="wide"><label for="p2-maiden">旧姓を添える場合（任意）</label><input type="text" id="p2-maiden" placeholder="例）齊藤" oninput="hxRenderNames()"></div>
+          </div>
+          <p class="example">入力例<br>・姓を入れない　→　姓を空欄に：「花子」<br>・旧姓を添える　→　旧姓の欄に「齊藤」：「山田 花子（旧姓：齊藤）」</p>
+        </div>
+        <div class="print-preview" id="hx-print-preview"></div>
+      </div>
+      <p class="pending-note hidden">決まりましたら、同じURLからこの項目だけお送りいただけます。</p>
+    </section>
 
     <!-- その他 -->
-    <div class="card">
+    <div class="card" id="f-notes-card">
       <div class="card-title">その他ご要望</div>
       <div class="field"><textarea id="f-notes" rows="3" placeholder="ご質問やご要望がございましたらご記入ください"></textarea></div>
     </div>
@@ -165,6 +316,8 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
+<script src="extras.js?v=20260923"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -303,6 +456,7 @@ function init() {
     if (hideDateTime) document.getElementById('f-delivDate').closest('.row').classList.add('hidden');
   }
   renderGroups();
+  hxInit();   // 写真・メッセージ・印字氏名（extras.js）。前回の回答があれば2回目の画面に
 }
 
 var patternImages = {
@@ -341,6 +495,7 @@ function renderGroups() {
   }
   document.getElementById('f-groups').innerHTML = html;
   renderCardDesignSection(count);
+  if (typeof hxOnGroupsChanged === 'function') hxOnGroupsChanged();   // 写真・メッセージの「贈り分けごと」のタブ
 }
 
 // ===== 引き菓子・縁起物（2026-09-22 saito）=====
@@ -430,6 +585,7 @@ function onSweetChange(g) {
     // 選べる受け取り方が1つだけなら、それを入れておく（例：eGift だけの1,000円コース）
     if (shown.length === 1 && !shown[0].checked) { shown[0].checked = true; shown[0].setAttribute('data-auto', '1'); }
   });
+  if (typeof hxRenderSuggest === 'function' && document.getElementById('hx-msg')) hxRenderSuggest();   // 引き菓子なしに添える一文
 }
 // お客様が受け取り方を選んだ＝自動で入れた印を消す
 function onSweetTypePick(input, g) {
@@ -515,6 +671,7 @@ function renderCardDesignSection(count) {
 function showPatternSection() {
   var design = (document.querySelector('input[name=design]:checked') || {}).value || '';
   renderPatternChoices(design);
+  if (typeof hxRenderNames === 'function') hxRenderNames();   // 印字氏名のカードの色（和風／洋風）
 }
 
 function renderPatternChoices(design) {
@@ -651,8 +808,9 @@ function submitForm() {
       sweets: sw.sweets, sweetWant: sw.sweetWant, sweetId: sw.sweetId, sweetDelivery: sw.sweetDelivery,
       engiWant: sw.engiWant, engiId: sw.engiId, engiDelivery: sw.engiDelivery });
   }
-  // 引き菓子・縁起物を「希望する」にしたら、価格と受け取り方まで必須
-  var miss = missingRequired(groups);
+  // 引き菓子・縁起物を「希望する」にしたら、価格と受け取り方まで必須。
+  // 2回目で今ある項目を開いていない（前回のまま送る）ときは、今ある項目は確かめない（サーバーが前回の回答を使う）
+  var miss = (HX.existingEdited ? missingRequired(groups) : []).concat(hxMissing());
   if (miss.length) { alert('次の項目を選んでください。\n\n' + miss.join('\n')); return; }
 
   var items = [];
@@ -677,7 +835,10 @@ function submitForm() {
       time: document.getElementById('f-delivTime').value,
       place: document.getElementById('f-delivPlace').value
     },
-    notes: document.getElementById('f-notes').value
+    notes: document.getElementById('f-notes').value,
+    // false＝2回目で「修正する」を押していない。サーバーは今ある項目を前回の回答のまま使い、ステータスも変えない
+    existingEdited: HX.existingEdited,
+    extras: hxPayload()
   };
   pendingPayload = payload;
   renderConfirm(payload);
@@ -705,6 +866,12 @@ function renderConfirm(payload) {
   var delivLabel = function(v) { var d = SWEET_DELIVERY.find(function(x) { return x.value === v; }); return d ? d.label : v; };
   var row = function(k, v) { return '<div class="cf-row"><dt>' + esc(k) + '</dt><dd>' + (v ? esc(v) : '<span class="cf-empty">未入力</span>') + '</dd></div>'; };
   var h = '';
+  if (!payload.existingEdited && FD.prev) {
+    h += '<div class="card"><div class="card-title">前回のご回答（変更なし）</div><div class="prev-list">' + esc(hxPrevSummary(FD.prev)) + '</div></div>';
+    h += '<div class="card"><div class="card-title">ヘッダー・カード</div><dl style="margin:0">' + hxConfirmHtml(payload.extras, row) + '</dl></div>';
+    document.getElementById('confirm-body').innerHTML = h;
+    return;
+  }
   var basic = '';
   if (shown('f-kikkake')) basic += row('きっかけ', payload.kikkake);
   if (shown('f-venue')) basic += row('式場・会場名', payload.venue);
@@ -725,6 +892,7 @@ function renderConfirm(payload) {
       + row('カード', (g.design || '') + (g.pattern ? '・' + g.pattern : ''))
       + '</dl></div>';
   });
+  h += '<div class="card"><div class="card-title">ヘッダー・カード</div><dl style="margin:0">' + hxConfirmHtml(payload.extras, row) + '</dl></div>';
   h += '<div class="card"><div class="card-title">その他ご要望</div><dl style="margin:0">' + row('内容', payload.notes) + '</dl></div>';
   document.getElementById('confirm-body').innerHTML = h;
 }
@@ -757,6 +925,8 @@ function sendPayload() {
       alert(result.error);
       return;
     }
+    // 開き直したときに前回の回答（今送ったもの）が出るよう、読み込みの控えを捨てる
+    try { localStorage.removeItem('form_' + FD.customerId); } catch (e) {}
     document.getElementById('confirm-area').classList.add('hidden');
     document.getElementById('success-area').classList.remove('hidden');
   })
