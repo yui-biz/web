@@ -62,6 +62,8 @@ textarea{resize:vertical;min-height:60px}
 .loading p{font-family:var(--serif);color:var(--text-muted);font-size:.7rem;letter-spacing:.18em;margin-top:20px}
 .error{text-align:center;padding:60px 20px}
 /* 送信中のぐるぐる（2026-09-23 saito「動きがないとフリーズしたように見える」）。押し直しも防ぐ */
+/* 本人確認のあいだは、確認のカード以外を隠す */
+#form-area.gating > *:not(#gate-card):not(h1):not(.sub){display:none!important}
 .send-overlay{position:fixed;inset:0;z-index:50;background:rgba(250,249,247,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
 .send-overlay .loading-spinner{width:40px;height:40px;border-width:2px}
 .send-overlay p{font-family:var(--serif);color:var(--text-light);font-size:.82rem;letter-spacing:.12em;line-height:1.9}
@@ -150,6 +152,17 @@ textarea{resize:vertical;min-height:60px}
   <div id="form-area" class="hidden">
     <h1>カタログヒアリングフォーム</h1>
     <div class="sub" id="f-sub">所要時間 約3〜5分</div>
+
+    <!-- 前回の回答を出す前の本人確認（2026-09-23） -->
+    <div class="card hidden" id="gate-card">
+      <div class="card-title">前回のご回答を表示します</div>
+      <p style="font-size:.78rem;color:var(--text-light);margin-bottom:12px;">ご本人確認のため、<span id="gate-what">挙式日</span>を入力してください。</p>
+      <div class="field" id="gate-date-field"><label for="gate-date">挙式日</label><input type="date" id="gate-date"></div>
+      <div class="field hidden" id="gate-phone-field"><label for="gate-phone">電話番号の下4桁</label><input type="text" id="gate-phone" inputmode="numeric" maxlength="4" placeholder="例）1234" autocomplete="off"></div>
+      <p id="gate-msg" style="font-size:.74rem;color:#b91c1c;min-height:1.2em;margin-bottom:10px;"></p>
+      <button class="btn-submit" id="gate-btn" onclick="submitGate()">前回のご回答を表示する</button>
+      <button class="btn-back" style="margin-top:10px;" onclick="skipGate()">最初から入力する</button>
+    </div>
 
     <!-- 2回目（前回の回答がある）：今ある項目は読むだけで出し、「修正する」で入力欄を開く。2026-09-23 -->
     <div class="card hidden" id="prev-card">
@@ -341,7 +354,7 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
-<script src="extras.js?v=20260923j"></script>
+<script src="extras.js?v=20260923k"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -350,7 +363,9 @@ var FD = null;
 var FORM_FRESH = false;   // true＝中継の控えを使わず取り直す（fresh=1）。下の読み込みより前に置く
 
 // URLパラメータから顧客IDを取得してデータをfetch（キャッシュ付き）
-(function() {
+// 🚨 起動はスクリプトの最後で呼ぶ（startForm）。以前はここで即実行していて、控えで画面を出す処理が
+//    まだ読み込まれていない設定値（cardDesigns・targets 等）を使ってエラーになり、控えは一度も効いていなかった（2026-09-23 発見）
+function startForm() {
   var params = new URLSearchParams(window.location.search);
   var customerId = params.get('customer') || '';
   if (!customerId) {
@@ -379,7 +394,7 @@ var FORM_FRESH = false;   // true＝中継の控えを使わず取り直す（fr
 
   // キャッシュなし→ローディング表示のままGASから取得
   fetchFromGas(customerId, cacheKey, true);
-})();
+}
 
 // 🚨 GAS の JSON 応答は googleusercontent へのリダイレクトが【3〜5割の確率で404になる】
 //    （cookieなしの実測: 5回中3回）。それを【フォームが見つかりません】と出していたので、
@@ -404,7 +419,7 @@ function fetchFromGas(customerId, cacheKey, showResult, attempt) {
       if (showResult) showForm(data);
       // 端末の控えで先に出した画面が古かった（別の端末から回答された等）＝最新で出し直す。
       // 古い画面のまま送ると、別の端末の回答を上書きしてしまう（2026-09-23 レビューで発見）
-      else if (FD && ((data.prev && data.prev.submittedAt) || '') !== ((FD.prev && FD.prev.submittedAt) || '') && !formSubmitted) location.reload();
+      else if (FD && ((data.prevGate && data.prevGate.at) || '') !== ((FD.prevGate && FD.prevGate.at) || '') && !formSubmitted) location.reload();
     })
     .catch(function(e) {
       var reason = e && e.message ? e.message : String(e);
@@ -435,10 +450,65 @@ function showForm(data) {
   // 販売中止のタイプはランクが持つタイプからも外す。外さないと、ランクで絞ったあとの選択肢や
   // 「1タイプしか無いランクは自動で入れる」処理（submitForm）から選ばれてしまう
   (FD.products || []).forEach(function(p) { if (p._catTypes) p._catTypes = p._catTypes.filter(isCatalogTypeOpen); });
-  init();
   document.getElementById('loading-area').classList.add('hidden');
   document.getElementById('form-area').classList.remove('hidden');
+  // 前回の回答があるときは、挙式日（無ければ電話番号の下4桁）で本人確認してから出す（2026-09-23 saito）。
+  // フォームの URL は転送されうるので、印字氏名・メッセージなどの中身は formData に載せていない
+  if (FD.prevGate && FD.prevGate.kind && !FD.prev) { showGate(); return; }
+  init();
 }
+
+// ===== 前回の回答を出す前の本人確認 =====
+function gateKey() { return 'gate_' + FD.customerId; }
+function showGate() {
+  var kind = FD.prevGate.kind;
+  document.getElementById('form-area').classList.add('gating');
+  document.getElementById('gate-card').classList.remove('hidden');
+  document.getElementById('gate-what').textContent = kind === 'date' ? '挙式日' : 'ご登録の電話番号の下4桁';
+  document.getElementById('gate-date-field').classList.toggle('hidden', kind !== 'date');
+  document.getElementById('gate-phone-field').classList.toggle('hidden', kind !== 'phone');
+  // この端末で一度確認できていれば、同じ答えで自動で確かめる（送信のあとに開き直すたびに聞かない）
+  var saved = '';
+  try { saved = localStorage.getItem(gateKey()) || ''; } catch (e) {}
+  if (saved) verifyGate(saved, true);
+}
+function submitGate() {
+  var kind = FD.prevGate.kind;
+  var a = kind === 'date' ? document.getElementById('gate-date').value : document.getElementById('gate-phone').value;
+  if (!String(a).trim()) { gateMsg(kind === 'date' ? '挙式日を入力してください' : '電話番号の下4桁を入力してください'); return; }
+  verifyGate(a, false);
+}
+function gateMsg(t) { document.getElementById('gate-msg').textContent = t || ''; }
+function verifyGate(answer, auto) {
+  var btn = document.getElementById('gate-btn');
+  btn.disabled = true; btn.textContent = '確認しています...'; gateMsg('');
+  var reset = function () { btn.disabled = false; btn.textContent = '前回のご回答を表示する'; };
+  fetch(GAS_PROXY + '?action=formPrev&customer=' + encodeURIComponent(FD.customerId) + '&answer=' + encodeURIComponent(answer))
+    .then(function (res) { return res.json(); })
+    .then(function (r) {
+      reset();
+      if (r && r.ok && r.prev) {
+        try { localStorage.setItem(gateKey(), answer); } catch (e) {}
+        FD.prev = r.prev;
+        openFormAfterGate();
+        return;
+      }
+      if (auto) { try { localStorage.removeItem(gateKey()); } catch (e) {} return; }   // 覚えていた答えが古い＝黙って入力してもらう
+      if (r && r.reason === 'locked') gateMsg('入力の回数が上限に達しました。10分ほどおいて、もう一度お試しください。');
+      else if (r && r.reason === 'ng') gateMsg((FD.prevGate.kind === 'date' ? '挙式日' : '電話番号の下4桁') + 'が一致しません（あと' + r.remaining + '回）');
+      else gateMsg('確認できませんでした。お手数ですが「最初から入力する」でお進みください。');
+    })
+    .catch(function () { reset(); if (!auto) gateMsg('通信が不安定です。もう一度お試しください。'); });
+}
+function openFormAfterGate() {
+  document.getElementById('gate-card').classList.add('hidden');
+  document.getElementById('form-area').classList.remove('gating');
+  init();
+  window.scrollTo(0, 0);
+}
+// 確認できない（挙式日が分からない等）ときは、前回の回答を出さずに最初から入力する。
+// 前回の写真などは、サーバーが「見ていなかった回答は保留で消さない」ので残る
+function skipGate() { FD.prev = null; openFormAfterGate(); }
 
 function showError() {
   document.getElementById('loading-area').classList.add('hidden');
@@ -1038,6 +1108,9 @@ function confirmDelivered(key, attempt, done, restore) {
       alert('送信を確認できませんでした。お手数ですが、もう一度「この内容で送信」を押してください。');
     });
 }
+
+// ここまでで設定値・関数がそろう。ここで起動する
+startForm();
 </script>
 </body>
 </html>

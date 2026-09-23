@@ -20,8 +20,9 @@ const GAS_EXEC = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3
 // 中継してよい操作だけを並べる。ここに無いものは通さない
 // （何でも中継すると、CRMの他の機能を外から叩ける口になってしまう）
 // hearingKey＝ヒアリングの送信の印だけ（フォームが答えを受け取り損ねたとき「届いたか」確かめる・2026-09-23）。覚えない
-const ALLOWED_ACTIONS = new Set(['guideData', 'formData', 'hearingKey']);
-const NO_CACHE_ACTIONS = new Set(['hearingKey']);
+// formPrev＝挙式日で本人確認して前回の回答を返す（2026-09-23）。答えを含むので覚えない
+const ALLOWED_ACTIONS = new Set(['guideData', 'formData', 'hearingKey', 'formPrev']);
+const NO_CACHE_ACTIONS = new Set(['hearingKey', 'formPrev']);
 
 // 取ってよい呼び出し元。ご案内ページとフォームは GitHub Pages にある
 const ALLOWED_ORIGINS = new Set([
@@ -63,7 +64,8 @@ export default {
     }
 
     const target = GAS_EXEC + '?action=' + encodeURIComponent(action)
-      + '&customer=' + encodeURIComponent(customer);
+      + '&customer=' + encodeURIComponent(customer)
+      + (action === 'formPrev' ? '&answer=' + encodeURIComponent((url.searchParams.get('answer') || '').slice(0, 20)) : '');
 
     // ⭐ 一度取れたものは覚えておく。実測で GAS の応答は 2.4〜76秒とばらつくので、
     //    2回目以降が速いだけで体感がまるで違う。中身は分単位で変わるものではない。
