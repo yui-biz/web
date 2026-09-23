@@ -905,6 +905,8 @@ function renderConfirm(payload) {
 function sendPayload() {
   if (formSubmitted || !pendingPayload) return;
   var payload = pendingPayload;
+  // 送信ごとの印。やり直しでも同じ印を使う（2026-09-23）
+  if (!payload.submitKey) payload.submitKey = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   var btn = document.getElementById('btn-send');
   formSubmitted = true;
   btn.disabled = true;
@@ -916,31 +918,56 @@ function sendPayload() {
     btn.textContent = 'この内容で送信';
     document.getElementById('btn-back').disabled = false;
   };
-
-  // GAS Web AppにPOST送信
-  fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'submitHearing', payload: payload })
-  })
-  .then(function(res) { return res.json(); })
-  .then(function(result) {
-    if (result.error) {
-      restore();
-      alert(result.error);
-      return;
-    }
+  var finished = false;
+  var done = function() {
+    if (finished) return; finished = true;
     // 開き直したときに前回の回答（今送ったもの）が出るよう、読み込みの控えを捨てる
     try { localStorage.removeItem('form_' + FD.customerId); localStorage.setItem('sent_' + FD.customerId, String(Date.now())); } catch (e) {}
     // 中継の控え（30分）も今の回答で取り直しておく（別の端末から開いても前回の回答が出るように）。答えは待たない
     try { fetch(GAS_PROXY + '?action=formData&customer=' + encodeURIComponent(FD.customerId) + '&fresh=1', { keepalive: true }); } catch (e) {}
     document.getElementById('confirm-area').classList.add('hidden');
     document.getElementById('success-area').classList.remove('hidden');
+  };
+
+  // 🚨 GAS は処理を終えてから答えを別の場所（googleusercontent）に置き、そこが3〜5割で404になる。
+  //    写真付きで送信が長くなって目立った（2026-09-23 saito「送信中が終わらない」→「送信に失敗」なのに届いていた）。
+  //    ⭐ 答えを受け取り損ねても【送り直さない】。中継で前回の回答を読み、自分の送信の印があれば「届いた」とする
+  //    （KNOWLEDGE「404は応答側で起きている。直し方は再送ではなく確認」）。印が無いと確かめられたときだけ、もう一度押してもらう
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var timer = setTimeout(function() { if (ctrl) ctrl.abort(); }, 90000);
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'submitHearing', payload: payload }),
+    signal: ctrl ? ctrl.signal : undefined
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(result) {
+    clearTimeout(timer);
+    // サーバーが内容を確かめて断った（何も保存していない）
+    if (result.error) { restore(); alert(result.error); return; }
+    done();
   })
   .catch(function() {
-    restore();
-    alert('送信に失敗しました。もう一度お試しください。');
+    clearTimeout(timer);
+    btn.textContent = '送信を確認しています...';
+    confirmDelivered(payload.submitKey, 0, done, restore);
   });
+}
+
+// 送信が届いたかを中継で読んで確かめる（控えを使わず取り直す）。3回見て無ければ、届いていないと判定
+function confirmDelivered(key, attempt, done, restore) {
+  fetch(GAS_PROXY + '?action=formData&customer=' + encodeURIComponent(FD.customerId) + '&fresh=1')
+    .then(function(res) { return res.json(); })
+    .then(function(d) {
+      if (d && d.prev && d.prev.submitKey === key) { done(); return; }
+      throw new Error('まだ無い');
+    })
+    .catch(function() {
+      if (attempt < 2) { setTimeout(function() { confirmDelivered(key, attempt + 1, done, restore); }, 5000); return; }
+      restore();
+      alert('送信を確認できませんでした。お手数ですが、もう一度「この内容で送信」を押してください。');
+    });
 }
 </script>
 </body>
