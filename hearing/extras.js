@@ -47,7 +47,12 @@ function hxInit() {
   HX.delivAsked = !hx$('f-deliv-card').classList.contains('hidden');
   HX.message.texts.all = HX_TEMPLATES[0].text; HX.message.picked.all = 0;
   if (prev) hxPrefillExisting(prev);
-  if (prev) {
+  // 却下された回答のあと＝今ある項目は入れ直してもらう（前回の回答を入れた入力欄を開いて出す）。写真などは前回のまま
+  if (prev && prev.rejected) {
+    hx$('f-sub').textContent = 'ご回答の内容をご確認のうえ、もう一度お送りください';
+    var exr = prev.extras || {};
+    ['photo', 'message', 'names'].forEach(function (k) { var x = exr[k]; if (x && x.state === 'answered') { hxLoadAnswer(k, x); hxShowDone(k); } });
+  } else if (prev) {
     HX.existingEdited = false;
     hx$('existing-block').classList.add('hidden');
     hx$('existing-block2').classList.add('hidden');
@@ -528,7 +533,9 @@ function hxPayload() {
   var out = {};
   ['photo', 'message', 'names'].forEach(function (k) {
     var st = hxState(k);
-    if (st !== 'answered') { out[k] = { state: st }; return; }
+    // baseAt＝このフォームが見ていた前回の回答の日時。別の端末で先に回答されていたら、サーバーは保留で消さない
+    var baseAt = (FD.prev && FD.prev.extras && FD.prev.extras[k] && FD.prev.extras[k].at) || '';
+    if (st !== 'answered') { out[k] = { state: st, baseAt: baseAt }; return; }
     if (k === 'photo') out.photo = { state: st, split: HX.photo.split, items: hxKeys('photo').map(function (key) {
       var s = HX.photo.slots[key] || {};
       if (s.source === 'tpl') return { key: key, source: 'tpl', tpl: s.tpl };

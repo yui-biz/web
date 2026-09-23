@@ -341,7 +341,7 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
-<script src="extras.js?v=20260923h"></script>
+<script src="extras.js?v=20260923i"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -402,6 +402,9 @@ function fetchFromGas(customerId, cacheKey, showResult, attempt) {
       if (data.error) { if (showResult) showError(); return; }
       try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
       if (showResult) showForm(data);
+      // 端末の控えで先に出した画面が古かった（別の端末から回答された等）＝最新で出し直す。
+      // 古い画面のまま送ると、別の端末の回答を上書きしてしまう（2026-09-23 レビューで発見）
+      else if (FD && ((data.prev && data.prev.submittedAt) || '') !== ((FD.prev && FD.prev.submittedAt) || '') && !formSubmitted) location.reload();
     })
     .catch(function(e) {
       var reason = e && e.message ? e.message : String(e);
@@ -1029,7 +1032,8 @@ function confirmDelivered(key, attempt, done, restore) {
       throw new Error('まだ無い');
     })
     .catch(function() {
-      if (attempt < 3) { setTimeout(function() { confirmDelivered(key, attempt + 1, done, restore); }, 3000); return; }
+      // 遅い回線で送信を打ち切ったとき、サーバーがまだ処理中のことがある。5秒おきに6回（約1分）見る
+      if (attempt < 5) { setTimeout(function() { confirmDelivered(key, attempt + 1, done, restore); }, 5000); return; }
       restore();
       alert('送信を確認できませんでした。お手数ですが、もう一度「この内容で送信」を押してください。');
     });
