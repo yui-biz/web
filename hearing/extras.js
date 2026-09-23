@@ -11,8 +11,10 @@ var HX_LABELS = ['A','B','C','D','E'];
 var HX_MAX_SIDE = 2400, HX_MAX_TOTAL = 500, HX_MAX_LINE = 20;
 var HX_PUNCT = /[、。，．,.]/g;
 var HX_EMOJI_RE = '[\\u{1F000}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{FE0F}\\u{200D}]';
-function hxHasEmoji(t) { return new RegExp(HX_EMOJI_RE, 'u').test(t); }
-function hxStripEmoji(t) { return t.replace(new RegExp(HX_EMOJI_RE, 'gu'), ''); }
+// ♡ ♪ ☆ ★ は絵文字の範囲に入るが、デジタルカタログの画面ではほぼ文字化けしないので使ってよい（saito 2026-09-23）
+var HX_EMOJI_OK = /[♡♪☆★]/g;
+function hxHasEmoji(t) { return new RegExp(HX_EMOJI_RE, 'u').test(t.replace(HX_EMOJI_OK, '')); }
+function hxStripEmoji(t) { return t.replace(new RegExp(HX_EMOJI_RE, 'gu'), function (c) { return /^[♡♪☆★]$/.test(c) ? c : ''; }); }
 var HX_TPL_COUNT = 7;   // hearing/tpl/1〜7.jpg（共有ドライブ 01_CS/01_yui/03_LINE@/ヘッダー/テンプレ を縮めたもの）
 // 文例（saito 2026-09-22 の原文のまま）
 var HX_TEMPLATES = [
