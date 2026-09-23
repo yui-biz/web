@@ -158,13 +158,20 @@ textarea{resize:vertical;min-height:60px}
       </div>
     </div>
 
-    <!-- 式場・納品 -->
+    <!-- 式場 -->
     <div class="card" id="f-delivery-card">
-      <div class="card-title">式場・納品情報</div>
+      <div class="card-title">式場情報</div>
       <div class="row">
         <div class="field"><label>式場名・会場名</label><input type="text" id="f-venue"></div>
         <div class="field"><label>ご担当者様のお名前</label><input type="text" id="f-staff"></div>
       </div>
+    </div>
+    </div><!-- /existing-block -->
+
+    <!-- 納品（2026-09-23 saito：「まだ決まっていない」を選べる。後から納品だけ入れてもステータスは変えない）。
+         2回目は、保留にしていたときだけこのカードを出す（extras.js） -->
+    <div class="card" id="f-deliv-card">
+      <div class="card-title hx-title"><span>納品情報</span><label class="pend"><input type="checkbox" id="pend-delivery" onchange="hxApplyDeliveryPending()"> まだ決まっていない</label></div>
       <div id="f-delivery-fields">
         <div class="row">
           <div class="field"><label>ご希望の納品日</label><input type="date" id="f-delivDate"></div>
@@ -184,8 +191,10 @@ textarea{resize:vertical;min-height:60px}
         </div>
         <div class="field"><label>ご希望の納品場所</label><input type="text" id="f-delivPlace" placeholder="例）自宅、式場名"></div>
       </div>
+      <p class="pending-note hidden" id="deliv-pending-note">決まりましたら、同じURLからこの項目だけお送りいただけます。</p>
     </div>
 
+    <div id="existing-block2">
     <!-- 贈り分け -->
     <div class="card">
       <div class="card-title">贈り分け</div>
@@ -208,7 +217,7 @@ textarea{resize:vertical;min-height:60px}
       <div id="f-design-section"></div>
       <div id="f-pattern-section" style="margin-top:12px;"></div>
     </div>
-    </div><!-- /existing-block（ご要望は下） -->
+    </div><!-- /existing-block2（ご要望は下） -->
 
     <!-- ヘッダーのお写真 -->
     <section class="card" id="hx-photo" data-item="photo">
@@ -317,7 +326,7 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
-<script src="extras.js?v=20260923b"></script>
+<script src="extras.js?v=20260923c"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -456,6 +465,7 @@ function init() {
   var hideDateTime = FD.deliveryType === '式場指定（住所あり）' || !!fixed.dateTime;
   if (hidePlace && hideDateTime) {
     document.getElementById('f-delivery-fields').classList.add('hidden');
+    document.getElementById('f-deliv-card').classList.add('hidden');
   } else {
     if (hidePlace) document.getElementById('f-delivPlace').closest('.field').classList.add('hidden');
     if (hideDateTime) document.getElementById('f-delivDate').closest('.row').classList.add('hidden');
@@ -815,7 +825,7 @@ function submitForm() {
   }
   // 引き菓子・縁起物を「希望する」にしたら、価格と受け取り方まで必須。
   // 2回目で今ある項目を開いていない（前回のまま送る）ときは、今ある項目は確かめない（サーバーが前回の回答を使う）
-  var miss = (HX.existingEdited ? missingRequired(groups) : []).concat(hxMissing());
+  var miss = (HX.existingEdited ? missingRequired(groups) : []).concat(hxDeliveryMissing(), hxMissing());
   if (miss.length) { alert('次の項目を選んでください。\n\n' + miss.join('\n')); return; }
 
   var items = [];
@@ -835,7 +845,9 @@ function submitForm() {
     groups: groups,
     items: items,
     totalQty: totalQty,
-    delivery: {
+    // 保留（まだ決まっていない）のときは空で送る。deliveryState：answered／pending／keep（2回目で前回のまま）
+    deliveryState: hxDeliveryState(),
+    delivery: hxDeliveryState() === 'pending' ? { date: '', time: '', place: '' } : {
       date: document.getElementById('f-delivDate').value,
       time: document.getElementById('f-delivTime').value,
       place: document.getElementById('f-delivPlace').value
@@ -873,6 +885,11 @@ function renderConfirm(payload) {
   var h = '';
   if (!payload.existingEdited && FD.prev) {
     h += '<div class="card"><div class="card-title">前回のご回答（変更なし）</div><div class="prev-list">' + esc(hxPrevSummary(FD.prev)) + '</div></div>';
+    if (payload.deliveryState !== 'keep') {
+      var dl = payload.deliveryState === 'pending' ? 'まだ決まっていない'
+        : [payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '', payload.delivery.time, payload.delivery.place].filter(Boolean).join(' ');
+      h += '<div class="card"><div class="card-title">納品情報</div><dl style="margin:0">' + row('納品', dl) + '</dl></div>';
+    }
     h += '<div class="card"><div class="card-title">ヘッダー・カード</div><dl style="margin:0">' + hxConfirmHtml(payload.extras, row) + '</dl></div>';
     document.getElementById('confirm-body').innerHTML = h;
     return;
@@ -881,9 +898,10 @@ function renderConfirm(payload) {
   if (shown('f-kikkake')) basic += row('きっかけ', payload.kikkake);
   if (shown('f-venue')) basic += row('式場・会場名', payload.venue);
   if (shown('f-staff')) basic += row('ご担当者様', payload.venueStaff);
-  if (shown('f-delivDate')) basic += row('納品日', payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '');
-  if (shown('f-delivTime')) basic += row('納品時間', payload.delivery.time);
-  if (shown('f-delivPlace')) basic += row('納品場所', payload.delivery.place);
+  if (payload.deliveryState === 'pending') basic += row('納品', 'まだ決まっていない');
+  else if (shown('f-delivDate')) basic += row('納品日', payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '');
+  if (payload.deliveryState !== 'pending' && shown('f-delivTime')) basic += row('納品時間', payload.delivery.time);
+  if (payload.deliveryState !== 'pending' && shown('f-delivPlace')) basic += row('納品場所', payload.delivery.place);
   if (basic) h += '<div class="card"><div class="card-title">ご注文者・納品</div><dl style="margin:0">' + basic + '</dl></div>';
   payload.groups.forEach(function(g, i) {
     var sw = function(want, id, del) { return want === '希望' ? prodName(id) + '／' + delivLabel(del) : want === '不要' ? '不要' : ''; };

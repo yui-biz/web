@@ -43,12 +43,18 @@ function hxKeys(item) { return HX[item].split ? HX_LABELS.slice(0, hxGroupCount(
 // ---------- 初期化（init の最後から） ----------
 function hxInit() {
   var prev = FD.prev;
+  // 納品のカードを聞く式場か（式場が納品先・日時を両方決めていると init がカードごと隠している）
+  HX.delivAsked = !hx$('f-deliv-card').classList.contains('hidden');
   HX.message.texts.all = HX_TEMPLATES[0].text; HX.message.picked.all = 0;
   if (prev) hxPrefillExisting(prev);
   if (prev) {
     HX.existingEdited = false;
     hx$('existing-block').classList.add('hidden');
+    hx$('existing-block2').classList.add('hidden');
     hx$('f-notes-card').classList.add('hidden');
+    // 納品は、前回「まだ決まっていない」だったときだけ入力欄を出す（チェックは外した状態から）
+    HX.delivKeep = !(HX.delivAsked && prev.deliveryState === 'pending');
+    hx$('f-deliv-card').classList.toggle('hidden', HX.delivKeep);
     hx$('prev-card').classList.remove('hidden');
     hx$('prev-list').textContent = hxPrevSummary(prev);
     hx$('f-sub').textContent = 'まだ決まっていなかった項目をお答えください';
@@ -398,7 +404,8 @@ function hxPrevSummary(prev) {
   if (prev.venueStaff) L.push('ご担当者様：' + prev.venueStaff);
   var d = prev.delivery || {};
   var dv = [d.date ? d.date.replace(/-/g, '/') : '', d.time, d.place].filter(Boolean).join(' ');
-  if (dv) L.push('納品：' + dv);
+  if (prev.deliveryState === 'pending') L.push('納品：まだ決まっていない');
+  else if (dv) L.push('納品：' + dv);
   (prev.groups || []).forEach(function (g, i) {
     var sw = function (want, id, del) { return want === '希望' ? prodName(id) + '（' + delivLabel(del) + '）' : want === '不要' ? '不要' : ''; };
     var parts = [(g.targets || []).join('、'), prodName(g.rank), g.catalogType, g.qty ? g.qty + '冊' : '',
@@ -445,7 +452,10 @@ function openExistingEdit() {
   HX.existingEdited = true;
   hx$('prev-card').classList.add('hidden');
   hx$('existing-block').classList.remove('hidden');
+  hx$('existing-block2').classList.remove('hidden');
   hx$('f-notes-card').classList.remove('hidden');
+  HX.delivKeep = false;
+  if (HX.delivAsked) hx$('f-deliv-card').classList.remove('hidden');
   hxOnGroupsChanged();
 }
 // 前回の回答を入力欄の状態に戻す（「修正する」を押したとき用）
@@ -548,4 +558,28 @@ function hxConfirmHtml(extras, row) {
   var n = extras.names;
   h += row('印字するお名前', n.state === 'answered' ? 'お一人目：' + hxPersonText(n.p1) + '\nお二人目：' + hxPersonText(n.p2) : st(n));
   return h;
+}
+
+// ---------- 納品の「まだ決まっていない」（2026-09-23 saito）----------
+// 後から納品だけ入れても CRM はステータスを変えない（納品は注文の中身・金額に関わらない）
+function hxApplyDeliveryPending() {
+  var on = hx$('pend-delivery').checked;
+  hx$('f-delivery-fields').style.display = on ? 'none' : '';
+  hx$('deliv-pending-note').classList.toggle('hidden', !on);
+}
+function hxDeliveryState() {
+  if (!HX.delivAsked) return 'answered';          // 式場が決めている＝聞いていない（サーバーが式場の値を補う）
+  if (HX.delivKeep) return 'keep';                // 2回目で前回のまま
+  return hx$('pend-delivery').checked ? 'pending' : 'answered';
+}
+// 保留にしていないなら、出している欄は全部必須
+function hxDeliveryMissing() {
+  if (hxDeliveryState() !== 'answered' || !HX.delivAsked) return [];
+  var miss = [];
+  [['f-delivDate', '納品日'], ['f-delivTime', '納品時間'], ['f-delivPlace', '納品場所']].forEach(function (x) {
+    var el = hx$(x[0]);
+    if (el.closest('.hidden')) return;
+    if (!String(el.value || '').trim()) miss.push('ご希望の' + x[1] + '　※ 未定なら納品情報の「まだ決まっていない」に');
+  });
+  return miss;
 }
