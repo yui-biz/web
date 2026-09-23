@@ -56,7 +56,7 @@ function hxInit() {
     HX.delivKeep = !(HX.delivAsked && prev.deliveryState === 'pending');
     hx$('f-deliv-card').classList.toggle('hidden', HX.delivKeep);
     hx$('prev-card').classList.remove('hidden');
-    hx$('prev-list').textContent = hxPrevSummary(prev);
+    hx$('prev-list').innerHTML = hxPrevHtml(prev);
     hx$('f-sub').textContent = 'まだ決まっていなかった項目をお答えください';
     var ex = prev.extras || {};
     ['photo', 'message', 'names'].forEach(function (k) {
@@ -396,30 +396,6 @@ function hxRenderNames() {
 }
 
 // ---------- 2回目：前回の回答 ----------
-function hxPrevSummary(prev) {
-  var prodName = function (id) {
-    var p = (FD.products || []).find(function (x) { return x['商品ID'] === id; });
-    return p ? p['商品名'] : (id || '');
-  };
-  var delivLabel = function (v) { var d = (typeof SWEET_DELIVERY !== 'undefined' ? SWEET_DELIVERY : []).find(function (x) { return x.value === v; }); return d ? d.label : (v || ''); };
-  var L = [];
-  if (prev.kikkake && !FD.isPartner) L.push('きっかけ：' + prev.kikkake);
-  if (prev.venue && !FD.isPartner) L.push('式場・会場名：' + prev.venue);
-  if (prev.venueStaff) L.push('ご担当者様：' + prev.venueStaff);
-  var d = prev.delivery || {};
-  var dv = [d.date ? d.date.replace(/-/g, '/') : '', d.time, d.place].filter(Boolean).join(' ');
-  if (prev.deliveryState === 'pending') L.push('納品：まだ決まっていない');
-  else if (dv) L.push('納品：' + dv);
-  (prev.groups || []).forEach(function (g, i) {
-    var sw = function (want, id, del) { return want === '希望' ? prodName(id) + '（' + delivLabel(del) + '）' : want === '不要' ? '不要' : ''; };
-    var parts = [(g.targets || []).join('、'), prodName(g.rank), g.catalogType, g.qty ? g.qty + '冊' : '',
-      g.sweetWant ? '引き菓子 ' + sw(g.sweetWant, g.sweetId, g.sweetDelivery) : '', g.engiWant ? '縁起物 ' + sw(g.engiWant, g.engiId, g.engiDelivery) : '',
-      [g.design, g.pattern].filter(Boolean).join('・')].filter(Boolean);
-    L.push('贈り分け' + HX_LABELS[i] + '：' + parts.join('　'));
-  });
-  L.push('ご要望：' + (prev.notes || '（記入なし）'));
-  return L.join('\n');
-}
 // 今ある項目の入力欄に前回の回答を入れておく（「修正する」で開いたとき、その続きから直せるように）。
 // ⚠️ 戻しきれなくても害は無い：「修正する」を押さない限り、サーバーは前回の回答をそのまま使う（existingEdited:false）
 function hxPrefillExisting(prev) {
@@ -600,4 +576,36 @@ function hxDrawFakeQr(c) {
     x.fillStyle = '#fff'; x.fillRect(p[0] + 1, p[1] + 1, 5, 5);
     x.fillStyle = '#111'; x.fillRect(p[0] + 2, p[1] + 2, 3, 3);
   });
+}
+
+// 前回のご回答を、確認画面と同じ「項目名｜内容」の並びで出す（2026-09-23 saito「見づらい」）
+function hxPrevHtml(prev) {
+  var esc = function (t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var row = function (k, v) { return '<div class="cf-row"><dt>' + esc(k) + '</dt><dd>' + (v ? esc(v) : '<span class="cf-empty">未入力</span>') + '</dd></div>'; };
+  var prod = function (id) {
+    var p = (FD.products || []).find(function (x) { return x['商品ID'] === id; });
+    return p ? p['商品名'] + '（税込' + (parseInt(p['税込価格']) || 0).toLocaleString() + '円）' : (id || '');
+  };
+  var delivLabel = function (v) { var d = (typeof SWEET_DELIVERY !== 'undefined' ? SWEET_DELIVERY : []).find(function (x) { return x.value === v; }); return d ? d.label : (v || ''); };
+  var sw = function (want, id, del) { return want === '希望' ? prod(id) + '／' + delivLabel(del) : want === '不要' ? '不要' : ''; };
+  var h = '<div class="prev-sub">ご注文者・納品</div><dl style="margin:0">';
+  if (!FD.isPartner) { h += row('きっかけ', prev.kikkake); h += row('式場・会場名', prev.venue); }
+  h += row('ご担当者様', prev.venueStaff);
+  var d = prev.delivery || {};
+  var dv = [d.date ? d.date.replace(/-/g, '/') : '', d.time, d.place].filter(Boolean).join('　');
+  if (HX.delivAsked !== false) h += row('納品', prev.deliveryState === 'pending' ? 'まだ決まっていない' : dv);
+  h += '</dl>';
+  (prev.groups || []).forEach(function (g, i) {
+    h += '<div class="prev-sub">贈り分け ' + HX_LABELS[i] + '</div><dl style="margin:0">'
+      + row('対象ゲスト', (g.targets || []).join('、'))
+      + row('引き出物', prod(g.rank))
+      + row('カタログタイプ', g.catalogType)
+      + row('冊数', g.qty ? g.qty + '冊' : '')
+      + (g.sweetWant !== undefined ? row('引き菓子', sw(g.sweetWant, g.sweetId, g.sweetDelivery)) : '')
+      + (g.engiWant !== undefined ? row('縁起物', sw(g.engiWant, g.engiId, g.engiDelivery)) : '')
+      + row('カード', [g.design, g.pattern].filter(Boolean).join('・'))
+      + '</dl>';
+  });
+  h += '<div class="prev-sub">その他ご要望</div><dl style="margin:0">' + row('内容', prev.notes || '（記入なし）') + '</dl>';
+  return h;
 }

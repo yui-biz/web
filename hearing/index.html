@@ -123,7 +123,9 @@ textarea{resize:vertical;min-height:60px}
 .done-body .msgtxt{font-family:var(--serif);text-align:center;font-size:.8rem}
 .done-body .sub-label{display:block;font-size:.66rem;color:var(--text-muted);margin-top:4px}
 .done-row .sbtn{justify-self:start}
-.prev-list{font-size:.76rem;color:var(--text);line-height:1.8;white-space:pre-wrap}
+.prev-list{font-size:.76rem;color:var(--text);line-height:1.8}
+.prev-sub{font-family:var(--serif);font-size:.76rem;color:var(--accent);letter-spacing:.08em;margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--border-light)}
+.prev-sub:first-child{margin-top:0;padding-top:0;border-top:none}
 </style>
 </head>
 <body>
@@ -329,7 +331,7 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- ヘッダーのお写真・メッセージ・印字氏名（2026-09-23）。変えたら ?v= も上げる（開きっぱなしの古い版と混ざらないように） -->
-<script src="extras.js?v=20260923d"></script>
+<script src="extras.js?v=20260923e"></script>
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbzk2XDHbIPIh8yPGX5vvt3vHC8cPL1Kle7cIAC-sWsd591nwRo5IZNFCqcV_o0Ig6Os/exec';   // 直叩き用（回答の送信で使う。戻すとき用にも残す）
 var GAS_PROXY = 'https://yui-gas-proxy.yui-gift.workers.dev';
@@ -887,7 +889,7 @@ function renderConfirm(payload) {
   var row = function(k, v) { return '<div class="cf-row"><dt>' + esc(k) + '</dt><dd>' + (v ? esc(v) : '<span class="cf-empty">未入力</span>') + '</dd></div>'; };
   var h = '';
   if (!payload.existingEdited && FD.prev) {
-    h += '<div class="card"><div class="card-title">前回のご回答（変更なし）</div><div class="prev-list">' + esc(hxPrevSummary(FD.prev)) + '</div></div>';
+    h += '<div class="card"><div class="card-title">前回のご回答（変更なし）</div><div class="prev-list">' + hxPrevHtml(FD.prev) + '</div></div>';
     if (payload.deliveryState !== 'keep') {
       var dl = payload.deliveryState === 'pending' ? 'まだ決まっていない'
         : [payload.delivery.date ? payload.delivery.date.replace(/-/g, '/') : '', payload.delivery.time, payload.delivery.place].filter(Boolean).join(' ');
