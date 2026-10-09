@@ -370,9 +370,9 @@ function hxPersonText(p) {
   var base = [p.last, p.first].filter(Boolean).join(' ');
   return base ? base + (p.maiden ? '（旧姓：' + p.maiden + '）' : '') : '';
 }
-// カードの色は選んだデザイン（和風＝赤／洋風＝カーキと薄いグレーの間）
+// カードの色は選んだデザイン（和風＝赤／洋風＝カーキと薄いグレーの間／GORILLE＝明るいグレー）
 function hxCardDesign() {
-  if (FD.originalCard) return FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風';
+  if (FD.originalCard) return origCardDesign(FD.originalCard);
   if (!HX.existingEdited && FD.prev && FD.prev.groups && FD.prev.groups[0]) return FD.prev.groups[0].design || '和風';
   return (document.querySelector('input[name=design]:checked') || {}).value || '和風';
 }
@@ -381,7 +381,7 @@ function hxRenderNames() {
   box.innerHTML = '';
   var cap = document.createElement('span'); cap.className = 'cap'; cap.textContent = 'カードに印字したときのイメージ';
   box.appendChild(cap);
-  var card = document.createElement('div'); card.className = 'gcard' + (hxCardDesign() === '洋風' ? ' yofu' : '');
+  var card = document.createElement('div'); card.className = 'gcard' + ({ '洋風': ' yofu', 'GORILLE': ' gorille' }[hxCardDesign()] || '');
   var face = document.createElement('div'); face.className = 'gcard-face';
   var msg = document.createElement('div'); msg.className = 'gcard-msg';
   msg.textContent = '私達の結婚を祝っていただきありがとうございます\nささやかではありますが お礼の品として\nお選びいただいたものをご自宅にお届けいたします\n今後とも末永くよろしくお願いします';

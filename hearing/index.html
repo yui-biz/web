@@ -112,6 +112,7 @@ textarea{resize:vertical;min-height:60px}
 .print-preview .cap{justify-self:start}
 .gcard{--card-red:#d9442f;width:min(260px,100%);aspect-ratio:62/100;background:var(--card-red);border-radius:3px;padding:5% 5.5% 5% 4%;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .gcard.yofu{--card-red:#bdb8a6}
+.gcard.gorille{--card-red:#c9c7c2}
 .gcard-face{position:relative;height:100%;background:#fdfcf9;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6%;padding:10% 6%;font-family:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;color:#111;text-align:center;overflow:hidden}
 .gcard-face::before,.gcard-face::after{content:"";position:absolute;width:34%;aspect-ratio:1;background:var(--card-red);border-radius:50%}
 .gcard-face::before{top:0;left:0;transform:translate(-50%,-50%)}
@@ -517,8 +518,18 @@ function showError() {
 
 var cardDesigns = {
   '和風': ['鶴','亀','桜','富士','扇'],
-  '洋風': ['クローバー','ダイヤモンド','バード','ハート','ラビット']
+  '洋風': ['クローバー','ダイヤモンド','バード','ハート','ラビット'],
+  // pensée de gorille の完全オリジナル（和風・洋風のどちらでもない独自のカード・2026-10-09 saito）
+  'GORILLE': ['Bird','Leaf','Snow','Moon','Apple']
 };
+// 契約DBの「オリジナルカード」の値 → カードのデザイン。
+// 「和風オリジナル」（椿山荘）は和風の柄、「GORILLE」を含む値は独自の柄、それ以外は洋風。
+// ⚠ CRM（crm/index.html の origCardDesign_）と同じ規則。片方だけ直さない
+function origCardDesign(card) {
+  card = String(card || '');
+  if (/GORILLE/i.test(card)) return 'GORILLE';
+  return card.indexOf('和風') >= 0 ? '和風' : '洋風';
+}
 // 「オーダーメイド」は onCatTypeChange/onRankChange で常に表示する特別扱いなので、必ず末尾に置く。
 // 実際に選べるかは商品マスタのカタログURL（JSONのキー＝_catTypes）で絞られる。ここに足しただけでは出ない。
 // 🚨 販売を中止したカタログタイプ（2026-09-14 saito・全ランク）。お客様には選ばせない。
@@ -564,7 +575,8 @@ function init() {
 
 var patternImages = {
   '和風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468339/wafu_tne3xd.jpg',
-  '洋風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468338/yofu_lokobr.jpg'
+  '洋風': 'https://res.cloudinary.com/yui-gift/image/upload/w_540,f_auto/v1775468338/yofu_lokobr.jpg',
+  'GORILLE': 'img/gorille-patterns.jpg'
 };
 
 // 今の贈り分けの入力を読む（数を変えたときに入れ直すため・2026-09-23）。
@@ -764,7 +776,7 @@ function renderCardDesignSection(count) {
   var patternHtml = '';
 
   if (FD.originalCard) {
-    var origDesign = FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風';
+    var origDesign = origCardDesign(FD.originalCard);
     designHtml = '<p style="font-size:.8rem;color:var(--text-light);">オリジナルカードのため、カードデザインの選択は不要です。</p>';
     var imgUrl = patternImages[origDesign] || '';
     patternHtml = '<label>カード柄（' + origDesign + '）<span class="req">必須</span></label>';
@@ -922,7 +934,7 @@ function submitForm() {
         if (types.length === 1) cattype = types[0];
       }
     }
-    var design = FD.originalCard ? (FD.originalCard.indexOf('和風') >= 0 ? '和風' : '洋風') : (document.querySelector('input[name=design]:checked') || {}).value || '';
+    var design = FD.originalCard ? origCardDesign(FD.originalCard) : (document.querySelector('input[name=design]:checked') || {}).value || '';
     var pattern = (document.querySelector('input[name=pattern_' + g + ']:checked') || {}).value || '';
     var sw = readSweets(g);
     var qty = parseInt(document.getElementById('qty_' + g).value) || 0;
