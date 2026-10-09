@@ -779,7 +779,8 @@ function renderCardDesignSection(count) {
     var origDesign = origCardDesign(FD.originalCard);
     designHtml = '<p style="font-size:.8rem;color:var(--text-light);">オリジナルカードのため、カードデザインの選択は不要です。</p>';
     var imgUrl = patternImages[origDesign] || '';
-    patternHtml = '<label>カード柄（' + origDesign + '）<span class="req">必須</span></label>';
+    // 完全オリジナル（GORILLE）は呼び名を出さない（saito 2026-10-09「書かなくてOK」）
+    patternHtml = '<label>カード柄' + (origDesign === 'GORILLE' ? '' : '（' + origDesign + '）') + '<span class="req">必須</span></label>';
     if (imgUrl) patternHtml += '<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="' + imgUrl + '" alt="柄イメージ" style="width:100%;display:block;"></div>';
     patternHtml += '<p style="font-size:.72rem;color:var(--text-muted);margin-bottom:8px;">贈り分けごとに異なる柄をお選びください</p>';
     var patterns = cardDesigns[origDesign] || [];
@@ -1032,7 +1033,7 @@ function renderConfirm(payload) {
       + row('冊数', g.qty ? g.qty + '冊' : '')
       + (document.getElementById('swd_sweet_' + i) ? row('引き菓子', sw(g.sweetWant, g.sweetId, g.sweetDelivery)) : '')
       + (document.getElementById('swd_engi_' + i) ? row('縁起物', sw(g.engiWant, g.engiId, g.engiDelivery)) : '')
-      + row('カード', (g.design || '') + (g.pattern ? '・' + g.pattern : ''))
+      + row('カード', (g.design === 'GORILLE' ? 'オリジナル' : (g.design || '')) + (g.pattern ? '・' + g.pattern : ''))
       + '</dl></div>';
   });
   h += '<div class="card"><div class="card-title">ヘッダー・カード</div><dl style="margin:0">' + hxConfirmHtml(payload.extras, row) + '</dl></div>';
