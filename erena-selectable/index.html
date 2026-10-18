@@ -30,6 +30,8 @@
     background-repeat: no-repeat; background-position: right 10px center; background-size: 15px;
   }
   .note { font-size: 0.8em; color: #666; margin-top: 5px; }
+  input.input-error { border-color: #d33; background-color: #fff5f5; -webkit-box-shadow: 0 0 0px 1000px #fff5f5 inset; }
+  .field-error { font-size: 0.85em; color: #d33; margin-top: 5px; }
   .btn-container { text-align: center; margin-top: 30px; }
   .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -38,6 +40,9 @@
   .btn-secondary { background-color: #f0f0f0; color: #333; }
   .confirm-data p { margin: 10px 0; }
   .confirm-data span { font-weight: bold; margin-right: 10px; }
+  .confirm-id-box { border: 2px solid #d9534f; border-radius: 4px; padding: 12px 16px; margin: 10px 0 20px; background: #fffafa; }
+  .confirm-data .confirm-id-note { margin: 0 0 8px; font-size: 0.9em; font-weight: bold; color: #d9534f; }
+  .confirm-data .confirm-id-codes { margin: 0; font-size: 1.6em; font-weight: bold; letter-spacing: 0.08em; line-height: 1.6; font-variant-numeric: tabular-nums; }
   .multi-input { display: flex; align-items: center; }
   .multi-input input { width: 60px; text-align: center; }
   .multi-input .input-separator { margin: 0 5px; }
@@ -76,6 +81,10 @@
     <div id="form-input">
       <p style="text-align:center;">お間違いがないようにご入力ください。</p>
       <form id="entryForm">
+        <!-- 機械よけ：人には見えない欄。値が入っていたら受け付けない -->
+        <div aria-hidden="true" style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;">
+          <input type="text" id="hp" name="hp" tabindex="-1" autocomplete="off">
+        </div>
         <div class="form-section">
           <div class="form-row">
             <label for="idCode1">お客様のIDコード（半角英数字） <span class="required-tag">必須</span></label>
@@ -166,6 +175,7 @@
               <option value="">選択してください</option>
               <option value="HIMAWARI">HIMAWARI</option>
               <option value="AJISAI">AJISAI</option>
+              <option value="TSUBAKI">TSUBAKI</option>
             </select>
           </div>
           <div class="form-row">
@@ -202,7 +212,10 @@
       <p style="text-align:center;">以下の内容でよろしければ「送信する」ボタンを押してください。<br>修正したい場合は「修正する」ボタンを押すと前の画面に戻ります。</p>
       <div class="confirm-data">
         <p><span>お客様のIDコード:</span></p>
-        <p id="confirm-idCode"></p>
+        <div class="confirm-id-box">
+          <p class="confirm-id-note">お手元の「WEBお申込み方法のご案内」の番号と、1文字ずつお確かめください。</p>
+          <p id="confirm-idCode" class="confirm-id-codes"></p>
+        </div>
         <p><span>購入者様 名前:</span> <span id="confirm-name"></span></p>
         <p><span>購入者様 フリガナ:</span> <span id="confirm-furigana"></span></p>
         <p><span>購入者様 住所:</span> <span id="confirm-fullAddress"></span></p>
@@ -262,6 +275,71 @@
   }
 
   let formDataGlobal = {};
+  // ページを開いた時刻。開いてすぐの送信は機械とみなして GAS が断る
+  let pageOpenedAt = Date.now();
+
+  // お客様IDコード：夏（HIMAWARI=H／AJISAI=A）は 261、冬（TSUBAKI 店頭=T／優良顧客=Z）は 262
+  const ID_PATTERN = /^([AH]-261|[TZ]-262)-\d{4}$/;
+  const ID_FIELDS = ['idCode1', 'idCode2', 'idCode3', 'idCode4', 'idCode5'];
+
+  // 全角・小文字・ダッシュ違い・ハイフン抜けを揃える（Ａ–261-0200 / h2611296 → A-261-0200 / H-261-1296）
+  // 桁が足りないもの（A-261-139）は 0139 か 1390 か分からないので直さず、検査で止める
+  function normalizeIdCode(s) {
+    const t = String(s || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const m = t.match(/^([A-Z])(\d{3})(\d{4})$/);
+    return m ? m[1] + '-' + m[2] + '-' + m[3] : String(s || '').trim();
+  }
+
+  function setIdError(id, message) {
+    const input = document.getElementById(id);
+    let msg = input.parentNode.querySelector('.field-error');
+    if (!message) {
+      input.classList.remove('input-error');
+      if (msg) msg.remove();
+      return;
+    }
+    input.classList.add('input-error');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.className = 'field-error';
+      input.parentNode.appendChild(msg);
+    }
+    msg.textContent = message;
+  }
+
+  // 形・重複・夏冬の混在を確かめ、各欄の下に理由を出す。問題がなければ true
+  function validateIdCodes() {
+    const seen = {};
+    let ok = true;
+    ID_FIELDS.forEach(id => {
+      const input = document.getElementById(id);
+      input.value = normalizeIdCode(input.value);
+      const v = input.value;
+      let message = '';
+      if (v && !ID_PATTERN.test(v)) {
+        message = 'IDコードの形が違います。「WEBお申込み方法のご案内」に記載のとおり、「T-262-0001」の形でご入力ください。';
+      } else if (v && seen[v]) {
+        message = '同じIDコードがすでに入力されています。';
+      }
+      if (v) seen[v] = true;
+      setIdError(id, message);
+      if (message) ok = false;
+    });
+    const seasons = Object.keys(seen).filter(v => ID_PATTERN.test(v)).map(v => v.slice(2, 5));
+    if (ok && new Set(seasons).size > 1) {
+      ID_FIELDS.forEach(id => {
+        if (document.getElementById(id).value) setIdError(id, '夏と冬のIDコードは一緒に送れません。分けてご入力ください。');
+      });
+      ok = false;
+    }
+    return ok;
+  }
+
+  ID_FIELDS.forEach(id => {
+    document.getElementById(id).addEventListener('blur', e => {
+      e.target.value = normalizeIdCode(e.target.value);
+    });
+  });
 
   function searchAddress() {
     const zipcode1 = document.getElementById('zipcode1').value;
@@ -292,6 +370,11 @@
   }
 
   function showConfirmation() {
+    if (!validateIdCodes()) {
+      document.getElementById('idCode1').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     formDataGlobal = {
       idCode1: document.getElementById('idCode1').value,
       idCode2: document.getElementById('idCode2').value,
@@ -348,7 +431,10 @@
     fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'submitForm', payload: formDataGlobal })
+      body: JSON.stringify({ action: 'submitForm', payload: Object.assign({}, formDataGlobal, {
+        hp: document.getElementById('hp').value,
+        elapsedMs: Date.now() - pageOpenedAt
+      }) })
     })
       .then(res => res.json())
       .then(result => {
@@ -376,6 +462,8 @@
 
   function showInputAndClearForm() {
     document.getElementById('entryForm').reset();
+    ID_FIELDS.forEach(id => setIdError(id, ''));
+    pageOpenedAt = Date.now();
     document.getElementById('submitBtn').disabled = false;
     document.getElementById('submitBtn').textContent = '送信する';
     showInput();
