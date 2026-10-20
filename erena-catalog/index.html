@@ -2252,7 +2252,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261020b';
+  const APP_BUILD = '20261020c';
   // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
   // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
   // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
@@ -3873,6 +3873,8 @@
       option.dataset.leadDays = product.leadDays != null ? product.leadDays : 14;
       option.dataset.skipHolidays = product.skipHolidays !== false ? '1' : '0';
       option.dataset.dateSpecifiable = product.dateSpecifiable !== false ? '1' : '0';
+      // 着日指定の締切（2026冬は12/8受付分まで）を過ぎた商品は、サーバーが締切日を添えて指定不可で返す
+      option.dataset.dateSpecClosedUntil = product.dateSpecClosedUntil || '';
       option.dataset.dateSpecMinDays = product.dateSpecMinDays != null ? product.dateSpecMinDays : 0;
       option.dataset.noshiAvailable = product.noshiAvailable !== false ? '1' : '0';
       option.dataset.orderDeadline = product.orderDeadline || '';
@@ -3953,7 +3955,13 @@
       specifyRadio.disabled = true;
       specifyRadio.parentElement.style.cssText += ';opacity:0.4;cursor:not-allowed;';
       dateNote.style.color = '#c00';
-      dateNote.textContent = '（この商品は着日指定不可）';
+      const closedUntil = hasProduct ? (opt.dataset.dateSpecClosedUntil || '') : '';
+      if (closedUntil) {
+        const cu = closedUntil.split('-');
+        dateNote.textContent = '（着日指定は' + Number(cu[1]) + '/' + Number(cu[2]) + '受付分で終了しました）';
+      } else {
+        dateNote.textContent = '（この商品は着日指定不可）';
+      }
     } else {
       specifyRadio.disabled = false;
       specifyRadio.parentElement.style.opacity = '';
