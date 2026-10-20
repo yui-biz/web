@@ -548,7 +548,7 @@
 
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">登録商品タブ</h4>
               <ul style="margin:0 0 6px;padding-left:22px;">
-                <li>自社が登録している商品の詳細(価格・内容量・賞味期限・お盆休み等)を確認できます</li>
+                <li>自社が登録している商品の詳細(価格・内容量・賞味期限・休業期間等)を確認できます</li>
                 <li>商品マスタの修正依頼は エレナ ギフト事務局(info@yui.gift / 03-6441-0931) までご連絡ください</li>
               </ul>
 
@@ -2248,7 +2248,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20260813e';
+  const APP_BUILD = '20261020a';
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2417,8 +2417,8 @@
       +     row('アレルギー', p.allergy)
       +     row('包装形態', p.packaging)
       +     row('のし可否', p.noshi)
-      +     row('お盆休み', p.obonHoliday)
-      +     row('お盆前締切', p.obonShipDeadline)
+      +     row('休業期間', p.obonHoliday)          // 夏=お盆休み／冬=年末年始の休み（同じ列を使い回す）
+      +     row('休業前の出荷締切', p.obonShipDeadline)
       +     row('リードタイム', p.leadTimeText || p.leadTime)
       +     row('着日指定', p.dateSpecText || p.dateSpecifiable)
       +     row('配送不可地域', p.unshippableArea)
@@ -4495,7 +4495,8 @@
     _vendorSetOptions('vendor-product-filter', (res.productList || [])
       .filter(function(p) { return !selectedMaker || p.makerName === selectedMaker; })
       .map(function(p) {
-        return { value: p.productNo, label: p.productNo + ' ' + p.productName };
+        // value は「シーズン:番号」（夏と冬で番号が重なるため）。表示は番号だけにシーズンを添える
+        return { value: p.productNo, label: (p.season ? p.season + ' ' : '') + (p.productLabel || p.productNo) + ' ' + p.productName };
       }));
     _vendorSetOptions('vendor-store-filter', (res.storeList || []).map(function(s) { return { value: s, label: s }; }));
 
