@@ -2252,7 +2252,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261020c';
+  const APP_BUILD = '20261020d';
   // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
   // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
   // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
@@ -3885,6 +3885,16 @@
         if (new Date() > deadline) {
           option.disabled = true;
           option.textContent = '【受注締切】' + labelPrefix + product.name;
+        }
+      }
+      // 数量限定の商品（2026冬: 6002 五島ごと芋スイーツセット 100セット）。サーバーが残数を添えて返す。
+      // 一覧は最大10分古いことがあるが、超過はサーバーの受付処理で弾く
+      if (product.qtyCap && !option.disabled) {
+        if (product.soldOut) {
+          option.disabled = true;
+          option.textContent = '【完売】' + labelPrefix + product.name;
+        } else {
+          option.textContent = labelPrefix + product.name + '（数量限定・残り' + product.qtyLeft + '）';
         }
       }
       select.appendChild(option);
