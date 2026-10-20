@@ -210,6 +210,10 @@
       .detail-status-chip { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; margin-right: 4px; }
       .chip-unshipped { background: #ffebee; color: #c62828; }
       .chip-shipped { background: #e8f5e9; color: #2e7d32; }
+      /* WEBEDI計上/問屋報告の操作は2026冬から使わない（SHOW_WEBEDI=false）。資料（メーカー様向けご案内）と揃える */
+      .no-webedi .webedi-ui { display: none !important; }
+      .no-webedi .summary-cards.maker-cards { grid-template-columns: repeat(4,1fr) !important; }
+      .no-webedi .summary-cards.vendor-cards { grid-template-columns: repeat(4,1fr) !important; }
       .chip-webedi-done { background: #e3f2fd; color: #1565c0; }
       .chip-webedi-todo { background: #fff3e0; color: #ef6c00; }
       .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -516,7 +520,7 @@
                 <li>伝票だけ先に作った場合は「発送処理」→<b>「保存だけする」</b>で控えておけます(発送済みにはなりません)</li>
                 <li>発送準備ができたら<b>「発送処理」ボタン</b>(または一括発送)→ 運送会社・追跡番号を入力</li>
                 <li>発送後は<b>「発送済み」タブ</b>に移動</li>
-                <li>商品が着荷したら<b>「WEBEDI計上/問屋報告」</b>(直納商品or問屋経由で文言違い)</li>
+                <li class="webedi-ui">商品が着荷したら<b>「WEBEDI計上/問屋報告」</b>(直納商品or問屋経由で文言違い)</li>
               </ol>
 
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">発送処理の方法 (3通り)</h4>
@@ -534,8 +538,8 @@
 
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">間違えた時の取消</h4>
               <ul style="margin:0 0 12px;padding-left:22px;">
-                <li><b>「発送取消」</b>: 発送状況を未発送に戻す (運送会社・追跡番号・発送日時・WEBEDI状況をクリア)</li>
-                <li><b>「計上取消」</b>: WEBEDI計上/問屋報告を未完了に戻す</li>
+                <li><b>「発送取消」</b>: 発送状況を未発送に戻す (運送会社・追跡番号・発送日時をクリア)</li>
+                <li class="webedi-ui"><b>「計上取消」</b>: WEBEDI計上/問屋報告を未完了に戻す</li>
                 <li>※ どちらも確認ダイアログが出ます</li>
               </ul>
 
@@ -543,7 +547,7 @@
               <ul style="margin:0 0 12px;padding-left:22px;">
                 <li><b>今日/今週/今月 受注:</b> 期間内に店舗から受けた注文件数</li>
                 <li><b>未発送・要対応:</b> 発送処理が必要な件数(赤色)</li>
-                <li><b>WEBEDI計上待ち:</b> 発送済だがWEBEDI計上 or 問屋報告が残っている件数(オレンジ色)</li>
+                <li class="webedi-ui"><b>WEBEDI計上待ち:</b> 発送済だがWEBEDI計上 or 問屋報告が残っている件数(オレンジ色)</li>
               </ul>
 
               <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;">登録商品タブ</h4>
@@ -557,12 +561,12 @@
               </div>
             </div>
           </details>
-          <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
+          <div class="summary-cards maker-cards" style="grid-template-columns:repeat(5,1fr);">
             <div class="summary-card"><div class="label">今日 受注</div><div class="value" id="maker-cnt-today">-</div><div class="sublabel">店舗から受けた注文</div></div>
             <div class="summary-card"><div class="label">今週 受注</div><div class="value" id="maker-cnt-week">-</div><div class="sublabel">店舗から受けた注文</div></div>
             <div class="summary-card"><div class="label">今月 受注</div><div class="value" id="maker-cnt-month">-</div><div class="sublabel">店舗から受けた注文</div></div>
             <div id="card-unshipped" class="summary-card action urgent" onclick="switchMakerTab('unshipped')"><div class="label">未発送・要対応</div><div class="value" id="maker-cnt-unshipped">-</div><div class="sublabel">クリックで未発送タブへ</div></div>
-            <div id="card-unwebedi" class="summary-card action warn" onclick="switchMakerTab('shipped')"><div class="label">WEBEDI計上待ち</div><div class="value" id="maker-cnt-unwebedi">-</div><div class="sublabel">クリックで発送済タブへ</div></div>
+            <div id="card-unwebedi" class="summary-card action warn webedi-ui" onclick="switchMakerTab('shipped')"><div class="label">WEBEDI計上待ち</div><div class="value" id="maker-cnt-unwebedi">-</div><div class="sublabel">クリックで発送済タブへ</div></div>
           </div>
           <div class="orders-filter" id="maker-orders-filter" style="display:none;">
             <label>商品で絞り込み:
@@ -685,7 +689,7 @@
               <span id="webedi-filter-note" style="color:#888;font-size:11px;flex-basis:100%;"></span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-              <button onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
+              <button class="webedi-ui" onclick="bulkWebediSelected()" style="padding:6px 14px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">選択分をまとめて計上</button>
               <button onclick="downloadShippedCsv(false)" title="そのままの値で出力します。発送システムに取り込む方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">CSVダウンロード</button>
               <button onclick="downloadShippedCsv(true)" title="Excelで開いても番地が「9月7日」のような日付に化けません。Excelで開いて作業する方はこちら。" style="padding:6px 14px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:4px;cursor:pointer;font-size:13px;">Excelで開く用CSV</button>
             </div>
@@ -693,8 +697,8 @@
             <div style="overflow-x:auto;">
               <table class="orders-table" id="maker-shipped-table" style="display:none;">
                 <thead><tr>
-                  <th><input type="checkbox" id="check-all-shipped" onchange="toggleAllShippedChecks(this.checked)" title="全選択"></th>
-                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th>計上/報告</th><th>詳細</th>
+                  <th class="webedi-ui"><input type="checkbox" id="check-all-shipped" onchange="toggleAllShippedChecks(this.checked)" title="全選択"></th>
+                  <th>申込日時</th><th>商品</th><th>数量</th><th>お届け先</th><th>店舗</th><th>運送会社</th><th>追跡番号</th><th>発送日時</th><th class="webedi-ui">計上/報告</th><th>詳細</th>
                 </tr></thead>
                 <tbody></tbody>
               </table>
@@ -752,7 +756,7 @@
             <b>この画面について</b><br>
             ・貴社帳合のメーカー様が受けたご注文と、その発送状況（発送済／未発送）をご確認いただけます。<br>
             ・お客様の<b>氏名・ご住所・お電話番号・メールアドレス等の個人情報、および運送会社・追跡番号は表示されません</b>。<br>
-            ・<b>閲覧専用</b>です。発送処理・WEBEDI計上などの操作はメーカー様の画面で行われます。<br>
+            ・<b>閲覧専用</b>です。発送処理などの操作はメーカー様の画面で行われます。<br>
             ・内容についてのお問い合わせは エレナ ギフト事務局（info@yui.gift / 03-6441-0931）までご連絡ください。
           </div>
 
@@ -778,12 +782,12 @@
             <button onclick="downloadVendorCsv()" style="padding:7px 14px;background:#6d4c9f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">CSVダウンロード</button>
           </div>
 
-          <div class="summary-cards" style="grid-template-columns:repeat(5,1fr);">
+          <div class="summary-cards vendor-cards" style="grid-template-columns:repeat(5,1fr);">
             <div class="summary-card"><div class="label">対象 受注</div><div class="value" id="vendor-cnt-orders">-</div><div class="sublabel">絞り込み後の件数</div></div>
             <div class="summary-card"><div class="label">発送済</div><div class="value" id="vendor-cnt-shipped">-</div><div class="sublabel">メーカー様が発送処理済</div></div>
             <div class="summary-card"><div class="label">未発送</div><div class="value" id="vendor-cnt-unshipped">-</div><div class="sublabel">発送処理待ち</div></div>
             <div class="summary-card"><div class="label">発送済 数量</div><div class="value" id="vendor-cnt-shipqty">-</div><div class="sublabel">発送済注文の数量計</div></div>
-            <div class="summary-card"><div class="label">計上/報告 待ち</div><div class="value" id="vendor-cnt-unwebedi">-</div><div class="sublabel">直納=WEBEDI計上 / 問屋経由=問屋へ報告</div></div>
+            <div class="summary-card webedi-ui"><div class="label">計上/報告 待ち</div><div class="value" id="vendor-cnt-unwebedi">-</div><div class="sublabel">直納=WEBEDI計上 / 問屋経由=問屋へ報告</div></div>
           </div>
 
           <div id="vendor-loading" style="text-align:center;padding:40px;color:#666;">読み込み中...</div>
@@ -797,7 +801,7 @@
                 <thead><tr>
                   <th>メーカー</th><th>商品番号</th><th>商品名</th>
                   <th style="text-align:right;">受注</th><th style="text-align:right;">発送済</th><th style="text-align:right;">未発送</th>
-                  <th style="text-align:right;">数量計</th><th style="text-align:right;">発送済数量</th><th style="text-align:right;">計上/報告待ち</th>
+                  <th style="text-align:right;">数量計</th><th style="text-align:right;">発送済数量</th><th class="webedi-ui" style="text-align:right;">計上/報告待ち</th>
                 </tr></thead>
                 <tbody id="vendor-product-tbody"></tbody>
               </table>
@@ -818,7 +822,7 @@
               <table class="orders-table" id="vendor-detail-table">
                 <thead><tr>
                   <th>注文番号</th><th>申込日時</th><th>申込店舗</th><th>メーカー</th><th>商品番号</th><th>商品名</th>
-                  <th style="text-align:right;">数量</th><th>希望配達日</th><th>発送状況</th><th>発送日</th><th>計上/報告</th>
+                  <th style="text-align:right;">数量</th><th>希望配達日</th><th>発送状況</th><th>発送日</th><th class="webedi-ui">計上/報告</th>
                 </tr></thead>
                 <tbody id="vendor-detail-tbody"></tbody>
               </table>
@@ -2248,7 +2252,12 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261020a';
+  const APP_BUILD = '20261020b';
+  // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
+  // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
+  // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
+  const SHOW_WEBEDI = false;
+  if (!SHOW_WEBEDI) document.documentElement.classList.add('no-webedi');
   let _updateBannerShown = false;
   function checkForUpdate() {
     if (_updateBannerShown) return;
@@ -2659,8 +2668,8 @@
         ? '<span style="color:#2e7d32;font-weight:bold;">' + doneLabel + '</span><br><small style="color:#888;">' + (o.webediAt || '') + '</small><br><button onclick="confirmUndoWebedi(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:3px;cursor:pointer;font-size:11px;">計上取消</button>'
         : '<button onclick="submitWebedi(' + i + ', this)" style="padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">' + btnLabel + '</button>';
       const checkboxCell = isWebediDone
-        ? '<td></td>'
-        : '<td style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
+        ? '<td class="webedi-ui"></td>'
+        : '<td class="webedi-ui" style="text-align:center;"><input type="checkbox" class="shipped-check" data-idx="' + i + '"></td>';
       const carrierHtml = escapeHtml(o.carrier || '').replace(/, ?/g, '<br>');
       const trackingHtml = escapeHtml(o.trackingNo || '').replace(/, ?/g, '<br>');
       tr.innerHTML =
@@ -2677,7 +2686,7 @@
         '<td>' + carrierHtml + '</td>' +
         '<td>' + trackingHtml + '</td>' +
         '<td>' + (o.shippedAt || '') + '</td>' +
-        '<td>' + webediCell + '</td>' +
+        '<td class="webedi-ui">' + webediCell + '</td>' +
         '<td>' +
           '<button class="detail-btn" onclick="showMakerShippedDetail(' + i + ')">詳細</button>' +
           '<br><button onclick="showEditTrackingsModal(' + i + ')" style="margin-top:4px;padding:2px 6px;background:#fff;color:#1565c0;border:1px solid #1565c0;border-radius:3px;cursor:pointer;font-size:11px;white-space:nowrap;">伝票編集</button>' +
@@ -3094,7 +3103,7 @@
   function confirmUndoShipment(idx) {
     const o = (window._makerShippedCache || {})[idx];
     if (!o) return;
-    if (!confirm('発送処理を取消します。よろしいですか？\n\n' + o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様\n\n運送会社・追跡番号・発送日時・WEBEDI計上状況がクリアされます。')) return;
+    if (!confirm('発送処理を取消します。よろしいですか？\n\n' + o.productName + ' ×' + o.quantity + ' / ' + o.recipientName + ' 様\n\n運送会社・追跡番号・発送日時がクリアされます。')) return;
     gasPost({
       action: 'undoShipment',
       params: { rowIdx: o.rowIdx, email: currentMakerEmail, isAdmin: currentIsAdmin }
@@ -3709,7 +3718,7 @@
   function renderDetailViewReadOnly(o) {
     document.getElementById('order-detail-title').textContent = '発注詳細';
     const dt = new Date(o.timestamp);
-    const testBanner = o.isTest ? '<div class="test-banner">テスト注文 — 動作確認用のサンプルです。発送登録・WEBEDI操作をお試しいただけます（メールは送信されません）</div>' : '';
+    const testBanner = o.isTest ? '<div class="test-banner">テスト注文 — 動作確認用のサンプルです。発送登録をお試しいただけます（メールは送信されません）</div>' : '';
 
     // 商品画像取得(商品リストキャッシュから)
     const product = (window._cachedProducts || []).find(function(p) { return p.name === o.productName; });
@@ -3725,7 +3734,7 @@
     const isWebediDone = o.webediStatus === '計上済';
     const isDirect = o.productRoute === '直納';
     const webediLabel = isDirect ? 'WEBEDI計上' : '問屋報告';
-    const webediChip = isShipped
+    const webediChip = (isShipped && SHOW_WEBEDI)
       ? (isWebediDone
         ? '<span class="detail-status-chip chip-webedi-done">✓ ' + webediLabel + '済</span>'
         : '<span class="detail-status-chip chip-webedi-todo">' + webediLabel + '未完了</span>')
@@ -3736,7 +3745,7 @@
         + '<dt>運送会社</dt><dd>' + escapeHtml(o.carrier || '-') + '</dd>'
         + '<dt>追跡番号</dt><dd style="font-family:monospace;">' + escapeHtml(o.trackingNo || '-') + '</dd>'
         + '<dt>発送日時</dt><dd>' + escapeHtml(o.shippedAt || '-') + '</dd>'
-        + (isWebediDone ? '<dt>' + webediLabel + '日時</dt><dd>' + escapeHtml(o.webediAt || '-') + '</dd>' : '')
+        + (isWebediDone && SHOW_WEBEDI ? '<dt>' + webediLabel + '日時</dt><dd>' + escapeHtml(o.webediAt || '-') + '</dd>' : '')
         + '</dl></div>'
       : '';
 
@@ -4520,7 +4529,7 @@
         + '<td>' + escapeHtml(p.productName || '') + '</td>'
         + num(p.orders) + num(p.shipped) + num(p.unshipped)
         + num(p.quantity) + num(p.shippedQuantity)
-        + '<td style="text-align:right;' + (p.unwebedi ? 'color:#e65100;font-weight:bold;' : '') + '">' + (p.unwebedi || 0) + '</td>'
+        + '<td class="webedi-ui" style="text-align:right;' + (p.unwebedi ? 'color:#e65100;font-weight:bold;' : '') + '">' + (p.unwebedi || 0) + '</td>'
         + '</tr>';
     }).join('');
 
@@ -4553,7 +4562,7 @@
         + '<td>' + escapeHtml(r.deliveryDate || '-') + '</td>'
         + '<td>' + statusHtml + '</td>'
         + '<td>' + escapeHtml(r.shippedAt || '-') + '</td>'
-        + '<td>' + webedi + '</td>'
+        + '<td class="webedi-ui">' + webedi + '</td>'
         + '</tr>';
     }).join('');
   }
