@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20261026a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20261026b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -109,7 +109,8 @@
       @media (max-width: 1080px) { .login-grid { grid-template-columns: 1fr 1fr; } }
       @media (max-width: 600px) { .login-grid { grid-template-columns: 1fr; } }
       /* 帳合先ビュー */
-      body.vendor-mode .container { max-width: min(1400px, 96vw); margin: 12px auto; }
+      /* 1400pxだと大きい画面で表が横に間延びし、商品名と数値が離れて読みづらかった。明細11列が折り返さず収まる幅に抑える */
+      body.vendor-mode .container { max-width: min(1200px, 96vw); margin: 12px auto; }
       .vendor-section-title { font-size: 15px; font-weight: bold; color: #4a3570; margin: 22px 0 8px; padding-left: 8px; border-left: 4px solid #6d4c9f; }
       .vendor-filter { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; background: #f7f5fb; border: 1px solid #ded5ef; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }
       .vendor-filter label { font-size: 12px; color: #555; display: flex; flex-direction: column; gap: 4px; }
@@ -122,6 +123,19 @@
       .vendor-filter label { width: 165px; }
       .vendor-filter select, .vendor-filter input[type="date"] { width: 100%; min-width: 0; box-sizing: border-box; }
       body.vendor-mode .content { padding: 20px 30px; } /* 左右は他画面(店舗/メーカー)の30pxに合わせる。ここだけ18pxで詰まって見えていた */
+      /* 帳合先の3表: 日時・番号・数値・状況は折り返さない(「2026-11-01」「14:20」が2行に割れていた)。
+         折り返すのは商品名・メーカー・店舗だけにし、狭すぎる幅に潰れないよう下限を持たせる。
+         画面より広くなった分は表の枠(overflow-x:auto)の中で横にスクロールする */
+      body.vendor-mode .orders-table td { white-space: nowrap; }
+      body.vendor-mode .orders-table td.wrap { white-space: normal; min-width: 7em; }
+      body.vendor-mode .orders-table td.wrap.name { min-width: 12em; }
+      @media (max-width: 700px) {
+        body.vendor-mode .content { padding: 14px 12px; }
+        body.vendor-mode .summary-cards.vendor-cards { grid-template-columns: repeat(2, 1fr) !important; }
+        .vendor-filter label { width: calc(50% - 7px); }
+        body.vendor-mode .orders-table { font-size: 13px; }
+        body.vendor-mode .orders-table th, body.vendor-mode .orders-table td { padding: 8px 6px; }
+      }
       .vendor-note { background: #f3f0f9; border: 1px solid #ded5ef; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #4a3570; line-height: 1.7; margin-bottom: 14px; }
       .logout-btn { background: transparent; border: 1px solid #888; color: #555; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
       .logout-btn:hover { background: #f0f0f0; }
@@ -2266,7 +2280,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261026a';
+  const APP_BUILD = '20261026b';
   // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
   // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
   // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
@@ -4599,9 +4613,9 @@
 
     document.getElementById('vendor-product-tbody').innerHTML = (res.byProduct || []).map(function(p) {
       return '<tr>'
-        + '<td>' + escapeHtml(p.makerName || '-') + '</td>'
+        + '<td class="wrap">' + escapeHtml(p.makerName || '-') + '</td>'
         + '<td>' + escapeHtml(p.productNo || '') + '</td>'
-        + '<td>' + escapeHtml(p.productName || '') + '</td>'
+        + '<td class="wrap name">' + escapeHtml(p.productName || '') + '</td>'
         + num(p.orders) + num(p.shipped) + num(p.unshipped)
         + num(p.quantity) + num(p.shippedQuantity)
         + '<td class="webedi-ui" style="text-align:right;' + (p.unwebedi ? 'color:#e65100;font-weight:bold;' : '') + '">' + (p.unwebedi || 0) + '</td>'
@@ -4629,10 +4643,10 @@
       return '<tr>'
         + '<td>' + escapeHtml(r.orderNo || '') + cancelBadge + '</td>'
         + '<td>' + escapeHtml(r.orderedAt || '') + '</td>'
-        + '<td>' + escapeHtml(r.store || '') + '</td>'
-        + '<td>' + escapeHtml(r.makerName || '') + '</td>'
+        + '<td class="wrap">' + escapeHtml(r.store || '') + '</td>'
+        + '<td class="wrap">' + escapeHtml(r.makerName || '') + '</td>'
         + '<td>' + escapeHtml(r.productNo || '') + '</td>'
-        + '<td>' + escapeHtml(r.productName || '') + '</td>'
+        + '<td class="wrap name">' + escapeHtml(r.productName || '') + '</td>'
         + '<td style="text-align:right;">' + (r.quantity || 0) + '</td>'
         + '<td>' + escapeHtml(r.deliveryDate || '-') + '</td>'
         + '<td>' + statusHtml + '</td>'
