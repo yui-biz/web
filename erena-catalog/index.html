@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20261022b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20261026a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -604,7 +604,8 @@
               <div style="font-weight:bold;color:#1a1a1a;margin-bottom:6px;">CSVダウンロード→入力→アップロードで一括発送する手順</div>
               <ol style="margin:0;padding-left:20px;">
                 <li><b>「CSVダウンロード」</b>または<b>「Excelで開く用CSV」</b>をクリック → 未発送注文一覧のCSVが保存されます
-                  <ul><li><b>チェックを入れた注文だけを出せます。</b>チェックが1つも入っていないときは、いま表示されている注文（絞り込み後）がすべて出ます</li></ul>
+                  <ul><li><b>チェックを入れた注文だけを出せます。</b>チェックが1つも入っていないときは、いま表示されている注文（絞り込み後）がすべて出ます</li>
+                    <li>伝票を<b>準備済み</b>の注文が含まれるときは、<b>準備済みを除いて出力するか</b>確認が出ます。発送システムに取り込む場合は、二重発送を防ぐため「準備済みを除いて出力」をお選びください</li></ul>
                   <ul style="margin:4px 0;padding-left:20px;color:#555;">
                     <li><b>Excelで開いて作業する方は「Excelで開く用CSV」</b>をお使いください。番地の <code>9-7</code> が <b>9月7日</b> のような日付に化けるのを防ぎます（郵便番号・電話番号・追跡番号も同様に文字列のまま保てます）</li>
                     <li><b>発送システムに取り込む方は「CSVダウンロード」</b>のままでお願いします。こちらは従来どおり、そのままの値だけが入ります</li>
@@ -839,6 +840,19 @@
             <div id="order-detail-msg" style="display:none;margin-top:12px;padding:10px;border-radius:4px;font-size:13px;"></div>
             <div id="order-detail-buttons" style="margin-top:20px;text-align:right;"></div>
             <div style="clear:both;"></div>
+          </div>
+        </div>
+
+        <!-- 未発送CSV: 伝票準備済みの注文を含めるか聞く（2026-10-26 伊藤ハム様のご要望） -->
+        <div id="csv-draft-modal" class="modal-overlay" onclick="if(event.target===this)closeCsvDraftModal()">
+          <div class="modal-content" style="max-width:480px;">
+            <h3>伝票準備済みの注文が含まれています</h3>
+            <div id="csv-draft-body" style="font-size:14px;line-height:1.7;"></div>
+            <div style="margin-top:20px;text-align:right;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+              <button class="modal-close" onclick="closeCsvDraftModal()">やめる</button>
+              <button class="modal-btn" style="margin-left:0;background:#fff;color:#1565c0;border:1px solid #1565c0;" onclick="confirmCsvDraft(true)">含めて出力</button>
+              <button class="modal-btn" style="margin-left:0;" onclick="confirmCsvDraft(false)">準備済みを除いて出力</button>
+            </div>
           </div>
         </div>
 
@@ -2252,7 +2266,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261022b';
+  const APP_BUILD = '20261026a';
   // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
   // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
   // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
@@ -2545,7 +2559,7 @@
           if (o.isTest) tr.classList.add('test-row');
           tr.dataset.cacheIdx = i;
           // 下書き(未発送のまま保存された伝票)の有無。絞り込みで参照する
-          const hasDraft = !!(o.draftCarrier || o.draftTrackingNo);
+          const hasDraft = _hasShipDraft(o);
           tr.dataset.hasDraft = hasDraft ? '1' : '0';
           const draftCell = hasDraft
             ? '<span style="display:inline-block;background:#e8f5e9;color:#2e7d32;border:1px solid #2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:bold;white-space:nowrap;">準備済み</span>' +
@@ -3497,9 +3511,42 @@
     return idxs.map(function(i) { return (cache || {})[i]; }).filter(Boolean);
   }
 
+  // 伝票の下書き(運送会社・追跡番号を保存しただけで未発送)があるか
+  function _hasShipDraft(o) {
+    return !!(o.draftCarrier || o.draftTrackingNo);
+  }
+
+  // 未発送CSV（2026-10-26）。準備済みの注文が混ざっているときは、出力前に含めるか聞く。
+  // 発送システムに取り込むメーカー様で、準備済みの分が再び取り込まれ二重に発送されかけたため
+  // （伊藤ハム様のご指摘）。準備済みが無ければ従来どおりそのまま出す。
+  let _csvDraftPending = null;
   function downloadUnshippedCsv(armor) {
     const orders = _csvTargets(window._makerOrderCache, '.unshipped-check', '#maker-orders-table');
     if (orders.length === 0) { alert('出力する注文がありません。'); return; }
+    const drafts = orders.filter(_hasShipDraft).length;
+    if (drafts === 0) { _writeUnshippedCsv(orders, armor); return; }
+    _csvDraftPending = { orders: orders, armor: armor };
+    document.getElementById('csv-draft-body').innerHTML =
+      '出力する <b>' + orders.length + '件</b> のうち <b>' + drafts + '件</b> は、伝票（運送会社・追跡番号）を保存済みの注文です。<br>' +
+      '発送システムに取り込む場合、準備済みの注文を含めると<b>二重に発送するおそれ</b>があります。';
+    document.getElementById('csv-draft-modal').classList.add('active');
+  }
+
+  function closeCsvDraftModal() {
+    _csvDraftPending = null;
+    document.getElementById('csv-draft-modal').classList.remove('active');
+  }
+
+  function confirmCsvDraft(includeDrafts) {
+    const p = _csvDraftPending;
+    closeCsvDraftModal();
+    if (!p) return;
+    const orders = includeDrafts ? p.orders : p.orders.filter(function(o) { return !_hasShipDraft(o); });
+    if (orders.length === 0) { alert('準備済みを除くと、出力する注文がありません。'); return; }
+    _writeUnshippedCsv(orders, p.armor);
+  }
+
+  function _writeUnshippedCsv(orders, armor) {
     const rows = [['rowIdx', '申込日時', 'テスト注文', '商品名', '数量',
       'ご注文者名', 'ご注文者フリガナ', 'ご注文者郵便番号', 'ご注文者都道府県', 'ご注文者市区町村', 'ご注文者番地等', 'ご注文者電話', 'ご注文者メール',
       'お届け先名', 'お届け先フリガナ', 'お届け先郵便番号', 'お届け先都道府県', 'お届け先市区町村', 'お届け先番地等', 'お届け先電話', '店舗', '配達日', 'のしの種類', 'のし名入れ', '運送会社', '追跡番号',
