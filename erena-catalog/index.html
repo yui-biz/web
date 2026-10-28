@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>エレナ カタログギフト お申し込みフォーム</title>
-    <meta name="app-build" content="20261026b"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
+    <meta name="app-build" content="20261028a"><!-- デプロイのたびに更新。JS側 APP_BUILD と一致させること -->
 <style>
   /* 基本スタイル */
   body { font-family: sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
@@ -89,6 +89,7 @@
       .login-card { border: 1px solid #ddd; border-radius: 8px; padding: 24px; background: #fafafa; border-top: 4px solid #007BFF; display: flex; flex-direction: column; }
       .login-card h4 { margin: 0 0 8px 0; color: #007BFF; font-size: 18px; border-bottom: 2px solid #007BFF; padding-bottom: 8px; }
       .login-card p.role-desc { color: #666; font-size: 13px; margin: 0 0 16px 0; }
+      .login-card p.test-trial-note { background: #fff8e1; border: 1px solid #ffb74d; color: #6d4c00; font-size: 12px; line-height: 1.6; border-radius: 4px; padding: 6px 10px; margin: -8px 0 12px 0; }
       .login-card input[type="email"] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 12px; margin-top: auto; }
       .login-card button { width: 100%; padding: 12px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
       .login-card button:disabled { background: #aaa; cursor: not-allowed; }
@@ -290,6 +291,8 @@
               <p class="role-desc">商品を発送するメーカー担当者向け<br>自社商品の発注情報を確認できます</p>
               <!-- テスト期間(〜2026/6/30)のお知らせは本番運用開始に伴い削除(2026-07-28)。
                    6/30以前の注文に付く「TEST」バッジ自体は残っている。 -->
+              <!-- 2026冬のお試し期間（2026-10-28）。data-trial-until を過ぎると自動で消える -->
+              <p class="test-trial-note" data-trial-until="2026-11-06T00:00:00+09:00">操作をお試しいただけるテスト注文（TEST）を入れています。<b>11/5（木）まで</b>お試しいただけます。</p>
               <input type="email" id="loginEmailMaker" placeholder="例: 〇〇@メーカー.co.jp" autocomplete="email">
               <button type="button" id="loginBtnMaker" onclick="requestLoginMaker()">ログインURLを送信</button>
               <div id="login-msg-maker" class="login-msg" style="display:none;"></div>
@@ -471,6 +474,17 @@
           <div id="maker-display" style="background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
             <span><span style="color:#666;">ログインアカウント:</span> <b id="maker-name"></b><span id="maker-admin-badge" class="admin-badge" style="display:none;">管理者</span></span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
+          </div>
+          <!-- 2026冬のお試し期間（2026-10-28）。11/6 以降は自動で消える。×で閉じた人には出さない -->
+          <div id="test-notice-maker" class="update-notice test-trial-notice" data-upd-key="erena_test_maker_2026w" data-trial-until="2026-11-06T00:00:00+09:00">
+            <button class="update-notice-close" onclick="closeUpdateNotice('test-notice-maker','erena_test_maker_2026w')" title="閉じる">×</button>
+            <div class="update-notice-title">テスト注文のお試し期間のお知らせ</div>
+            <div class="update-notice-body">
+              「TEST」の印が付いた注文は、操作をお試しいただくためのテスト注文です。<b>11/5（木）まで</b>お試しいただけます。<b>11/6（金）にこちらで削除</b>いたします。<br>
+              ・実際の注文ではありません。商品の発送は不要です<br>
+              ・テスト注文を操作しても、受注・発送などのお知らせメールは送信されません<br>
+              ・お届け先・ご依頼主はすべて架空の情報です
+            </div>
           </div>
           <div id="update-notice-maker" class="update-notice" data-upd-key="erena_upd_maker_20260804">
             <button class="update-notice-close" onclick="closeUpdateNotice('update-notice-maker','erena_upd_maker_20260804')" title="閉じる">×</button>
@@ -1058,8 +1072,17 @@
   }
   // 各バナーは自分の data-upd-key だけを見る。単一キー固定だと、古いお知らせを閉じた人に
   // 新しいお知らせが二度と表示されなくなるため。
+  // お試し期間の告知は、期限を過ぎたら閉じたかどうかに関係なく出さない。
+  // ログイン画面の告知もあるので、ページを開いた時点でも呼ぶ。
+  function hideExpiredTrialNotices_() {
+    document.querySelectorAll('[data-trial-until]').forEach(function(el) {
+      if (Date.now() >= new Date(el.dataset.trialUntil).getTime()) el.style.display = 'none';
+    });
+  }
+  document.addEventListener('DOMContentLoaded', hideExpiredTrialNotices_);
   function applyUpdateNoticeState() {
-    ['update-notice-store', 'update-notice-maker'].forEach(function(id) {
+    hideExpiredTrialNotices_();
+    ['update-notice-store', 'update-notice-maker', 'test-notice-maker'].forEach(function(id) {
       const el = document.getElementById(id);
       if (!el) return;
       const key = el.dataset.updKey;
@@ -2280,7 +2303,7 @@
 
   // === バージョン更新検知（開きっぱなしの古いタブが古いJSを実行し続ける問題への対策） ===
   // head の <meta name="app-build"> と必ず同じ値にする。デプロイのたびに両方更新すること。
-  const APP_BUILD = '20261026b';
+  const APP_BUILD = '20261028a';
   // WEBEDI計上/問屋報告の操作（ボタン・計上待ちの件数・一括計上・詳細の表示）を出すか。
   // 2026夏は全メーカーで使われなかったため、2026冬から出さない（saito 2026-10-20）。
   // メーカー様向けご案内（冬版）からも外した。戻すときは true にする（サーバー側の記録はそのまま）
